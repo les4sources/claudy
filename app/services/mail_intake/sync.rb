@@ -114,14 +114,7 @@ module MailIntake
     end
 
     def body_text(mail)
-      text = if mail.text_part
-               mail.text_part.decoded
-             elsif mail.html_part
-               ActionController::Base.helpers.strip_tags(mail.html_part.decoded)
-             elsif !mail.multipart?
-               mail.mime_type == "text/html" ? ActionController::Base.helpers.strip_tags(mail.decoded) : mail.decoded
-             end
-      text.to_s.encode("UTF-8", invalid: :replace, undef: :replace).squeeze("\n").strip.truncate(20_000)
+      Body.text_of(mail).presence
     rescue StandardError
       nil
     end
