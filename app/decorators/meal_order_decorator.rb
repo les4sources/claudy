@@ -62,6 +62,16 @@ class MealOrderDecorator < ApplicationDecorator
     h.l(object.date, format: format)
   end
 
+  # Le texte de confirmation de la suppression. Il NOMME la ligne — dans une
+  # table de vingt services, « Supprimer cette demande ? » ne dit pas laquelle —
+  # et rappelle que supprimer n'est pas annuler : la cuisine n'en saura rien.
+  def delete_confirmation
+    kind    = object.label.sub(/ \(.*\)\z/, "") # « Repas (midi ou soir) » → « Repas »
+    service = "#{[kind, object.moment_label&.downcase].compact_blank.join(' ')}, #{day_label}"
+    "Supprimer la demande « #{service} » pour #{client_label} ? " \
+      "La cuisine n'est pas prévenue : si le client renonce, annulez-la plutôt."
+  end
+
   # Les deux lettres de l'avatar « S'en charge ».
   def responsible_initials
     name = object.responsible_human&.name.to_s

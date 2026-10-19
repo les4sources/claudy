@@ -154,7 +154,7 @@ Rails.application.routes.draw do
     # seul `format.csv` ne saurait pas lequel des deux produire.
     get "reporting/expenses", to: "reporting#expenses", as: :reporting_expenses
     resources :products, except: [:show]
-    resources :orders, only: [:index, :new, :create, :edit, :update] do
+    resources :orders, only: [:index, :new, :create, :edit, :update, :destroy] do
       collection do
         get :stay_search # autocomplete JSON du champ « Séjour » du formulaire
       end
