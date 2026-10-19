@@ -169,4 +169,32 @@ RSpec.describe "ExperienceBookings — CRUD admin sur un séjour", type: :reques
       expect(target.reload).not_to be_cancelled
     end
   end
+
+  # Rétablir une activité retirée par erreur (Michael, 2026-10-19).
+  describe "PATCH /experience_bookings/:id/restore (rétablir)" do
+    it "montre l'activité retirée sur la fiche, la rétablit sans email, et le total suit" do
+      booking = ExperienceBooking.create!(experience_availability: avail_a, stay: stay, participants: 2, status: "confirmed")
+      booking.update!(status: "cancelled")
+      stay.recompute_aggregates!
+      sign_in admin
+
+      get stay_path(stay)
+      expect(response.body).to include("Retirées", restore_experience_booking_path(booking))
+
+      ActionMailer::Base.deliveries.clear
+      patch restore_experience_booking_path(booking), as: :turbo_stream
+
+      expect(booking.reload).to be_confirmed
+      expect(stay.reload.total_amount_cents).to eq(7000)
+      expect(response.body).to include("rétablie")
+      expect(ActionMailer::Base.deliveries).to be_empty
+    end
+
+    it "un porteur ne peut pas rétablir l'activité d'un autre porteur" do
+      target = ExperienceBooking.create!(experience_availability: avail_b, stay: stay, participants: 1, status: "cancelled")
+      sign_in user_a
+      patch restore_experience_booking_path(target)
+      expect(target.reload).to be_cancelled
+    end
+  end
 end

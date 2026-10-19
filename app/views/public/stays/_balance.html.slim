@@ -8,6 +8,11 @@
         dt(class="text-moss") = t("public.stays.balance.lodging_and_spaces")
         dd.text-ink.whitespace-nowrap = @stay.formatted_lodging_and_spaces
 
+      - if @stay.has_party_reservations?
+        .flex.items-center.justify-between(data-balance-party="true")
+          dt(class="text-moss") = t("public.stays.balance.pizza_party")
+          dd.text-ink.whitespace-nowrap = @stay.formatted_party_reservations
+
       - if @stay.has_confirmed_experiences?
         .flex.items-center.justify-between
           dt(class="text-moss") = t("public.stays.balance.experiences_confirmed")

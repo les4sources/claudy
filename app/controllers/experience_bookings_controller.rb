@@ -12,7 +12,7 @@
 class ExperienceBookingsController < BaseController
   access_section :events
   before_action :load_scoped_booking,
-                only: [:show, :update, :destroy, :confirm, :new_refusal, :refuse, :record_outcome, :payout]
+                only: [:show, :update, :destroy, :restore, :confirm, :new_refusal, :refuse, :record_outcome, :payout]
 
   def index
     @experience_bookings = ExperienceBooking.for_user(current_user)
@@ -162,6 +162,23 @@ class ExperienceBookingsController < BaseController
       format.turbo_stream { render_stay_panels(@booking.stay, notice: notice) }
       format.html { redirect_to stay_path(@booking.stay), notice: notice }
       format.any  { head :ok }
+    end
+  end
+
+  # « Rétablir » une activité retirée par erreur (Michael, 2026-10-19) : elle
+  # reprend son statut d'avant le retrait et revient dans le total. Aucun email.
+  def restore
+    @booking.restore!
+    refresh_stay_totals!(@booking.stay)
+    notice = "Activité « #{@booking.experience.name} » rétablie."
+    respond_to do |format|
+      format.turbo_stream { render_stay_panels(@booking.stay, notice: notice) }
+      format.html { redirect_to stay_path(@booking.stay), notice: notice }
+    end
+  rescue ExperienceBooking::NotRestorable, ActiveRecord::RecordInvalid => e
+    respond_to do |format|
+      format.turbo_stream { render_stay_panels(@booking.stay, alert: e.message, status: :unprocessable_entity) }
+      format.html { redirect_to stay_path(@booking.stay), alert: e.message }
     end
   end
 

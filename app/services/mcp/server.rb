@@ -42,6 +42,7 @@ module Mcp
       Tools::Activites::AjouterActiviteSejour,
       Tools::Activites::ModifierReservationActivite,
       Tools::Activites::AnnulerReservationActivite,
+      Tools::Activites::RetablirReservationActivite,
       Tools::Activites::ValiderReservationActivite,
       Tools::Activites::RefuserReservationActivite,
       Tools::Activites::DeclarerTenue,

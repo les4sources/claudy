@@ -56,6 +56,21 @@
                 = f.submit "OK", title: "Enregistrer le nombre de participants", class: "px-2 py-1 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700"
               = button_to "Retirer", experience_booking_path(booking), method: :delete, class: "px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium hover:bg-red-200"
 
+    / Les activités retirées restent visibles, en gris, pour pouvoir revenir sur
+      un retrait par erreur (Michael, 2026-10-19). Rétablir ne prévient personne.
+    - retirees = @stay.experience_bookings.where(status: "cancelled").includes(experience_availability: :experience).to_a
+    - if retirees.any?
+      .mb-3
+        .text-xs.font-medium.text-gray-500.mb-1 Retirées
+        ul.divide-y.divide-gray-100
+          - retirees.each do |booking|
+            li.py-1.text-sm.flex.items-center.justify-between.gap-3.text-gray-500
+              .min-w-0.truncate
+                span.line-through = booking.experience.name
+                | &nbsp;·&nbsp;
+                = booking.experience_availability.available_on&.strftime("%-d/%m/%Y")
+              = button_to "Rétablir", restore_experience_booking_path(booking), method: :patch, title: "Remettre cette activité sur le séjour (personne n'est prévenu)", class: "px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium hover:bg-gray-200 shrink-0"
+
     / Ajout d'une activité au séjour.
     - if @assignable_availabilities.present?
       .bg-gray-50.rounded-md.p-3.mt-2

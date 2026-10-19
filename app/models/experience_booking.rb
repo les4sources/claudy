@@ -265,6 +265,33 @@ class ExperienceBooking < ApplicationRecord
     update!(status: "refused", refusal_reason: reason)
   end
 
+  # --- Rétablir une activité retirée (Michael, 2026-10-19) ---
+
+  class NotRestorable < StandardError; end
+
+  # « Retirer » une activité ne la supprime pas : elle passe en `cancelled`. Une
+  # activité retirée par erreur (cas du séjour #1518 : les ânes, tenus et déjà
+  # payés à Béné, retirés après coup) revient au statut qu'elle avait avant le
+  # retrait. La recréer paierait le porteur une seconde fois. Aucun email : le
+  # client a déjà reçu ce qu'il devait recevoir à l'époque.
+  def restore!
+    raise NotRestorable, "Seule une activité retirée se rétablit (celle-ci est #{status_label.downcase})." unless cancelled?
+
+    self.capacity_override = true
+    update!(status: status_before_cancellation)
+  end
+
+  # Le statut d'avant le retrait, d'après l'historique. Sans trace, une
+  # activité tenue ou déjà rémunérée était forcément confirmée ; sinon, elle
+  # repart à valider plutôt que d'entrer d'office dans le solde.
+  def status_before_cancellation
+    versions.reorder(created_at: :desc, id: :desc).each do |version|
+      from, to = version.changeset["status"]
+      return from if to == "cancelled" && ADMIN_CREATABLE_STATUSES.include?(from)
+    end
+    outcome.present? || carrier_fee_cents.present? ? "confirmed" : "pending"
+  end
+
   # --- Tenue de l'activité (epic #244, phase 2) ---
 
   class OutcomeNotRecordable < StandardError; end
