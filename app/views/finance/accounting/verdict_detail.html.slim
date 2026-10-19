@@ -1,0 +1,38 @@
+/  Le détail d'un montant de « Peut-on dépenser ? » (Michael, 2026-10-19),
+   ouvert en fenêtre au clic sur le montant. Chaque liste est celle que le
+   verdict additionne : son total est le chiffre de l'encart, au centime près.
+   Les liens sortent de la fenêtre (`_top`) : dans le cadre, la page visée
+   s'ouvrirait à la place du détail.
+- v = @verdict
+- t = v.treasury
+- horizon = l(t.horizon_end, format: :ddmmyyyy)
+- totals = { "incoming" => v.incoming_cents, "outgoing" => v.outgoing_cents,
+             "liabilities_later" => v.liabilities_later_cents, "loans" => v.loans_cents }
+- titles = { "incoming" => "À encaisser", "outgoing" => "À payer d'ici le #{horizon}",
+             "liabilities_later" => "Dettes et litiges après le #{horizon}", "loans" => "Prêts reçus à rendre" }
+- total = totals.fetch(@part)
+= render TurboModal::Component.new(title: "#{titles.fetch(@part)} — #{number_to_currency(total / 100.0, unit: '€', precision: 0)}") do
+  div(data-verdict-detail=@part)
+    p.mb-4.text-sm.text-gray-600
+      span.font-medium.text-gray-900= v.entity.name
+      - case @part
+      - when "incoming"
+        |  · Reste dû des séjours confirmés ou pré-confirmés qui arrivent d'ici le #{horizon}, et de ceux terminés depuis moins d'un an sans être soldés. Un paiement reçu mais jamais relié au séjour le fait compter en trop.
+      - when "outgoing"
+        |  · La file « À payer », les charges fixes et les mensualités des dettes et litiges qui tombent d'ici le #{horizon}. Une dette échue ou sans échéance compte aujourd'hui.
+      - when "liabilities_later"
+        |  · Les mensualités des dettes et litiges qui tombent après le #{horizon}, pour leur montant retenu : hors de la courbe, pas hors du compte.
+      - when "loans"
+        |  · Ce qui reste dû au grand livre (comptes 17), compte par compte. Un compte débiteur ne réduit pas ce qu'on doit sur les autres.
+        - if v.long_term_loans_cents.positive?
+          = " Les prêts à long terme (#{number_to_currency(v.long_term_loans_cents / 100.0, unit: '€', precision: 0)}) n'y sont pas : ils ne se rendent pas dans les #{Finance::Treasury::HORIZON_DAYS} jours."
+
+    - case @part
+    - when "incoming"
+      = render "finance/accounting/verdict_detail_incoming", treasury: t
+    - when "outgoing"
+      = render "finance/accounting/verdict_detail_outgoing", treasury: t
+    - when "liabilities_later"
+      = render "finance/accounting/verdict_detail_liabilities", treasury: t
+    - when "loans"
+      = render "finance/accounting/verdict_detail_loans", verdict: v
