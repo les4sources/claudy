@@ -6,7 +6,10 @@ RSpec.describe "Projet — case « action terminée »", type: :request do
   include Devise::Test::IntegrationHelpers
 
   let(:user) { User.create!(email: "agent-projets@les4sources.be", password: "password123") }
-  let(:project) { Project.create!(name: "Rénovation du moulin", human: Human.create!(name: "Porteur du moulin")) }
+  let(:project) do
+    Project.create!(name: "Rénovation du moulin", team: Team.create!(name: "Pôle Moulin"),
+                    human: Human.create!(name: "Porteur du moulin"))
+  end
   let(:bundle) { Bundle.create!(name: "Toiture", project: project) }
   let!(:task) { Task.create!(name: "Commander les ardoises", bundle: bundle, project: project, status: Task::STATUS_OPEN) }
   let(:turbo) { { "Accept" => "text/vnd.turbo-stream.html" } }
