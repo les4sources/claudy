@@ -73,7 +73,7 @@ RSpec.describe "Comptabilité — rapprocher une ligne d'un séjour choisi", typ
 
       get finance_cash_entry_path(sortie)
 
-      expect(response.body).not_to include("Rapprocher d&#39;un séjour")
+      expect(response.body).not_to include("name=\"stay_id\"")
     end
 
     it "ne propose rien sur une ligne déjà entamée" do
@@ -82,7 +82,7 @@ RSpec.describe "Comptabilité — rapprocher une ligne d'un séjour choisi", typ
 
       get finance_cash_entry_path(entry)
 
-      expect(response.body).not_to include("Rapprocher d&#39;un séjour")
+      expect(response.body).not_to include("name=\"stay_id\"")
     end
   end
 
