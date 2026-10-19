@@ -53,7 +53,7 @@ module Mcp
           lignes = note.expense_lines.sort_by { |l| [l.spent_on, l.position, l.id] }.map do |l|
             km = l.distance_km ? " · #{format('%g', l.distance_km)} km" : ""
             justificatif = if l.receipt.attached? then ""
-                           elsif l.receipt_on_paper? then " · justificatif sur papier"
+                           elsif l.receipt_on_paper? then " · justificatif sur papier#{" n° #{l.paper_receipt_label}" if l.paper_receipt_label}"
                            elsif l.mileage? then ""
                            else " · sans justificatif"
                            end

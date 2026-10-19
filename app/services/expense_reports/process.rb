@@ -14,16 +14,22 @@ module ExpenseReports
   # (Michael, 2026-10-18) : `accounts` = { id de ligne => id de compte }. Les
   # comptes s'enregistrent AVANT le passage, hors de sa transaction : si
   # l'exercice manque, le choix fait ligne par ligne n'est pas perdu.
+  #
+  # Le pôle de chaque ligne se corrige au même moment (Michael, 2026-10-19) :
+  # `teams` = { id de ligne => id de pôle, ou vide pour « aucun pôle » }. C'est
+  # lui que l'écriture porte, et lui que lisent les comptes du pôle.
   class Process < ServiceBase
     class BadStatus < StandardError; end
     class NoLines < StandardError; end
     class MissingFiscalYear < StandardError; end
     class MissingAccount < StandardError; end
+    class UnknownTeam < StandardError; end
 
-    def initialize(expense_report:, processed_on: nil, accounts: nil, whodunnit: nil)
+    def initialize(expense_report:, processed_on: nil, accounts: nil, teams: nil, whodunnit: nil)
       @report = expense_report
       @processed_on = processed_on.presence
       @accounts = (accounts || {}).to_h.transform_keys(&:to_s)
+      @teams = (teams || {}).to_h.transform_keys(&:to_s)
       @whodunnit = whodunnit
     end
 
@@ -45,6 +51,7 @@ module ExpenseReports
 
       date = parsed_date
       assign_accounts
+      assign_teams
       ensure_accounts
 
       # Une note déjà numérotée garde SON numéro et SON exercice — une note
@@ -98,6 +105,24 @@ module ExpenseReports
           end
 
           line.update!(general_account: account) unless line.general_account_id == account&.id
+        end
+      end
+    end
+
+    # Une clé présente et vide = « aucun pôle » : la part reste non ventilée.
+    def assign_teams
+      return if @teams.empty?
+
+      known = Team.where(id: @teams.values.compact_blank).index_by { |t| t.id.to_s }
+      PaperTrail.request(whodunnit: @whodunnit || "expense_reports") do
+        @report.expense_lines.each do |line|
+          next unless @teams.key?(line.id.to_s)
+
+          chosen = @teams[line.id.to_s].to_s
+          team = known[chosen]
+          raise UnknownTeam, "Le pôle choisi pour « #{line.label} » n'existe pas." if chosen.present? && team.nil?
+
+          line.update!(team: team) unless line.team_id == team&.id
         end
       end
     end

@@ -104,6 +104,25 @@ RSpec.describe ExpenseReport, type: :model do
       expect(line).to be_valid
     end
 
+    # Michael, 2026-10-19 : un numéro à écrire sur chaque ticket papier.
+    it "numérote les tickets papier dans la note, une fois pour toutes" do
+      report = build_report
+      premier = add_line(report)
+      second = add_line(report, label: "Terreau")
+      fichier = report.expense_lines.build(spent_on: Date.current, label: "Photo", amount_cents: 100,
+                                           general_account: account)
+      fichier.receipt.attach(io: StringIO.new("%PDF-1.4"), filename: "ticket.pdf", content_type: "application/pdf")
+      fichier.save!
+
+      expect([premier.receipt_number, second.receipt_number]).to eq([1, 2])
+      expect(second.paper_receipt_label).to eq("#{report.id}-2")
+      expect(fichier.receipt_number).to be_nil
+
+      premier.update!(label: "Visserie inox")
+      expect(premier.reload.receipt_number).to eq(1)
+      expect(add_line(report, label: "Colle").receipt_number).to eq(3)
+    end
+
     it "n'invalide pas une ligne saisie avant la règle du justificatif" do
       line = add_line(build_report)
       line.update_columns(receipt_on_paper: false)

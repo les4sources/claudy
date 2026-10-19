@@ -26,6 +26,7 @@
 #  label               :string           not null
 #  position            :integer          default(0), not null
 #  rate_cents_per_km   :integer
+#  receipt_number      :integer
 #  receipt_on_paper    :boolean          default(FALSE), not null
 #  spent_on            :date             not null
 #  supplier_name       :string
@@ -84,6 +85,11 @@ class ExpenseLine < ApplicationRecord
   validate :mileage_needs_distance
   validate :receipt_or_paper, on: :create
 
+  # Un ticket remis sur papier reçoit un numéro à écrire dessus (Michael,
+  # 2026-10-19). Attribué une fois, il ne change plus : il est peut-être déjà
+  # écrit à la main sur le ticket.
+  before_save :number_paper_receipt
+
   # Une note de mission rembourse des trajets : son compte va de soi
   # (« Déplacements »). La compta peut encore le changer au traitement.
   before_validation :default_travel_account
@@ -107,6 +113,14 @@ class ExpenseLine < ApplicationRecord
   # Le justificatif que la compta attend encore : ni fichier, ni papier annoncé.
   # Une ligne kilométrique n'a pas de ticket.
   def receipt_missing? = !mileage? && !receipt.attached? && !receipt_on_paper?
+
+  # Ce qu'on écrit sur le ticket : le numéro de la note, puis celui du ticket
+  # (« 42-3 »). Le numéro de pièce comptable n'existe pas encore à la saisie.
+  def paper_receipt_label
+    return nil if receipt_number.blank?
+
+    "#{expense_report_id}-#{receipt_number}"
+  end
 
   # Les kilomètres tels qu'ils se tapent, virgule décimale comprise.
   def distance_in_km
@@ -159,6 +173,16 @@ class ExpenseLine < ApplicationRecord
 
   def refresh_rate?
     rate_cents_per_km.blank? || new_record? || will_save_change_to_spent_on?
+  end
+
+  # Le suivant dans la note, soft-supprimées comprises : un numéro écrit sur un
+  # ticket ne se réattribue jamais à un autre.
+  def number_paper_receipt
+    return unless receipt_on_paper?
+    return if receipt_number.present? || expense_report_id.blank?
+
+    highest = ExpenseLine.with_deleted { ExpenseLine.where(expense_report_id: expense_report_id).maximum(:receipt_number) }
+    self.receipt_number = highest.to_i + 1
   end
 
   def default_travel_account

@@ -307,7 +307,8 @@ module Finance
       "finance/expense_reports" => Page.new(
         "Les notes de frais et de mission : ce qu'une personne a avancé pour la maison, ou les kilomètres parcourus.",
         ["Encode la note avec ses lignes et, pour chaque ticket, sa photo ou la mention « fourni sur papier ». Pas de compte à choisir à ce stade.",
-         "Passe-la en traitement depuis sa fiche : attribue le compte de charge de chaque ligne, elle reçoit son numéro et rejoint la file À payer.",
+         "Un ticket papier reçoit un numéro : écris-le dessus, puis dépose les tickets dans le bac « Admin », attachés, dans la farde plastique à ton nom.",
+         "Passe-la en traitement depuis sa fiche : attribue le compte de charge et le pôle de chaque ligne, elle reçoit son numéro et rejoint la file À payer.",
          "Rembourse, puis rapproche le virement."],
         %w[note-de-frais rapprocher]
       ),

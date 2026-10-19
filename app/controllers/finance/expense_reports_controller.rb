@@ -30,7 +30,10 @@ module Finance
                  finance_expense_report_path(@report), match: :exact
       @lines = @report.expense_lines.chronological.includes(:general_account, :team)
       @entry = @report.journal_entry
-      @accounts = ExpenseLine.assignable_accounts if @report.recorded?
+      if @report.recorded?
+        @accounts = ExpenseLine.assignable_accounts
+        @teams = Team.ordered
+      end
     end
 
     def new
@@ -88,15 +91,17 @@ module Finance
       end
     end
 
-    # Les comptes choisis ligne par ligne arrivent avec la date (`accounts[id]`) :
-    # attribuer et traiter, c'est le même geste.
+    # Les comptes et les pôles choisis ligne par ligne arrivent avec la date
+    # (`accounts[id]`, `teams[id]`) : attribuer et traiter, c'est le même geste.
     def start_processing
       ExpenseReports::Process.new(expense_report: @report, processed_on: params[:processed_on],
-                                  accounts: chosen_accounts, whodunnit: current_user&.email).run!
+                                  accounts: chosen_for(:accounts), teams: chosen_for(:teams),
+                                  whodunnit: current_user&.email).run!
       redirect_to finance_expense_report_path(@report),
                   notice: "Note #{@report.reload.reference} passée en traitement — l'écriture est au grand livre."
     rescue ExpenseReports::Process::BadStatus, ExpenseReports::Process::NoLines,
            ExpenseReports::Process::MissingFiscalYear, ExpenseReports::Process::MissingAccount,
+           ExpenseReports::Process::UnknownTeam,
            Accounting::PostExpenseReport::MissingAccount,
            Accounting::PostExpenseReport::NoLines,
            Accounting::PostDocument::MissingFiscalYear, Date::Error => e
@@ -141,10 +146,10 @@ module Finance
 
     def get_report = @report = ExpenseReport.includes(:expense_lines).find(params[:id])
 
-    def chosen_accounts
-      return {} if params[:accounts].blank?
+    def chosen_for(key)
+      return {} if params[key].blank?
 
-      params.require(:accounts).permit(@report.expense_lines.map { |line| line.id.to_s }).to_h
+      params.require(key).permit(@report.expense_lines.map { |line| line.id.to_s }).to_h
     end
 
     def refuse_edit

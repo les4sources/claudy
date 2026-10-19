@@ -214,7 +214,7 @@ RSpec.describe "Comptabilité — Notes de frais", type: :request do
         get finance_expense_report_path(report)
 
         expect(response.body).to include(%(name="accounts[#{line.id}]"), 'form="traitement-note"')
-        expect(CGI.unescapeHTML(response.body)).to include("1 à attribuer")
+        expect(CGI.unescapeHTML(response.body)).to include("1 compte(s) à attribuer")
       end
 
       it "enregistre le compte choisi et passe la note en traitement" do
@@ -236,6 +236,21 @@ RSpec.describe "Comptabilité — Notes de frais", type: :request do
 
         expect(report.reload.status).to eq("recorded")
         expect(flash[:alert]).to include("Attribue un compte de charge", "Visserie")
+      end
+
+      it "propose et enregistre le pôle de chaque ligne" do
+        report = sans_compte
+        line = report.expense_lines.sole
+        nature = Team.create!(name: "Pôle Nature")
+
+        get finance_expense_report_path(report)
+        expect(response.body).to include(%(name="teams[#{line.id}]"))
+
+        post start_processing_finance_expense_report_path(report),
+             params: { accounts: { line.id.to_s => fournitures.id.to_s }, teams: { line.id.to_s => nature.id.to_s } }
+
+        expect(report.reload.status).to eq("processing")
+        expect(line.reload.team).to eq(nature)
       end
 
       it "refuse un compte qui n'est ni une charge ni une immobilisation" do
@@ -293,6 +308,21 @@ RSpec.describe "Comptabilité — Notes de frais", type: :request do
   end
 
   describe "la fiche" do
+    it "donne le numéro de chaque ticket papier et la consigne du bac Admin, tant que la note attend" do
+      report = build_report
+      line = report.expense_lines.sole
+
+      get finance_expense_report_path(report)
+
+      body = CGI.unescapeHTML(response.body)
+      expect(body).to include("Tes tickets papier", "#{report.id}-1", "« Admin »", "farde plastique à ton nom")
+      expect(line.paper_receipt_label).to eq("#{report.id}-1")
+
+      ExpenseReports::Process.new(expense_report: report).run!
+      get finance_expense_report_path(report)
+      expect(CGI.unescapeHTML(response.body)).not_to include("Tes tickets papier")
+    end
+
     it "signale une note dont le bénéficiaire n'a pas d'IBAN" do
       report = build_report(person: autre)
 
