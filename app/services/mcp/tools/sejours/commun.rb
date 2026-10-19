@@ -23,7 +23,7 @@ module Mcp
 
         METHODES = {
           "cash" => "espèces", "bank_transfer" => "virement", "card" => "carte", "stripe" => "en ligne (Stripe)",
-          "airbnb" => "Airbnb", "bookingdotcom" => "Booking.com", "tranchesdevie" => "Tranches de Vie"
+          "airbnb" => "via Airbnb", "bookingdotcom" => "Booking.com", "tranchesdevie" => "Tranches de Vie"
         }.freeze
 
         STATUTS_PAIEMENT = { "pending" => "en attente", "paid" => "payé", "refunded" => "remboursé" }.freeze

@@ -130,8 +130,8 @@ class PaymentDecorator < ApplicationDecorator
 
   def payment_method
     case object.payment_method
-    when "airbnb"
-      "Airbnb"
+    when Payment::AIRBNB_METHOD
+      "Via Airbnb"
     when "bookingdotcom"
       "Booking.com"
     when "bank_transfer"

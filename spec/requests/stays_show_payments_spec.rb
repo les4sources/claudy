@@ -43,6 +43,28 @@ RSpec.describe "Stays#show — section Paiements (epic #26 / #55)", type: :reque
     expect(response.body).to include("En attente")
   end
 
+  # « Via Airbnb » (Michael 2026-10-18) : choisissable sur toute fiche, et
+  # proposé d'office sur un séjour Airbnb.
+  it "propose « Via Airbnb » parmi les moyens, sans le présélectionner hors Airbnb" do
+    expect(response.body).to include('<option value="airbnb">Via Airbnb</option>')
+    expect(response.body).to include('<option selected="selected" value="bank_transfer">Virement</option>')
+  end
+
+  context "séjour Airbnb" do
+    before do
+      booking = Booking.create!(firstname: "Roel", adults: 2, from_date: from, to_date: to, platform: "airbnb")
+      StayItem.create!(stay: stay, bookable: booking)
+      Payment.create!(stay: stay, amount_cents: 1_000, payment_method: "airbnb", status: "paid")
+      get stay_path(stay)
+    end
+
+    it "présélectionne « Via Airbnb » et l'affiche sur la ligne de paiement" do
+      # Deux fois : l'ajout d'un paiement, et la correction du paiement Airbnb.
+      expect(response.body.scan('<option selected="selected" value="airbnb">Via Airbnb</option>').size).to eq(2)
+      expect(response.body).to include(">Via Airbnb</span>")
+    end
+  end
+
   context "séjour sans aucun paiement" do
     let(:empty_stay) do
       Stay.create!(customer: customer, source: "manual", status: "confirmed",

@@ -39,9 +39,10 @@ li.rounded-md.border.border-gray-200.bg-white.p-2
           label.block.text-xs.text-gray-600
             | Montant (€)
             = number_field_tag "payment[amount]", (raw_payment.amount_cents / 100.0).then { |e| format("%g", e) }, step: "0.01", min: "0.01", required: true, class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
-          label.block.text-xs.text-gray-600
-            | Moyen
-            = select_tag "payment[payment_method]", options_for_select([["Liquide", "cash"], ["Virement", "bank_transfer"], ["Carte", "card"], ["En ligne", "stripe"]], raw_payment.payment_method), class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
+          div.relative.text-xs.text-gray-600(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un moyen…")
+            span.block Moyen
+            = select_tag "payment[payment_method]", options_for_select(Payment.stay_method_options_for(raw_payment.payment_method, label: payment.payment_method), raw_payment.payment_method), class: "mt-1 block w-full rounded border-gray-300 text-sm py-1", data: { searchable_select_target: "select" }
+            = render "shared/searchable_select_search", label: "Chercher un moyen de paiement"
           label.block.text-xs.text-gray-600
             | Date du paiement <span class="text-gray-400">(optionnel)</span>
             = date_field_tag "payment[paid_on]", raw_payment.paid_on, class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
