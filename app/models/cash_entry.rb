@@ -126,6 +126,20 @@ class CashEntry < ApplicationRecord
     scope
   }
 
+  # Le montant tapé dans la recherche du journal (Michael, 2026-10-19), en
+  # centimes, sans signe : « 150 », « 12,50 », « 1.234,56 », « 1 234,56 € »,
+  # « -45.90 ». Une virgule ou un point suivi d'un ou deux chiffres en fin de
+  # saisie est la décimale ; les autres séparent les milliers. Rien
+  # d'interprétable (ou zéro, qu'aucune ligne ne porte) rend nil.
+  def self.searched_amount_cents(raw)
+    texte = raw.to_s.gsub(/[[:space:]€]|eur\z/i, "").delete_prefix("+").delete_prefix("-")
+    return nil unless texte.match?(/\A\d+([.,]\d{1,2})?\z/) || texte.match?(/\A\d{1,3}([.,])\d{3}(\1\d{3})*([.,]\d{1,2})?\z/)
+
+    entier, decimales = texte.match?(/[.,]\d{1,2}\z/) ? texte.split(/[.,](?=\d{1,2}\z)/) : [texte, "0"]
+    cents = (entier.delete(".,").to_i * 100) + decimales.ljust(2, "0").to_i
+    cents.positive? ? cents : nil
+  end
+
   # La recherche du journal (Michael, 2026-09-20) : on cherche une ligne par ce
   # qu'on en retient — un nom, un mot de la communication, parfois le libellé.
   # Les trois colonnes ensemble, sans casse ni accents : « epicerie » doit

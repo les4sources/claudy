@@ -173,7 +173,8 @@ module Finance
       ),
       "finance/cash_entries" => Page.new(
         "Le journal de trésorerie : tous les mouvements d'argent réels (banque, caisse, Stripe), un par ligne.",
-        ["Cherche une ligne par un nom ou un mot de la communication.",
+        ["Cherche une ligne par un nom ou un mot de la communication, ou par son montant (45,90 trouve l'entrée " \
+         "comme la sortie).",
          "Pour faire le travail, ouvre « À affecter » : c'est la file qui doit tomber à zéro."],
         %w[tresorerie a-affecter]
       ),

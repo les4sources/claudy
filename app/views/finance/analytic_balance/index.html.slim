@@ -8,11 +8,11 @@
     = render "shared/searchable_select_search", label: "Chercher une entité"
   div
     = f.label :from, "Du", class: "block text-sm font-medium text-gray-700"
-    = f.date_field :from, value: @from, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+    = f.date_field :from, value: @from, label: false, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
   div
     = f.label :to, "Au", class: "block text-sm font-medium text-gray-700"
-    = f.date_field :to, value: @to, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
-  = f.submit "Afficher", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+    = f.date_field :to, value: @to, label: false, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
+  = submit_tag "Afficher", name: nil, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
 
 - if @pending_entries.positive?
   .mb-4.p-4.rounded-lg.border.border-amber-100(class="bg-amber-50/60")

@@ -5,7 +5,7 @@
   div
     = f.label :month, "Mois", class: "block text-sm font-medium text-gray-700"
     = f.text_field :month, value: @month.strftime("%Y-%m"), placeholder: "2026-08", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm"
-  = f.submit "Afficher", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+  = submit_tag "Afficher", name: nil, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
 
 / L'écart n'est pas une anomalie, et le dire évite de partir en chasse pour rien.
 .mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
