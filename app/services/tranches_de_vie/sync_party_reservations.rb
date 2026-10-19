@@ -1,7 +1,8 @@
 module TranchesDeVie
   # Répercute ici les annulations et remboursements décidés là-bas (issue #339),
-  # le paiement d'une party rattachée avant d'être réglée, et un changement de
-  # prix (nombre de personnes revu avant la soirée).
+  # le paiement d'une party rattachée avant d'être réglée, un pointage annulé
+  # là-bas (la party redevient due) et un changement de prix (nombre de
+  # personnes revu avant la soirée).
   #
   # Une party remboursée sort du total du séjour et son paiement sort de
   # l'encaissé (statut `refunded`), mais la LIGNE RESTE VISIBLE : la compta doit
@@ -61,13 +62,22 @@ module TranchesDeVie
       previous_price = reservation.price_cents
       reservation.update!(attributes)
       newly_paid = reservation.paid? && !was_paid
-      return if reservation.status == previous_status && !newly_paid && reservation.price_cents == previous_price
+      newly_unpaid = was_paid && !reservation.paid?
+      return if reservation.status == previous_status && !newly_paid && !newly_unpaid && reservation.price_cents == previous_price
 
       @changed += 1
       if newly_paid && reservation.active? && reservation.payment.nil? && reservation.price_cents.positive?
         # Rattachée avant d'être payée (réglée sur place) : l'argent est arrivé
         # là-bas, il entre dans l'encaissé ici.
         reservation.update!(payment: AttachPartyReservation.build_payment!(reservation))
+      elsif newly_unpaid && reservation.active? && reservation.payment.present?
+        # Pointage annulé là-bas (mauvais bouton, caisse pas encore faite) :
+        # l'argent n'est jamais arrivé. La party reste due dans le total, son
+        # paiement sort de l'encaissé (soft-delete, comme au détachement) et
+        # reviendra le jour où Tranches de Vie la verra payée.
+        payment = reservation.payment
+        reservation.update!(payment: nil)
+        payment.soft_delete!(validate: false)
       elsif reservation.status != previous_status
         # L'argent suit le statut : une party qui sort du total sort de
         # l'encaissé, une party qui redevient active y revient.
