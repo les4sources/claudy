@@ -155,4 +155,20 @@ RSpec.describe "Public /sejour/:token — page client enrichie", type: :request 
       expect(response.body).not_to include('data-stay-siblings="true"')
     end
   end
+
+  # Séjour #1554 (Michael, 2026-10-19) : une activité seule pour une
+  # organisation, sans hébergement ni espace. « Vos informations » restait vide.
+  it "montre le nom et les coordonnées du client d'un séjour sans réservable" do
+    org = Customer.create!(customer_type: "organization", organization_name: "Fondation Rurale de Wallonie",
+                           email: "contact@frw.be", phone: "+32 81 26 18 82")
+    stay = Stay.create!(customer: org, source: "manual", status: "confirmed",
+                        arrival_date: Date.today + 10, departure_date: Date.today + 10)
+
+    get "/sejour/#{stay.token}"
+
+    contact = response.body[/data-stay-contact="true".*?<\/dd>/m]
+    expect(contact).to include("Fondation Rurale de Wallonie")
+    expect(contact).to include("contact@frw.be")
+    expect(contact).to include("+32 81 26 18 82")
+  end
 end

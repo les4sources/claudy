@@ -794,6 +794,28 @@ class StayDecorator < ApplicationDecorator
     [person.presence, group].compact.join(" · ").presence || "—"
   end
 
+  # Bloc « Vos informations » de la page client (Michael, 2026-10-19). Il lisait
+  # `contact_line`, donc le seul réservable : un séjour sans hébergement ni
+  # espace (une activité seule, des repas) n'en a pas, et la page affichait
+  # « — » alors que le client avait un nom et une adresse (séjour #1554).
+  #
+  # Le CLIENT est la source : son nom, son email, son téléphone. Le nom de la
+  # personne ou du groupe porté par la réservation s'y ajoute quand il dit autre
+  # chose. Sur un client FOURRE-TOUT, rien du client ne sort (nom et boîte sont
+  # ceux des 4 Sources) : seule la réservation d'origine parle.
+  # Rend { name:, email:, phone: } ; `name` vaut « — » quand on ne sait rien.
+  def public_contact
+    origin = origin_contacts.first || {}
+    customer = catch_all_customer? ? nil : object.customer
+
+    names = [customer&.explicit_name, origin[:name], origin[:group]].compact_blank
+    names = names.uniq { |n| n.strip.downcase }
+
+    { name:  names.join(" · ").presence || "—",
+      email: customer ? customer.email.presence : origin[:email],
+      phone: customer&.phone.presence || origin[:phone] }
+  end
+
   # --- Ventilation du montant exigible (epic #55, Phase 3) ---------------
   # Montants formatés en euros pour la page client. On lit l'arithmétique du
   # modèle (source unique de vérité « total prévu vs exigible »).
