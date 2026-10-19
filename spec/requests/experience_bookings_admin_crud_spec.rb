@@ -38,6 +38,19 @@ RSpec.describe "ExperienceBookings — CRUD admin sur un séjour", type: :reques
       expect(response.body).to include("Balade ânes")
       expect(response.body).to include("stay_#{stay.id}_activities") # turbo-frame d'ancrage
     end
+
+    it "montre l'avatar de qui tient l'activité, son prénom en bulle" do
+      ExperienceBooking.create!(experience_availability: avail_a, stay: stay, participants: 2, status: "confirmed")
+      sign_in admin
+      get stay_path(stay)
+      expect(response.body).to include('data-tooltip-text-value="Porteuse A"')
+
+      remplacant = Human.create!(name: "Remplaçant", email: "r@example.com")
+      ExperienceBooking.last.update!(performed_by: remplacant)
+      get stay_path(stay)
+      expect(response.body).to include('data-tooltip-text-value="Remplaçant"')
+      expect(response.body).not_to include('data-tooltip-text-value="Porteuse A"')
+    end
   end
 
   describe "POST /stays/:stay_id/experience_bookings (ajout)" do

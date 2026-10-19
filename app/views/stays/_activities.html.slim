@@ -23,14 +23,19 @@
     - if local_assigns[:alert].present?
       p.mb-2.rounded.bg-red-50.px-2.py-1.text-xs.font-medium.text-red-700(role="alert")
         = local_assigns[:alert]
-    - active_bookings = @stay.experience_bookings.active.includes(experience_availability: :experience).to_a
+    - active_bookings = @stay.experience_bookings.active.includes(:performed_by, experience_availability: { experience: :human }).to_a
     - if active_bookings.empty?
       p.text-sm.text-gray-500.mb-2 Aucune activité sur ce séjour.
     - else
       ul.divide-y.divide-gray-100.mb-3
         - active_bookings.each do |booking|
           li.py-2.text-sm.flex.items-center.justify-between.gap-3
-            .min-w-0
+            / Avatar de qui tient l'activité (la personne nommée sur la
+              réservation, sinon le porteur), prénom en bulle (Michael 2026-10-19).
+            - carrier = booking.carrier
+            = tag.span(**tooltip_options(carrier&.name || "Sans porteur", class: "shrink-0 self-start mt-0.5", tabindex: 0)) do
+              = render "humans/avatar", human: carrier, size: "w-8 h-8", title: false
+            .min-w-0.flex-1
               .text-gray-900.font-medium.truncate = booking.experience.name
               .text-gray-500
                 = booking.experience_availability.available_on&.strftime("%-d/%m/%Y")

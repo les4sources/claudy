@@ -16,7 +16,8 @@ import { createPopper } from "@popperjs/core"
 //    pur, sans Popper : bulle sombre arrondie avec sa flèche, au-dessus de
 //    l'élément ou en dessous s'il n'y a pas la place (première ligne d'une
 //    liste), recalée dans la largeur de la fenêtre. Posée en `fixed` sur le
-//    <body> : aucun décalage de mise en page, jamais rognée par un parent.
+//    <body> (ou dans la modale <dialog> ouverte qui contient l'élément) : aucun
+//    décalage de mise en page, jamais rognée par un parent.
 //    Côté vue, passer par le helper `tooltip_options` (UiHelper), qui pose aussi
 //    l'`aria-label` à la place du `title=` natif.
 //   el(data-controller="tooltip"
@@ -76,7 +77,10 @@ export default class extends Controller {
   showBubble() {
     if (!this.bubble) this.bubble = this.buildBubble()
     this.bubble.firstChild.textContent = this.textValue
-    document.body.appendChild(this.bubble)
+    // Dans une modale <dialog>, la bulle doit vivre DANS le dialog : posée sur
+    // le <body>, elle resterait sous la couche supérieure (top layer), invisible.
+    const host = this.element.closest("dialog[open]") || document.body
+    host.appendChild(this.bubble)
     this.positionBubble()
     requestAnimationFrame(() => this.bubble?.classList.replace("opacity-0", "opacity-100"))
     // Une bulle `fixed` ne suit pas le défilement : on la retire plutôt que de
