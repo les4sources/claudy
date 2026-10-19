@@ -18,6 +18,12 @@ module Stays
       "canceled"      => Stay::CANCELED_STATUSES
     }.freeze
 
+    # Sans statut dans l'URL, la liste montre les séjours confirmés (Michael,
+    # 2026-10-18) : c'est ce qu'on vient y regarder. « Tous » se demande donc
+    # explicitement, par `status=all`. Un statut inconnu retombe sur le défaut.
+    DEFAULT_STATUS = "confirmed"
+    ALL            = "all"
+
     # Associations que `IndexAmounts` lit en mémoire (items Booking pour les
     # paiements, activités pour l'exigible).
     AMOUNT_PRELOADS = [
@@ -28,7 +34,9 @@ module Stays
     attr_reader :status, :referral
 
     def initialize(params)
-      @status      = params[:status].to_s.presence_in(STATUSES.keys)
+      raw          = params[:status].to_s
+      @all         = (raw == ALL)
+      @status      = @all ? nil : (raw.presence_in(STATUSES.keys) || DEFAULT_STATUS)
       @balance_due = params[:solde].to_s == "1"
       # Apporteur (Michael, 2026-10-18) : les séjours venus par un lien
       # partenaire (`Stay::REFERRALS`), pour préparer ce qu'on lui reverse.
@@ -39,13 +47,20 @@ module Stays
       @balance_due
     end
 
+    # « Tous » choisi : aucun filtre de statut.
+    def all_statuses?
+      @all
+    end
+
     def active?
       status.present? || balance_due? || referral.present?
     end
 
     # Paramètres à reporter dans les liens de la page (trimestres, effacer…).
+    # Le statut y est toujours explicite, « Tous » compris : sans lui, le lien
+    # retomberait sur le défaut.
     def to_params
-      { status: status, solde: (balance_due? ? "1" : nil), apporteur: referral }.compact
+      { status: (all_statuses? ? ALL : status), solde: (balance_due? ? "1" : nil), apporteur: referral }.compact
     end
 
     # Filtres SQL : statut et apporteur.

@@ -32,12 +32,21 @@ RSpec.describe "Index Séjours — filtres statut et solde", type: :request do
     %w[Attente Preconf Solde Paye Annule Historic].select { |nom| response.body.include?("Client #{nom}") }
   end
 
-  it "liste tout sans filtre et propose les pastilles" do
+  # Défaut (Michael 2026-10-18) : sans statut dans l'URL, les confirmés.
+  it "montre les séjours confirmés par défaut et propose les pastilles" do
     get stays_path
     expect(response).to have_http_status(:ok)
-    expect(noms_affiches).to eq(%w[Attente Preconf Solde Paye Annule Historic])
+    expect(noms_affiches).to eq(%w[Solde Paye])
     expect(response.body).to include("Solde à payer")
     expect(response.body).to include("Pré-confirmé")
+    expect(response.body).to match(%r{<a [^>]*aria-current="true"[^>]*>Confirmé</a>})
+  end
+
+  it "« Tous » montre tous les statuts et le reste dans la navigation" do
+    get stays_path(status: "all")
+    expect(noms_affiches).to eq(%w[Attente Preconf Solde Paye Annule Historic])
+    expect(response.body).to match(%r{<a [^>]*aria-current="true"[^>]*>Tous</a>})
+    expect(response.body).to include("status=all&amp;year=#{trimestre.year}")
   end
 
   it "filtre par statut" do
@@ -50,13 +59,13 @@ RSpec.describe "Index Séjours — filtres statut et solde", type: :request do
     expect(noms_affiches).to eq(%w[Annule Historic])
   end
 
-  it "ignore un statut inconnu" do
+  it "retombe sur le défaut pour un statut inconnu" do
     get stays_path(status: "nimporte")
-    expect(noms_affiches.size).to eq(6)
+    expect(noms_affiches).to eq(%w[Solde Paye])
   end
 
   it "ne garde que les séjours non annulés avec un solde exigible" do
-    get stays_path(solde: "1")
+    get stays_path(status: "all", solde: "1")
     expect(noms_affiches).to eq(%w[Attente Preconf Solde])
     total = ApplicationController.helpers.humanized_money_with_symbol(Money.new(40_000))
     expect(response.body).to include(total)
@@ -89,8 +98,8 @@ RSpec.describe "Index Séjours — filtres statut et solde", type: :request do
     get stays_path(status: "pending")
     expect(response.body).not_to include("quarter=#{autre}&amp;status=pending")
 
-    get stays_path(solde: "1")
-    expect(response.body).to include("quarter=#{autre}&amp;solde=1")
+    get stays_path(status: "all", solde: "1")
+    expect(response.body).to include("quarter=#{autre}&amp;solde=1&amp;status=all")
   end
 
   it "dit quand aucun séjour ne correspond aux filtres" do
