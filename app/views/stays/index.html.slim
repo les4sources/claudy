@@ -208,13 +208,10 @@
                  ou check vert. Le badge faisait doublon et coûtait 150 px.
               /  Statut de facturation (Michael, 2026-10-19), à la place de la
                  colonne « Actions » et de son lien « Éditer » : l'édition passe
-                 par la modale, ouverte d'un clic sur la ligne. « Non requise »
-                 reste discret, le badge ne marque que ce qui attend ou est parti.
-              td.px-3.py-2.text-sm.whitespace-nowrap
-                - if stay.invoice_expected?
-                  = stay.invoice_badge
-                - else
-                  span.text-xs.text-gray-400 Non requise
+                 par la modale, ouverte d'un clic sur la ligne. Facture non
+                 requise : cellule vide, le badge ne marque que ce qui attend ou
+                 est parti (`invoice_badge` rend nil sinon).
+              td.px-3.py-2.text-sm.whitespace-nowrap = stay.invoice_badge
           - if @stays.empty?
             tr.bg-white
               td.px-4.py-6.text-center.text-sm.text-gray-400 colspan="6"

@@ -124,7 +124,7 @@ RSpec.describe "Index Séjours (/stays)", type: :request do
   describe "colonne Facturation" do
     let(:debut) { Date.today.beginning_of_quarter }
 
-    it "affiche le statut de facturation de chaque séjour" do
+    it "affiche le statut de facturation, rien quand la facture n'est pas requise" do
       create_stay(email: "a-fournir@example.com", arrival: debut + 2, departure: debut + 4).update!(invoice_status: "requested")
       create_stay(email: "facturee@example.com", arrival: debut + 5, departure: debut + 7).update!(invoice_status: "sent")
       create_stay(email: "sans-facture@example.com", arrival: debut + 8, departure: debut + 9)
@@ -134,7 +134,8 @@ RSpec.describe "Index Séjours (/stays)", type: :request do
       expect(response.body).to include(">Facturation</th>")
       expect(response.body).to include(">À fournir</span>")
       expect(response.body).to include(">Facturée</span>")
-      expect(response.body).to include(">Non requise</span>")
+      # Facture non requise : rien dans la cellule (Michael, 2026-10-19).
+      expect(response.body).not_to include("Non requise")
     end
 
     it "n'a plus de colonne Actions, de lien Éditer ni de mention « imposé »" do
