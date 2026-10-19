@@ -7,7 +7,7 @@ import { Controller } from "@hotwired/stimulus"
 // boîte mail. Sans le reste-à-ventiler affiché, on découvre le déséquilibre à la
 // validation, une fois les vingt lignes tapées.
 export default class extends Controller {
-  static targets = ["rows", "template", "row", "total", "allocated", "remaining", "verdict",
+  static targets = ["rows", "template", "row", "total", "allocated", "vat", "remaining", "verdict",
                     "dropzone", "file", "filename", "previewFrame", "previewImage", "previewEmpty"]
 
   connect() {
@@ -40,18 +40,32 @@ export default class extends Controller {
     this.refresh()
   }
 
+  // Les lignes se tapent HTVA avec leur taux, comme sur la pièce. La TVA se
+  // calcule taux par taux sur la somme des bases, comme le fournisseur l'a
+  // calculée (et comme `PurchaseInvoice#compute_vat` l'enregistre) : le reste à
+  // ventiler compare alors le total TVAC à des lignes TVA comprise.
   refresh() {
     const totalCents = this.toCents(this.totalTarget.value)
-    let allocatedCents = 0
+    const basesByRate = new Map()
 
     this.rowTargets.forEach((row) => {
       if (row.hidden) return
-      allocatedCents += this.toCents(row.querySelector("[data-role='amount']")?.value)
+      const net = this.toCents(row.querySelector("[data-role='amount']")?.value)
+      const rate = parseInt(row.querySelector("[data-role='vat-rate']")?.value ?? "0", 10) || 0
+      basesByRate.set(rate, (basesByRate.get(rate) ?? 0) + net)
     })
 
-    const remaining = totalCents - allocatedCents
+    let netCents = 0
+    let vatCents = 0
+    basesByRate.forEach((base, rate) => {
+      netCents += base
+      vatCents += Math.sign(base) * Math.round(Math.abs(base) * rate / 100)
+    })
 
-    this.allocatedTarget.textContent = this.format(allocatedCents)
+    const remaining = totalCents - netCents - vatCents
+
+    this.allocatedTarget.textContent = this.format(netCents)
+    if (this.hasVatTarget) this.vatTarget.textContent = this.format(vatCents)
     this.remainingTarget.textContent = this.format(remaining)
 
     if (this.hasVerdictTarget) {

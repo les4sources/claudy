@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_19_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_19_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2003,6 +2003,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_090000) do
     t.bigint "purchase_invoice_id", null: false
     t.bigint "team_id"
     t.datetime "updated_at", null: false
+    t.integer "vat_cents", default: 0, null: false
+    t.integer "vat_rate", default: 0, null: false
     t.index ["analytic_account_id"], name: "index_purchase_lines_on_analytic"
     t.index ["deleted_at"], name: "index_purchase_lines_on_deleted_at"
     t.index ["general_account_id"], name: "index_purchase_lines_on_account"

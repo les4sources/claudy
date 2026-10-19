@@ -301,7 +301,7 @@ module Finance
         :legal_entity_id, :third_party_id, :number, :issued_on, :due_on, :total_euros, :payment_reference,
         :requires_validation, :validation_team_id, :notes,
         purchase_invoice_lines_attributes: %i[id general_account_id team_id analytic_account_id
-                                              amount_euros label position _destroy]
+                                              amount_euros net_euros vat_rate label position _destroy]
       ).tap do |permitted|
         euros = permitted.delete(:total_euros)
         permitted[:total_cents] = to_cents(euros) if euros.present?
@@ -309,9 +309,13 @@ module Finance
         lines = permitted[:purchase_invoice_lines_attributes]
         next if lines.blank?
 
+        # Le formulaire tape le HTVA et son taux : la facture en tire la TVA
+        # et le TVAC (`PurchaseInvoice#compute_vat`).
         lines.each_value do |line|
           montant = line.delete(:amount_euros)
           line[:amount_cents] = to_cents(montant) if montant.present?
+          net = line.delete(:net_euros)
+          line[:net_cents] = to_cents(net) if net.present?
         end
       end
     end

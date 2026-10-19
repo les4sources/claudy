@@ -2,6 +2,13 @@
   et pôle se cherchent (`searchable-select`) : le plan comptable fait des
   centaines de lignes. Une ligne ajoutée depuis le <template> s'équipe toute
   seule, Stimulus branche les contrôleurs à l'insertion.
+
+  Le montant se tape HTVA avec son taux, comme sur la pièce : la TVA s'ajoute
+  au calcul du reste à ventiler. Une ligne vide part à 21 % ; une ligne qui a
+  déjà un montant (enregistrée, ou lue d'un mail en TVAC) garde son taux.
+- line = lf.object
+- vat_rate = line.persisted? || line.amount_cents.to_i.nonzero? ? line.vat_rate : PurchaseInvoiceLine::DEFAULT_VAT_RATE
+- net_cents = line.net_cents || line.net_amount_cents
 .rounded-xl.bg-gray-50.px-3.py-3(data-purchase-invoice-form-target="row")
   = lf.hidden_field :id
   = lf.hidden_field :_destroy, value: "0"
@@ -14,14 +21,18 @@
       label.block.text-xs.font-medium.text-gray-500 Pôle
       = lf.collection_select :team_id, teams, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
       = render "shared/searchable_select_search", label: "Chercher un pôle"
-    .sm:col-span-8
+    .sm:col-span-6
       label.block.text-xs.font-medium.text-gray-500 Libellé
       = lf.text_field :label, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
-    .sm:col-span-4
-      label.block.text-xs.font-medium.text-gray-500 Montant (€)
-      = text_field_tag "#{lf.object_name}[amount_euros]", (lf.object.amount_cents.to_i.nonzero? ? format("%.2f", lf.object.amount_cents / 100.0) : nil),
+    .sm:col-span-3
+      label.block.text-xs.font-medium.text-gray-500 Montant HTVA (€)
+      = text_field_tag "#{lf.object_name}[net_euros]", (net_cents.nonzero? ? format("%.2f", net_cents / 100.0) : nil),
                        inputmode: "decimal", placeholder: "0,00",
                        class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
                        data: { role: "amount", action: "input->purchase-invoice-form#refresh" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Taux…" class="relative sm:col-span-3")
+      label.block.text-xs.font-medium.text-gray-500 TVA
+      = lf.select :vat_rate, PurchaseInvoiceLine::VAT_RATES.map { |rate| ["#{rate} %", rate] }, { selected: vat_rate }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { role: "vat-rate", searchable_select_target: "select", action: "change->purchase-invoice-form#refresh" }
+      = render "shared/searchable_select_search", label: "Chercher un taux"
   .mt-2.text-right
     button.text-xs.text-gray-400(type="button" data-action="purchase-invoice-form#remove") Retirer cette ligne
