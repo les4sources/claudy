@@ -169,6 +169,6 @@ RSpec.describe "Public /sejour/:token — page client enrichie", type: :request 
     contact = response.body[/data-stay-contact="true".*?<\/dd>/m]
     expect(contact).to include("Fondation Rurale de Wallonie")
     expect(contact).to include("contact@frw.be")
-    expect(contact).to include("+32 81 26 18 82")
+    expect(contact).to include("+3281261882")
   end
 end

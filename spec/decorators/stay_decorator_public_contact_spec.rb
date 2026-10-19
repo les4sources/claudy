@@ -15,7 +15,7 @@ RSpec.describe StayDecorator, "#public_contact" do
     stay = Stay.create!(customer: customer, source: "manual", status: "confirmed")
 
     expect(stay.decorate.public_contact).to eq(
-      name: "Fondation Rurale de Wallonie", email: "contact@frw.be", phone: "+32 81 26 18 82"
+      name: "Fondation Rurale de Wallonie", email: "contact@frw.be", phone: "+3281261882"
     )
   end
 
