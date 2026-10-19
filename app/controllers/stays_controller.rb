@@ -3,7 +3,7 @@ class StaysController < BaseController
   # sous-navigation Séjours · Coworking · Reporting · Comptabilité, qui remplace
   # l'ancien dropdown de la barre principale.
   before_action :set_home_view
-  before_action :set_stay, only: %i[edit update destroy update_status update_category update_invoice_status update_notes approve_change_request refuse_change_request send_confirmation_email pre_confirm create_pre_confirmation refuse create_refusal]
+  before_action :set_stay, only: %i[edit update destroy update_status update_category update_invoice_status update_notes update_accounting_notes approve_change_request refuse_change_request send_confirmation_email pre_confirm create_pre_confirmation refuse create_refusal]
 
   # Index admin des séjours (epic #81) — le séjour devient le point d'entrée
   # unique. Tableau paginé (30/page) orienté GESTION des réservations et
@@ -539,6 +539,15 @@ class StaysController < BaseController
     submitted = params.dig(:stay, :internal_notes).to_s
     @stay.update(internal_notes: Stays::InternalNote.present?(submitted) ? submitted : nil)
     redirect_to stay_path(@stay), notice: "Note enregistrée."
+  end
+
+  # Note COMPTABLE de la section « Comptabilité » de la modale (Michael,
+  # 2026-10-19) : même mécanique que la note interne, frame comprise. N'écrit
+  # QUE `accounting_notes`.
+  def update_accounting_notes
+    submitted = params.dig(:stay, :accounting_notes).to_s
+    @stay.update(accounting_notes: Stays::InternalNote.present?(submitted) ? submitted : nil)
+    redirect_to stay_path(@stay), notice: "Note comptable enregistrée."
   end
 
   # Suppression = soft-delete (soft_deletion + PaperTrail), jamais de hard destroy.

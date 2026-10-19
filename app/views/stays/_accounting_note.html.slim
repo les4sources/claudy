@@ -1,0 +1,27 @@
+/ NOTE COMPTABLE (Michael, 2026-10-19) — même système que la note interne :
+  repliée à l'ouverture, un clic la déplie en éditeur de texte riche, le
+  turbo-frame enregistre sans recharger la modale. Le Pôle Accueil y donne de
+  quoi établir la facture (raison sociale, TVA, adresse, bon de commande…), la
+  compta y note quand c'est facturé.
+  Écriture COURANTE, pas manuscrite : ce sont des coordonnées à recopier sur une
+  facture, la lisibilité prime.
+- note_html = @stay.accounting_notes&.body&.to_html
+- derniere = @stay.accounting_note_last_edit
+= turbo_frame_tag "stay_#{@stay.id}_accounting_note" do
+  .mt-3
+    .text-sm.text-gray-600 Note comptable
+    details.mt-1
+      summary.cursor-pointer.select-none.list-none
+        - if @stay.accounting_note?
+          .content.rounded-md.border.border-dashed.border-gray-300.bg-white.px-3.py-2.text-sm.text-gray-800
+            == note_html
+        - else
+          .rounded-md.border.border-dashed.border-gray-300.bg-white.px-3.py-2.text-sm.text-gray-500
+            | Aucune note comptable — cliquer pour en ajouter
+      = form_with url: update_accounting_notes_stay_path(@stay), method: :patch, class: "mt-2 space-y-2" do
+        = rich_text_area_tag "stay[accounting_notes]", note_html, id: "stay_#{@stay.id}_accounting_notes", class: "lexxy-content", placeholder: "Infos pour la facture, date de facturation…"
+        .flex.flex-wrap.items-center.gap-2
+          = submit_tag "Enregistrer la note", class: "cursor-pointer rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+          - if derniere
+            span.text-xs.text-gray-500
+              = ["modifiée", (derniere[:by].present? ? "par #{derniere[:by]}" : nil), "· #{l(derniere[:at].to_date, format: :long)}"].compact.join(" ")

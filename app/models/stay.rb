@@ -200,6 +200,10 @@ class Stay < ApplicationRecord
   # laisser en base une ligne au corps nul, qui n'est ni une note ni rien. Les
   # séjours sans note interne — l'immense majorité — n'ont donc aucune ligne.
   has_rich_text :internal_notes, store_if_blank: false
+  # Note COMPTABLE (Michael, 2026-10-19) : même système que la note interne. Le
+  # Pôle Accueil y donne de quoi établir la facture, la compta y note quand
+  # c'est facturé. Jamais visible du client.
+  has_rich_text :accounting_notes, store_if_blank: false
   # Repas (epic #66, Phase 3) : rattachés en direct (pas d'occupation calendrier),
   # sur le modèle d'`experience_bookings`.
   has_many :meal_orders, dependent: :destroy
@@ -281,6 +285,16 @@ class Stay < ApplicationRecord
   # texte seul et les comparaisons d'idempotence. Jamais `nil`.
   def internal_note_text
     internal_notes.to_plain_text.strip
+  end
+
+  # Texte brut de la note comptable, jamais `nil` (même lecture que la note
+  # interne : le corps vide d'un éditeur riche n'est pas une note).
+  def accounting_note_text
+    accounting_notes.to_plain_text.strip
+  end
+
+  def accounting_note?
+    accounting_note_text.present?
   end
 
   # Une facture est-elle attendue sur ce séjour (à fournir OU déjà envoyée) ?

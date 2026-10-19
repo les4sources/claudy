@@ -167,7 +167,7 @@ div id="stay-details-#{@stay.id}"
             = select_tag "stay[category]", options_for_select(Stay::CATEGORIES.map(&:reverse), @stay.category), include_blank: "— Aucune —", class: "block w-full rounded-md border-gray-300 text-sm py-1.5"
 
       /  Comptabilité (Michael, 2026-10-19), juste au-dessus des paiements :
-         pour l'instant le seul statut de facturation, modifiable sur place.
+         statut de facturation et note comptable, modifiables sur place.
       = render "stays/accounting_panel"
 
       = render "stays/payments_panel"
