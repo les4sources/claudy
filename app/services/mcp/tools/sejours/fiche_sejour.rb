@@ -10,7 +10,7 @@ module Mcp
              title: "Fiche d'un séjour",
              description: "Le détail d'un séjour : client et contact, dates et heures, composition (hébergement, " \
                           "espaces, camping, repas, activités, draps), montants, paiements (avec leurs " \
-                          "identifiants), notes interne et publique, demande de modification en attente.",
+                          "identifiants), notes interne, publique et comptable, demande de modification en attente.",
              schema: { properties: { sejour: SEJOUR }, required: %w[sejour] }
 
         ACTIVITES = { "pending" => "à valider par le porteur", "confirmed" => "validée", "refused" => "refusée",
@@ -116,6 +116,7 @@ module Mcp
           blocs = []
           blocs << "Note interne :\n#{interne}" if interne.present?
           blocs << "Note publique (visible du client) :\n#{publique}" if publique.present?
+          blocs << "Note comptable :\n#{stay.accounting_note_text}" if stay.accounting_note?
           blocs.presence&.join("\n\n")
         end
 

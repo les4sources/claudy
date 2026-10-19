@@ -1,8 +1,8 @@
 require "rails_helper"
 
 # Section « Comptabilité » de la modale séjour (Michael, 2026-10-19) : au-dessus
-# des paiements, le statut de facturation, modifiable sans ouvrir le formulaire
-# d'édition.
+# des paiements, le statut de facturation et la note comptable, modifiables sans
+# ouvrir le formulaire d'édition.
 RSpec.describe "Stays — section Comptabilité de la modale", type: :request do
   include Devise::Test::IntegrationHelpers
 
@@ -79,6 +79,51 @@ RSpec.describe "Stays — section Comptabilité de la modale", type: :request do
 
       expect(response).to redirect_to(stay_path(stay))
       expect(stay.reload.invoice_status).to eq("sent")
+    end
+  end
+
+  describe "note comptable" do
+    it "invite à en ajouter une, dans la section Comptabilité" do
+      stay = create_stay
+
+      get stay_path(stay, modal: 1)
+
+      body = response.body
+      expect(body).to include("Aucune note comptable", update_accounting_notes_stay_path(stay))
+      expect(body).to match(/<lexxy-editor[^>]*name="stay\[accounting_notes\]"/)
+      expect(body.index("Note comptable")).to be < body.index(">Paiements<")
+    end
+
+    it "enregistre la note sans toucher à la note interne" do
+      stay = create_stay
+      stay.update!(internal_notes: "<p>Clés dans le boîtier.</p>")
+
+      patch update_accounting_notes_stay_path(stay), params: { stay: { accounting_notes: "<p>ASBL Chorale, BE0123.456.789</p>" } }
+
+      expect(response).to redirect_to(stay_path(stay))
+      stay.reload
+      expect(stay.accounting_note_text).to eq("ASBL Chorale, BE0123.456.789")
+      expect(stay.internal_note_text).to eq("Clés dans le boîtier.")
+    end
+
+    it "l'affiche dans la modale avec son auteur" do
+      stay = create_stay
+      PaperTrail.request(whodunnit: user.id.to_s) { stay.update!(accounting_notes: "<p>Facturée le 19/10</p>") }
+
+      get stay_path(stay, modal: 1)
+
+      expect(response.body).to include("Facturée le 19/10", "modifiée par #{user.email}")
+      expect(response.body).not_to include("Aucune note comptable")
+    end
+
+    it "efface la note quand l'éditeur renvoie du HTML creux" do
+      stay = create_stay
+      stay.update!(accounting_notes: "<p>À effacer</p>")
+
+      patch update_accounting_notes_stay_path(stay), params: { stay: { accounting_notes: "<div><br></div>" } }
+
+      expect(stay.reload.accounting_note?).to be(false)
+      expect(ActionText::RichText.where(record: stay, name: "accounting_notes")).to be_empty
     end
   end
 end

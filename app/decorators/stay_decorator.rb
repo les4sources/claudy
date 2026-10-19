@@ -630,10 +630,19 @@ class StayDecorator < ApplicationDecorator
     { at: version.created_at, by: note_editor_name(version.whodunnit) }
   end
 
-  # Versions du texte riche `internal_notes` porté par CE séjour.
-  def rich_note_last_version
+  # Dernière édition de la note COMPTABLE (Michael, 2026-10-19) : née en texte
+  # riche, elle n'a pas d'historique d'avant à rattraper.
+  def accounting_note_last_edit
+    version = rich_note_last_version("accounting_notes")
+    return nil if version.nil?
+
+    { at: version.created_at, by: note_editor_name(version.whodunnit) }
+  end
+
+  # Versions du texte riche `name` (la note interne par défaut) porté par CE séjour.
+  def rich_note_last_version(name = "internal_notes")
     rich_text_id = ActionText::RichText
-                   .where(record_type: "Stay", record_id: object.id, name: "internal_notes")
+                   .where(record_type: "Stay", record_id: object.id, name: name)
                    .pick(:id)
     return nil if rich_text_id.nil?
 

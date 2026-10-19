@@ -746,6 +746,8 @@ Rails.application.routes.draw do
       # sans ouvrir le form d'édition. C'est l'écriture la plus fréquente du
       # quotidien : elle mérite d'être à un clic.
       patch :update_notes
+      # Note COMPTABLE, même mécanique que la note interne (Michael, 2026-10-19).
+      patch :update_accounting_notes
       # Demande de modification client (issue #133) : approbation / refus par
       # l'équipe. C'est le seul chemin qui applique la demande au séjour.
       post :approve_change_request

@@ -74,6 +74,12 @@ RSpec.describe Mcp::Server, "séjours" do
       expect(fiche).to include("pas encore due (séjour pas encore confirmé, séjour pas entièrement payé)")
     end
 
+    it "donne la note comptable" do
+      sejour.update!(accounting_notes: "<p>Facture au nom de l'ASBL Chorale</p>")
+      fiche = texte(outil("fiche_sejour", { "sejour" => "##{sejour.id}" }))
+      expect(fiche).to include("Note comptable :\nFacture au nom de l'ASBL Chorale")
+    end
+
     it "cherche un client par son téléphone" do
       expect(texte(outil("chercher_clients", { "recherche" => "470 11 22 33" }))).to include("##{client.id} Camille Martin")
     end
