@@ -739,6 +739,9 @@ Rails.application.routes.draw do
       # Changement rapide de catégorie depuis la modale (Michael 2026-07-21),
       # sans ouvrir le form d'édition. URL admin en ANGLAIS.
       patch :update_category
+      # Statut de facturation changé depuis la section « Comptabilité » de la
+      # modale (Michael, 2026-10-19), sans ouvrir le form d'édition.
+      patch :update_invoice_status
       # Édition de la note INTERNE depuis la modale séjour (Michael 2026-07-26),
       # sans ouvrir le form d'édition. C'est l'écriture la plus fréquente du
       # quotidien : elle mérite d'être à un clic.

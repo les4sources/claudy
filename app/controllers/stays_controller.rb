@@ -3,7 +3,7 @@ class StaysController < BaseController
   # sous-navigation Séjours · Coworking · Reporting · Comptabilité, qui remplace
   # l'ancien dropdown de la barre principale.
   before_action :set_home_view
-  before_action :set_stay, only: %i[edit update destroy update_status update_category update_notes approve_change_request refuse_change_request send_confirmation_email pre_confirm create_pre_confirmation refuse create_refusal]
+  before_action :set_stay, only: %i[edit update destroy update_status update_category update_invoice_status update_notes approve_change_request refuse_change_request send_confirmation_email pre_confirm create_pre_confirmation refuse create_refusal]
 
   # Index admin des séjours (epic #81) — le séjour devient le point d'entrée
   # unique. Tableau paginé (30/page) orienté GESTION des réservations et
@@ -497,6 +497,30 @@ class StaysController < BaseController
       redirect_to stay_path(@stay), notice: "Catégorie mise à jour."
     else
       redirect_to stay_path(@stay), alert: error
+    end
+  end
+
+  # Statut de facturation changé depuis la section « Comptabilité » de la modale
+  # (Michael, 2026-10-19). Mêmes valeurs que le formulaire d'édition : vide =
+  # « Non requise », qui arrive aussi en `none` (la liste cherchable de la modale
+  # ne montre pas d'option vide). Réponse Turbo Stream qui remplace toute la
+  # modale, pour que le badge de facture de l'en-tête suive le choix.
+  def update_invoice_status
+    submitted = params.dig(:stay, :invoice_status).to_s
+    submitted = "" if submitted == "none"
+    ok = submitted.blank? || Stay::INVOICE_STATUSES.key?(submitted)
+    ok &&= @stay.update(invoice_status: submitted.presence)
+
+    @stay = Stay.includes(stay_items: :bookable, customer: []).find(@stay.id).decorate
+    @assignable_availabilities = assignable_availabilities_for(@stay)
+
+    respond_to do |format|
+      format.turbo_stream do
+        render turbo_stream: turbo_stream.replace("stay-details-#{@stay.id}", partial: "stays/details")
+      end
+      format.html do
+        redirect_to stay_path(@stay), (ok ? { notice: "Statut de facturation mis à jour." } : { alert: "Statut de facturation invalide." })
+      end
     end
   end
 

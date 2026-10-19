@@ -111,7 +111,11 @@ export default class extends Controller {
 
   filter() {
     this.lireLesOptions()
-    const requete = this.constructor.normaliser(this.inputTarget.value)
+    // Le champ montre le choix en cours : tant qu'on n'a rien tapé d'autre, la
+    // liste propose TOUTES les options, pas seulement celle déjà retenue.
+    const choisie = this.options.find((o) => o.value === this.selectTarget.value)
+    const texte = choisie && this.inputTarget.value === choisie.label ? "" : this.inputTarget.value
+    const requete = this.constructor.normaliser(texte)
     const visibles = this.options
       .filter((o) => o.value !== "" && (requete === "" || o.cle.includes(requete)))
       .slice(0, this.maxValue)
