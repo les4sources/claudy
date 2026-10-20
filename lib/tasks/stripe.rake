@@ -42,6 +42,30 @@ namespace :stripe do
     exit 1
   end
 
+  # Le montant des justificatifs mensuels des frais, relevé chez Stripe
+  # (Michael, 2026-10-19). Quotidienne au cron avec APPLY=1 : sans effet sur un
+  # mois déjà déclaré, elle remplit le mois précédent dès le 1er. Le PDF reste à
+  # déposer à la main, Stripe ne l'expose pas par l'API.
+  desc "Prérempli le montant des justificatifs Stripe des mois terminés — [SINCE=2026-01-01], dry-run par défaut, APPLY=1 pour écrire"
+  task prefill_fee_invoices: :environment do
+    since = ENV["SINCE"].presence && Date.parse(ENV["SINCE"])
+    apply = ENV["APPLY"] == "1"
+
+    report = Stripe::PrefillFeeInvoices.new(since: since, apply: apply).run!
+
+    if report[:results].empty?
+      puts "[stripe:prefill_fee_invoices] Rien à remplir."
+    else
+      report[:results].each do |row|
+        puts "[stripe:prefill_fee_invoices] #{StripeService.label_for(row.account_key)}, " \
+             "#{I18n.l(row.month, format: '%B %Y')} : #{Money.new(row.fee_cents, 'EUR').format} " \
+             "#{row.action == :filled ? 'enregistré' : 'à enregistrer'}"
+      end
+    end
+    puts "  DRY-RUN — relance avec APPLY=1 pour écrire." unless apply
+    report[:messages].each { |message| puts "  ! #{message}" }
+  end
+
   # Créer une correspondance depuis le serveur, avant que l'écran de la phase 2
   # n'existe. Idempotent : relancer met à jour la correspondance existante.
   desc "Crée une correspondance de catégorie Stripe — ACCOUNT=… CATEGORY=…|none GENERAL_ACCOUNT=… [TEAM_ID=…] [ENTITY_ID=…]"

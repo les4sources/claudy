@@ -30,7 +30,11 @@ module Mcp
               "frais #{euros(r[:fees_cents])}, net #{euros(r[:net_cents])}, #{taux(r[:rate])}, #{r[:payouts]} versement(s)"
           end
           mois = cout.fee_months.map do |r|
-            declare = r.declared_fee_cents.nil? ? "aucun justificatif" : "déclaré #{euros(r.declared_fee_cents)}"
+            declare = if r.declared_fee_cents.nil?
+                        "aucun justificatif"
+                      else
+                        "déclaré #{euros(r.declared_fee_cents)}#{' (relevé chez Stripe)' if r.invoice.fetched_from_stripe?}"
+                      end
             ecart = r.gap? ? " · ÉCART #{'+' if r.gap_cents.positive?}#{euros(r.gap_cents)}" : ""
             "  #{nom_mois(r.month)} · #{r.label} : compté #{euros(r.counted_fee_cents)} · #{declare}#{ecart}" \
               "#{' · PDF déposé' if r.document?}#{" · réf. #{r.invoice.reference}" if r.invoice&.reference.present?}"

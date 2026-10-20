@@ -306,7 +306,8 @@ module Finance
       ),
       "finance/collection_cost" => Page.new(
         "Ce que coûte le fait d'être payé : les commissions Stripe, en euros et en pourcentage.",
-        ["Dépose chaque mois le justificatif des frais Stripe."],
+        ["Dépose chaque mois le PDF des frais Stripe, à partir du 10 : Dashboard Stripe, Paramètres, Plans et " \
+         "tarifs, Historique des factures. Le montant, lui, se relève seul chez Stripe."],
         %w[stripe]
       ),
       "finance/mail_messages" => Page.new(

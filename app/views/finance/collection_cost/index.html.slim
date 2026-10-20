@@ -68,6 +68,8 @@ section#justificatifs.mt-10
   h2.text-lg.font-semibold.text-gray-900 Justificatifs Stripe
   p.mt-1.text-sm.text-gray-500
     | Les frais sont <strong>déjà comptabilisés</strong> par la ventilation des versements : ce document ne crée aucune écriture, il archive la facture mensuelle téléchargée du Dashboard Stripe pour qu'un contrôle la trouve.
+  p.mt-1.text-sm.text-gray-500
+    | Le montant se relève seul chez Stripe chaque matin pour les mois terminés. Le PDF, lui, ne s'obtient que dans le Dashboard Stripe (Paramètres › Plans et tarifs › Historique des factures), à partir du 10 du mois suivant.
 
   - if @fee_months.blank?
     .mt-4.p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
@@ -95,6 +97,8 @@ section#justificatifs.mt-10
               td.py-4.px-6.text-right
                 - if row.declared_fee_cents
                   = humanized_money_with_symbol(Money.new(row.declared_fee_cents, "EUR"))
+                  - if row.invoice.fetched_from_stripe?
+                    span.block.text-xs.text-gray-400[title="Relevé automatiquement chez Stripe. Vérifie-le sur le PDF en le déposant."] relevé chez Stripe
                 - else
                   span.text-gray-300 —
               td.py-4.px-6.text-right

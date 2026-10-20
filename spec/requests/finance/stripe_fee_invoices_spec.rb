@@ -78,6 +78,24 @@ RSpec.describe "Finances > Justificatifs Stripe (epic #240, phase 5)", type: :re
       expect(response.body).to include(I18n.l(month, format: "%B %Y"))
     end
 
+    it "dit qu'un montant prérempli vient de Stripe, jusqu'au dépôt du PDF avec le même montant" do
+      build_payout(fee_cents: 3_100)
+      StripeFeeInvoice.create!(account_key: "claudy", period_month: month, declared_fee_cents: 3_100,
+                               declared_fee_fetched_at: Time.current)
+
+      get finance_collection_cost_path(from: month, to: month.end_of_month)
+      expect(response.body).to include("relevé chez Stripe")
+      expect(response.body).to include("Montant relevé chez Stripe")
+
+      post finance_stripe_fee_invoices_path, params: {
+        account_key: "claudy", period_month: month.to_s,
+        stripe_fee_invoice: { declared_fee: "31.00", document: pdf_upload }
+      }
+      invoice = StripeFeeInvoice.find_for("claudy", month)
+      expect(invoice.document).to be_attached
+      expect(invoice).to be_fetched_from_stripe
+    end
+
     it "n'affiche aucun mois vide" do
       get finance_collection_cost_path(from: month, to: month.end_of_month)
       expect(response.body).to include("aucun justificatif déposé")

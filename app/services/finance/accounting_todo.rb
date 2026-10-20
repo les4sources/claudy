@@ -23,13 +23,17 @@ module Finance
     # souvient plus de ce qu'elles paient.
     STALE_IMPORT_DAYS = 7
 
+    # Stripe met la facture de frais d'un mois à disposition au plus tard le 10
+    # du mois suivant : avant, la demander serait réclamer un PDF qui n'existe pas.
+    STRIPE_INVOICE_DAY = 10
+
     def initialize(today: Date.current)
       @today = today
     end
 
     def items
       @items ||= [inbox, bank_import, unallocated, invoices_to_complete, invoices_to_validate,
-                  expense_reports, carrier_statements, payables, monthly_close].compact
+                  expense_reports, carrier_statements, payables, stripe_fee_invoices, monthly_close].compact
     end
 
     def todo_count = items.count(&:todo?)
@@ -109,6 +113,27 @@ module Finance
       detail = n.zero? ? "Rien n'attend de virement." : "#{n} dette(s) pour #{euros(rows.sum(&:remaining_cents))} attendent leur virement."
       Item.new(label: "Faire les virements", detail: detail, count: n,
                state: n.zero? ? :done : :todo, path: finance_payables_path)
+    end
+
+    # Les mois dont la facture Stripe est disponible et dont le PDF manque,
+    # depuis le début de l'année du dernier mois dû. Le montant se relève seul
+    # (`Stripe::PrefillFeeInvoices`) ; le PDF, Stripe ne l'expose pas par l'API.
+    def stripe_fee_invoices
+      last = (@today.day >= STRIPE_INVOICE_DAY ? @today.prev_month : @today.prev_month.prev_month).beginning_of_month
+      first = last.beginning_of_year
+      missing = Finance::StripeFeeMonths.new(from: first, to: last).rows.reject(&:document?)
+      n = missing.size
+      detail = if n.zero?
+                 "Tous les PDF sont déposés."
+               else
+                 comptes = missing.group_by(&:label).map do |label, rows|
+                   "#{label} : #{rows.map { |row| I18n.l(row.month, format: '%B') }.join(', ')}"
+                 end
+                 "#{n} mois sans PDF (#{comptes.join(' ; ')}), à télécharger dans le Dashboard Stripe."
+               end
+      Item.new(label: "Déposer les justificatifs Stripe", detail: detail, count: n,
+               state: n.zero? ? :done : :todo,
+               path: finance_collection_cost_path(from: first, to: last.end_of_month, anchor: "justificatifs"))
     end
 
     def monthly_close

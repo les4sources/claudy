@@ -68,7 +68,7 @@ module Mcp
         end
 
         def ligne(justificatif)
-          [("déclaré #{euros(justificatif.declared_fee_cents)}" if justificatif.declared_fee_cents),
+          [("déclaré #{euros(justificatif.declared_fee_cents)}#{' (relevé chez Stripe)' if justificatif.fetched_from_stripe?}" if justificatif.declared_fee_cents),
            ("réf. #{justificatif.reference}" if justificatif.reference.present?),
            ("PDF déposé" if justificatif.document.attached?)].compact.join(" · ").presence || "vide"
         end
