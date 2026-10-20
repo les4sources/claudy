@@ -16,6 +16,7 @@ module Finance
       scope = JournalLine.joins(:journal_entry, :general_account)
                          .where(journal_entries: { entry_date: @from..@to })
                          .where(general_accounts: { klass: [6, 7] })
+                         .where.not(GeneralAccount::APPROPRIATION_SQL)
       scope = scope.where(journal_entries: { legal_entity_id: @entity.id }) if @entity
 
       totals = scope.group(:team_id, "general_accounts.klass")

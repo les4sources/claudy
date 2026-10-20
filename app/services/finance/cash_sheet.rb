@@ -61,13 +61,13 @@ module Finance
     # le comptage (phase 3) a besoin du MÊME solde théorique : deux façons de le
     # calculer donneraient deux vérités, et l'écart serait une illusion.
     def self.accounting_balance(cash_account:, up_to:, inclusive: true)
-      periode = inclusive ? (..up_to) : (...up_to)
-      lines = JournalLine.joins(:journal_entry)
-                         .where(general_account_id: cash_account.general_account_id)
-                         .where(journal_entries: { legal_entity_id: cash_account.legal_entity_id })
-                         .where(journal_entries: { entry_date: periode })
-
-      lines.sum(:debit_cents) - lines.sum(:credit_cents)
+      # La convention d'ouverture des comptes (`Accounting::Balances`) : la
+      # caisse part de l'à-nouveau de l'exercice quand il en a un, sans quoi
+      # l'ouverture reprise compterait une seconde fois les années passées.
+      balances = Accounting::Balances.new(cash_account.legal_entity)
+      only = [cash_account.general_account_id]
+      sums = inclusive ? balances.through(up_to, only: only) : balances.before(up_to, only: only)
+      sums[cash_account.general_account_id]
     end
 
     def closing_cents = opening_cents + entries.sum(&:amount_cents)

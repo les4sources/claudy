@@ -63,6 +63,9 @@ module AccountingNavHelper
         ["Grand livre", finance_ledger_path, %w[finance/ledger]],
         ["Balance", finance_trial_balance_path, %w[finance/trial_balance]],
         ["Analytique", finance_analytic_balance_path, %w[finance/analytic_balance]],
+        ["Comptes annuels", finance_annual_accounts_path, %w[finance/annual_accounts]],
+        ["Immobilisations", finance_fixed_assets_path, %w[finance/fixed_assets]],
+        ["Export comptable", finance_accountant_export_path, %w[finance/accountant_exports]],
         ["Budget", finance_budget_path, %w[finance/budgets]],
         ["Contrôle croisé", finance_cross_check_path, %w[finance/cross_check]]
       ]]
@@ -101,6 +104,9 @@ module AccountingNavHelper
     "Grand livre" => "Toutes les écritures d'un compte",
     "Balance" => "Le total de chaque compte",
     "Analytique" => "Ce que chaque pôle rapporte et coûte",
+    "Comptes annuels" => "Bilan et compte de résultats, au format BNB",
+    "Immobilisations" => "Les biens durables et leurs amortissements",
+    "Export comptable" => "Tout un exercice, en fichiers pour le comptable",
     "Budget" => "Ce qu'on prévoit, pôle par pôle et compte par compte",
     "Contrôle croisé" => "L'argent encaissé face aux séjours facturés",
     "Guide" => "Le mode d'emploi et le lexique"

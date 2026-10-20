@@ -21,6 +21,7 @@ module Mcp
 
           produits = JournalLine.joins(:journal_entry, :general_account)
                                 .where(journal_entries: { entry_date: du..au }, general_accounts: { klass: 7 })
+                                .where.not(GeneralAccount::APPROPRIATION_SQL)
                                 .group(:team_id).pluck(Arel.sql("team_id, SUM(credit_cents) - SUM(debit_cents)"))
           poles = Team.where(id: produits.map(&:first).compact).index_by(&:id)
           journal = produits.sum { |_, montant| montant.to_i }

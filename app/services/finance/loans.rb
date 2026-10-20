@@ -56,7 +56,10 @@ module Finance
     private
 
     def lenders
-      rows = JournalLine.joins(:journal_entry, :general_account)
+      # Depuis l'à-nouveau de l'exercice en cours quand il existe : un prêt
+      # repris dans l'à-nouveau ET dans les écritures des années passées
+      # compterait deux fois.
+      rows = Accounting::Balances.since_opening(JournalLine.joins(:journal_entry, :general_account))
                         .where(journal_entries: { deleted_at: nil })
                         .where("general_accounts.code LIKE ?", "#{ACCOUNT_PREFIX}%")
                         .group("journal_entries.legal_entity_id", "journal_lines.general_account_id", "journal_lines.third_party_id")

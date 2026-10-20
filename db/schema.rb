@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_19_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_20_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1148,6 +1148,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_160000) do
     t.index ["deleted_at"], name: "index_fiscal_years_on_deleted_at"
     t.index ["legal_entity_id", "starts_on"], name: "index_fiscal_years_on_legal_entity_id_and_starts_on", unique: true
     t.index ["legal_entity_id"], name: "index_fiscal_years_on_legal_entity_id"
+  end
+
+  create_table "fixed_asset_depreciations", force: :cascade do |t|
+    t.bigint "amount_cents", null: false
+    t.datetime "created_at", null: false
+    t.bigint "fiscal_year_id", null: false
+    t.bigint "fixed_asset_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fiscal_year_id"], name: "index_fixed_asset_depreciations_on_fiscal_year_id"
+    t.index ["fixed_asset_id", "fiscal_year_id"], name: "index_fixed_asset_depreciations_unique_year", unique: true
+    t.index ["fixed_asset_id"], name: "index_fixed_asset_depreciations_on_fixed_asset_id"
+  end
+
+  create_table "fixed_assets", force: :cascade do |t|
+    t.date "acquired_on", null: false
+    t.bigint "acquisition_cents", null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "depreciation_account_id", null: false
+    t.date "disposed_on"
+    t.bigint "expense_account_id", null: false
+    t.bigint "general_account_id", null: false
+    t.bigint "legal_entity_id", null: false
+    t.string "name", null: false
+    t.text "notes"
+    t.bigint "prior_depreciation_cents", default: 0, null: false
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.integer "useful_life_years", null: false
+    t.index ["deleted_at"], name: "index_fixed_assets_on_deleted_at"
+    t.index ["depreciation_account_id"], name: "index_fixed_assets_on_depreciation_account_id"
+    t.index ["expense_account_id"], name: "index_fixed_assets_on_expense_account_id"
+    t.index ["general_account_id"], name: "index_fixed_assets_on_general_account_id"
+    t.index ["legal_entity_id"], name: "index_fixed_assets_on_legal_entity_id"
+    t.index ["team_id"], name: "index_fixed_assets_on_team_id"
   end
 
   create_table "gathering_action_humans", force: :cascade do |t|
@@ -2916,6 +2951,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_160000) do
   add_foreign_key "experiences", "humans"
   add_foreign_key "experiences", "teams"
   add_foreign_key "fiscal_years", "legal_entities"
+  add_foreign_key "fixed_asset_depreciations", "fiscal_years"
+  add_foreign_key "fixed_asset_depreciations", "fixed_assets"
+  add_foreign_key "fixed_assets", "general_accounts"
+  add_foreign_key "fixed_assets", "general_accounts", column: "depreciation_account_id"
+  add_foreign_key "fixed_assets", "general_accounts", column: "expense_account_id"
+  add_foreign_key "fixed_assets", "legal_entities"
+  add_foreign_key "fixed_assets", "teams"
   add_foreign_key "gathering_action_humans", "gathering_actions"
   add_foreign_key "gathering_action_humans", "humans"
   add_foreign_key "gathering_actions", "gatherings"

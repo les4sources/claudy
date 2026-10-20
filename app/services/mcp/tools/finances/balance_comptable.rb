@@ -53,6 +53,7 @@ module Mcp
 
         def analytique(scope, titre)
           totaux = scope.joins(:general_account).where(general_accounts: { klass: [6, 7] })
+                        .where.not(GeneralAccount::APPROPRIATION_SQL)
                         .group(:team_id, "general_accounts.klass")
                         .pluck(Arel.sql("team_id, general_accounts.klass, SUM(debit_cents), SUM(credit_cents)"))
           return "Balance analytique #{titre} : aucune charge ni aucun produit." if totaux.empty?
