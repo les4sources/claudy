@@ -58,6 +58,9 @@ module Accounting
               general_account: line.general_account,
               analytic_account: line.analytic_account,
               team: line.team,
+              # Sans le tiers, l'annulation d'un paiement fournisseur solderait
+              # le 440000 au global mais laisserait la dette ouverte chez lui.
+              third_party: line.third_party,
               debit_cents: line.credit_cents,
               credit_cents: line.debit_cents,
               label: line.label
