@@ -297,6 +297,19 @@ Rails.application.routes.draw do
     get "budget", to: "budgets#show", as: :budget
     patch "budget", to: "budgets#update"
     get "ledger", to: "ledger#index"
+    # Les comptes annuels au schéma BNB (2026-10-20) : bilan, compte de
+    # résultats et affectation d'un exercice, en regard du précédent.
+    get "annual_accounts", to: "annual_accounts#show", as: :annual_accounts
+    # Ce que le comptable emporte : un ZIP de CSV par entité et par exercice.
+    get "accountant_export", to: "accountant_exports#show", as: :accountant_export
+    get "accountant_export/download", to: "accountant_exports#download", as: :download_accountant_export
+    # Le registre des immobilisations et les dotations aux amortissements. Pas
+    # de `show` : un bien se lit dans le registre. Une dotation se passe pour
+    # tout l'exercice et s'annule bien par bien.
+    resources :fixed_assets, path: "immobilisations", except: [:show] do
+      collection { post :depreciate }
+    end
+    post "immobilisations/dotations/:id/annuler", to: "fixed_assets#cancel_depreciation", as: :cancel_fixed_asset_depreciation
     get "trial_balance", to: "trial_balance#index"
     # Journal de trésorerie (issue #179). `unallocated` est nommée AVANT la
     # ressource : sinon `/finance/cash_entries/unallocated` serait capté par
@@ -495,8 +508,15 @@ Rails.application.routes.draw do
     # corrige. La création, l'entité et le compte général restent à l'API et au
     # connecteur (`compte_tresorerie`), qui gardent leurs garde-fous.
     resources :cash_accounts, only: [:index, :edit, :update]
+    # La clôture annuelle (2026-10-20) : un aperçu (`closing`), puis la
+    # clôture qui affecte le résultat, verrouille et pose l'à-nouveau. La
+    # réouverture, motivée, ne vaut que pour le dernier exercice clôturé.
     resources :fiscal_years, except: [:show] do
-      member { post :close }
+      member do
+        get :closing
+        post :close
+        post :reopen
+      end
     end
 
     resources :statements, only: [:index] do

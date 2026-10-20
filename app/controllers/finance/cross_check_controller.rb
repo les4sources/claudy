@@ -43,6 +43,7 @@ module Finance
       lignes = JournalLine.joins(:journal_entry, :general_account)
                           .where(journal_entries: { entry_date: @from..@to })
                           .where(general_accounts: { klass: 7 })
+                          .where.not(GeneralAccount::APPROPRIATION_SQL)
                           .group(:team_id)
                           .pluck(Arel.sql("team_id, SUM(credit_cents), SUM(debit_cents)"))
 

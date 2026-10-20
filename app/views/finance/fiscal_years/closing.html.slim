@@ -1,0 +1,107 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Clôturer l'exercice #{@year.label} · #{@year.legal_entity.name}"
+
+- money = ->(cents) { humanized_money_with_symbol(Money.new(cents, "EUR")) }
+- p = @preview
+
+.mb-6.grid.grid-cols-1.gap-px.overflow-hidden.rounded-xl.border.border-stone-200.bg-stone-100.shadow-sm(class="md:grid-cols-3" data-closing-summary="")
+  .bg-white.px-5.py-4
+    p.text-xs.uppercase.text-stone-400 Résultat de l'exercice
+    p class="mt-1 text-2xl font-semibold tabular-nums #{p.result_cents.negative? ? 'text-red-700' : 'text-emerald-700'}"= money.call(p.result_cents)
+    p.mt-1.text-xs.text-stone-500= p.result_cents.zero? ? "Rien à affecter." : (p.profit? ? "Bénéfice : il passe au résultat reporté (693 → 140)." : "Perte : elle passe au résultat reporté (140 ← 793).")
+  .bg-white.px-5.py-4
+    p.text-xs.uppercase.text-stone-400 Écritures à verrouiller
+    p.mt-1.text-2xl.font-semibold.tabular-nums.text-stone-900= @year.journal_entries.count
+    p.mt-1.text-xs.text-stone-500 Après la clôture, elles ne se corrigent plus que par contre-passation.
+  .bg-white.px-5.py-4
+    p.text-xs.uppercase.text-stone-400 À-nouveau #{p.next_year_label}
+    - if @closing.opening == "none"
+      p.mt-1.text-2xl.font-semibold.text-stone-400 Aucun
+      p.mt-1.text-xs.text-stone-500 L'exercice #{p.next_year_label} garde ses soldes d'ouverture actuels.
+    - else
+      p.mt-1.text-2xl.font-semibold.tabular-nums.text-stone-900= "#{p.opening_lines.size} ligne(s)"
+      p.mt-1.text-xs.text-stone-500
+        = p.next_year_exists ? "Posé au 1er jour de l'exercice #{p.next_year_label}." : "L'exercice #{p.next_year_label} sera créé pour le recevoir."
+
+- if p.blockers.any?
+  .mb-4.p-4.rounded-lg.border.border-red-200.bg-red-50(data-closing-blockers="")
+    p.text-sm.font-semibold.text-red-800 La clôture est impossible pour l'instant
+    ul.mt-1.list-disc.pl-5.text-sm.text-red-800
+      - p.blockers.each do |blocker|
+        li= blocker
+- if p.warnings.any?
+  .mb-4.p-4.rounded-lg.border.border-amber-200(class="bg-amber-50/70" data-closing-warnings="")
+    p.text-sm.font-semibold.text-amber-900 À regarder avant de clôturer
+    ul.mt-1.list-disc.pl-5.text-sm.text-amber-900
+      - p.warnings.each do |warning|
+        li= warning
+
+.mb-6.p-4.bg-white.rounded-lg.border.border-gray-100
+  p.text-sm.font-medium.text-gray-700 L'à-nouveau de #{p.next_year_label}
+  p.mt-1.text-xs.text-gray-500
+    - if p.existing_opening
+      | L'exercice #{p.next_year_label} a déjà un à-nouveau (repris d'un bilan, par exemple). Choisis de le remplacer par celui que Claudy calcule, ou de le garder.
+    - else
+      | Les soldes des comptes de bilan (classes 1 à 5), compte par compte et tiers par tiers, ouvrent l'exercice suivant.
+  .mt-3.flex.flex-wrap.gap-2
+    - Accounting::CloseFiscalYear::OPENING_MODES.each do |mode|
+      - current = @closing.opening == mode
+      = link_to Accounting::CloseFiscalYear::OPENING_MODE_LABELS.fetch(mode), closing_finance_fiscal_year_path(@year, opening: mode),
+                class: "rounded-full px-3 py-1 text-sm border #{current ? 'border-4s-main bg-4s-main text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}"
+
+- if p.appropriation.any?
+  h3.mb-2.text-sm.font-semibold.text-gray-700 Affectation du résultat, au #{l(@year.ends_on, format: :long)}
+  .mb-6.overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Compte
+          th.py-3.px-6.text-right[scope="col"] Débit
+          th.py-3.px-6.text-right[scope="col"] Crédit
+      tbody
+        - p.appropriation.each do |line|
+          tr.border-b.bg-white
+            td.py-3.px-6
+              span.font-mono.text-gray-900= line.account.code
+              span.ml-2= line.account.name
+              - if line.account.new_record?
+                span.ml-2.text-xs.text-amber-700 (créé à la clôture)
+            td.py-3.px-6.text-right= line.debit_cents.positive? ? money.call(line.debit_cents) : ""
+            td.py-3.px-6.text-right= line.credit_cents.positive? ? money.call(line.credit_cents) : ""
+
+- unless @closing.opening == "none" || p.opening_lines.empty?
+  - by_account = p.opening_lines.group_by(&:account)
+  h3.mb-2.text-sm.font-semibold.text-gray-700 À-nouveau #{p.next_year_label}, par compte
+  .mb-6.overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Compte
+          th.py-3.px-6.text-right[scope="col"] Tiers
+          th.py-3.px-6.text-right[scope="col"] Débit
+          th.py-3.px-6.text-right[scope="col"] Crédit
+      tbody
+        - by_account.each do |account, lines|
+          - cents = lines.sum(&:cents)
+          tr.border-b.bg-white
+            td.py-3.px-6
+              span.font-mono.text-gray-900= account.code
+              span.ml-2= account.name
+            td.py-3.px-6.text-right= lines.count(&:third_party).nonzero? || ""
+            td.py-3.px-6.text-right= cents.positive? ? money.call(cents) : ""
+            td.py-3.px-6.text-right= cents.negative? ? money.call(-cents) : ""
+      tfoot
+        tr.bg-gray-50.font-semibold.text-gray-900
+          td.py-3.px-6 Total
+          td
+          td.py-3.px-6.text-right= money.call(p.opening_debit_cents)
+          td.py-3.px-6.text-right= money.call(p.opening_credit_cents)
+
+.flex.items-center.gap-3
+  - if p.closable?
+    = button_to "Clôturer l'exercice #{@year.label}", close_finance_fiscal_year_path(@year), method: :post,
+                params: { opening: @closing.opening },
+                class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90",
+                data: { turbo_confirm: "Clôturer l'exercice #{@year.label} de #{@year.legal_entity.name} ? Ses écritures deviennent définitives." }
+  = link_to "Voir les comptes annuels", finance_annual_accounts_path(fiscal_year_id: @year.id), class: "text-sm text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+  = link_to "Retour aux exercices", finance_fiscal_years_path, class: "text-sm text-gray-500 hover:text-gray-700"

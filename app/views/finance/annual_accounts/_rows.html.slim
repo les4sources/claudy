@@ -1,0 +1,40 @@
+/ Une table du schéma BNB : code, rubrique, exercice, exercice précédent.
+  Une rubrique vide des deux côtés se tait, sauf les grands totaux ; avec
+  « détail », chaque rubrique déplie ses comptes.
+- money = ->(cents) { cents.nil? ? "—" : humanized_money_with_symbol(Money.new(cents, "EUR")) }
+table.w-full.text-sm.text-left.text-gray-600
+  thead.text-xs.text-gray-700.uppercase.bg-gray-50
+    tr
+      th.py-2.px-3.w-20[scope="col"] Code
+      th.py-2.px-3[scope="col"]= title
+      th.py-2.px-3.text-right.whitespace-nowrap[scope="col"]= accounts.fiscal_year.label
+      th.py-2.px-3.text-right.whitespace-nowrap.text-gray-400[scope="col"]= accounts.previous_year&.label || "N-1"
+  tbody
+    - rows.each do |row|
+      - next if row.blank? && row.level.positive? && !row.section?
+      - if row.section?
+        tr.bg-white
+          td.pt-4.pb-1.px-3(colspan="4")
+            span.text-xs.font-semibold.uppercase.tracking-wide.text-gray-500= row.label
+        - next
+      tr(class="border-b #{row.total? ? (row.level.zero? ? 'bg-stone-50 font-semibold text-gray-900' : 'bg-white font-medium text-gray-800') : 'bg-white'}" data-bnb-code=row.code)
+        td.py-2.px-3.font-mono.text-xs.text-gray-400= row.code
+        td.py-2.px-3(style="padding-left: #{0.75 + row.level * 1.25}rem")= row.label
+        td.py-2.px-3.text-right.tabular-nums.whitespace-nowrap= money.call(row.amount_cents)
+        td.py-2.px-3.text-right.tabular-nums.whitespace-nowrap.text-gray-400= money.call(row.previous_cents)
+      - if detail
+        - row.accounts.each do |account, now, before|
+          tr.bg-white.text-xs.text-gray-500
+            td
+            td.py-1.px-3(style="padding-left: #{1.75 + row.level * 1.25}rem")
+              = link_to finance_ledger_path(general_account_id: account.id, legal_entity_id: accounts.fiscal_year.legal_entity_id, from: accounts.fiscal_year.starts_on, to: accounts.fiscal_year.ends_on), class: "hover:text-blue-600" do
+                span.font-mono= account.code
+                span.ml-2= account.name
+            td.py-1.px-3.text-right.tabular-nums= now ? money.call(now) : ""
+            td.py-1.px-3.text-right.tabular-nums.text-gray-400= before ? money.call(before) : ""
+    - if local_assigns[:total_label]
+      tr.bg-stone-100.font-semibold.text-gray-900
+        td.py-3.px-3
+        td.py-3.px-3= total_label
+        td.py-3.px-3.text-right.tabular-nums.whitespace-nowrap= money.call(total)
+        td.py-3.px-3.text-right.tabular-nums.whitespace-nowrap.text-gray-500= money.call(previous_total)

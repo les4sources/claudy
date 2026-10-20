@@ -163,6 +163,7 @@ module Finance
         JournalLine.joins(:journal_entry, :general_account)
                    .where(journal_entries: { legal_entity_id: @entity.id, entry_date: reference_period, deleted_at: nil })
                    .where(general_accounts: { klass: BudgetLine::CLASSES })
+                   .where.not(GeneralAccount::APPROPRIATION_SQL)
                    .group(:team_id, :general_account_id, "general_accounts.klass")
                    .pluck(Arel.sql("journal_lines.team_id, journal_lines.general_account_id, general_accounts.klass, " \
                                    "SUM(debit_cents), SUM(credit_cents)"))

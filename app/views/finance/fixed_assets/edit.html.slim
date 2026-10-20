@@ -1,0 +1,10 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: @asset.name
+
+= render "form", asset: @asset
+
+- if @asset.depreciations.empty?
+  .mt-6
+    = button_to "Retirer du registre", finance_fixed_asset_path(@asset), method: :delete,
+                class: "text-sm text-red-600 hover:text-red-800",
+                data: { turbo_confirm: "Retirer « #{@asset.name} » du registre ? Il n'a encore aucune dotation." }

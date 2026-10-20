@@ -1,0 +1,67 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: (@year ? "Comptes annuels #{@year.label} · #{@year.legal_entity.name}" : "Comptes annuels"),
+           links: (@year ? [link_to("⬇ CSV", finance_annual_accounts_path(fiscal_year_id: @year.id, format: :csv), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
+                            link_to("Export pour le comptable", finance_accountant_export_path(fiscal_year_id: @year.id), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")] : [])
+
+- money = ->(cents) { humanized_money_with_symbol(Money.new(cents, "EUR")) }
+
+= form_with url: finance_annual_accounts_path, method: :get, class: "mb-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap items-end gap-4" do |f|
+  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un exercice…" class="relative w-80")
+    = f.label :fiscal_year_id, "Exercice", class: "block text-sm font-medium text-gray-700"
+    = f.select :fiscal_year_id, options_for_select(@years.map { |year| ["#{year.legal_entity.name} · #{year.label}#{' (clôturé)' if year.closed?}", year.id] }, @year&.id), {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher un exercice"
+  label.flex.items-center.gap-2.text-sm.text-gray-700
+    = check_box_tag :detail, "1", @detail, class: "rounded border-gray-300"
+    | Détail par compte
+  button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="submit" class="hover:bg-gray-50") Afficher
+
+- if @accounts.nil?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucun exercice : crée-le d'abord dans Exercices.
+- else
+  p.mb-4.text-xs.text-gray-500
+    = @accounts.schema_label
+    |  · montants en euros · exercice du #{l(@year.starts_on, format: :long)} au #{l(@year.ends_on, format: :long)}
+    - if @accounts.previous_year
+      |  · en gris, l'exercice #{@accounts.previous_year.label}
+
+  - if @accounts.warnings.any?
+    .mb-6.p-4.rounded-lg.border.border-amber-200(class="bg-amber-50/70" data-annual-warnings="")
+      ul.list-disc.pl-5.text-sm.text-amber-900
+        - @accounts.warnings.each do |warning|
+          li= warning
+
+  .mb-6.flex.flex-wrap.items-baseline.gap-6.p-5.rounded-lg.border(class="#{@accounts.balanced? ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-200'}")
+    div
+      p.text-xs.uppercase.text-gray-500 Total de l'actif
+      p.text-2xl.font-semibold.text-gray-900= money.call(@accounts.total_assets_cents)
+    div
+      p.text-xs.uppercase.text-gray-500 Total du passif
+      p.text-2xl.font-semibold.text-gray-900= money.call(@accounts.total_liabilities_cents)
+    div
+      p.text-xs.uppercase.text-gray-500 Résultat de l'exercice
+      p class="text-2xl font-semibold #{@accounts.result_cents.negative? ? 'text-red-700' : 'text-emerald-700'}"= money.call(@accounts.result_cents)
+
+  h3.mb-2.text-lg.font-semibold.text-gray-900 Bilan
+  .mb-8.grid.grid-cols-1.gap-6(class="xl:grid-cols-2")
+    .overflow-x-auto.rounded-lg.border.border-gray-100(data-bnb-statement="actif")
+      = render "rows", title: "Actif", rows: @accounts.assets, accounts: @accounts, detail: @detail,
+               total_label: "Total de l'actif (20/58)", total: @accounts.total_assets_cents, previous_total: @accounts.previous_total_assets_cents
+    .overflow-x-auto.rounded-lg.border.border-gray-100(data-bnb-statement="passif")
+      = render "rows", title: "Passif", rows: @accounts.liabilities, accounts: @accounts, detail: @detail,
+               total_label: "Total du passif (10/49)", total: @accounts.total_liabilities_cents, previous_total: @accounts.previous_total_liabilities_cents
+
+  h3.mb-2.text-lg.font-semibold.text-gray-900 Compte de résultats
+  .mb-8.overflow-x-auto.rounded-lg.border.border-gray-100(data-bnb-statement="resultats")
+    = render "rows", title: "Rubrique", rows: @accounts.income_statement, accounts: @accounts, detail: @detail
+
+  h3.mb-2.text-lg.font-semibold.text-gray-900 Affectations et prélèvements
+  .mb-8.overflow-x-auto.rounded-lg.border.border-gray-100(data-bnb-statement="affectations")
+    = render "rows", title: "Rubrique", rows: @accounts.appropriation, accounts: @accounts, detail: false
+
+  - unless @year.closed?
+    p.text-sm.text-gray-600
+      | L'exercice est ouvert : 
+      = link_to "voir ce que donnerait sa clôture", closing_finance_fiscal_year_path(@year), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+      | .

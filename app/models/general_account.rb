@@ -74,6 +74,18 @@ class GeneralAccount < ApplicationRecord
   # Honoraires`, qui est la prestation facturée par un indépendant.
   CONTRIBUTOR_FEE_CODE = "616000".freeze
 
+  # L'affectation du résultat, à la clôture de l'exercice (revue du
+  # 2026-10-20) : 693 « Bénéfice à reporter » et 793 « Perte à reporter »
+  # soldent les classes 6 et 7 vers le résultat reporté (14). Ce sont des
+  # comptes de classe 6 et 7, mais pas des charges ni des produits : une
+  # lecture du résultat (analytique, budget, contrôle croisé) les écarte, sinon
+  # le 31 décembre ferait apparaître une charge égale au bénéfice de l'année.
+  APPROPRIATION_PREFIXES = %w[69 79].freeze
+  APPROPRIATION_SQL = "general_accounts.code LIKE '69%' OR general_accounts.code LIKE '79%'".freeze
+  RETAINED_EARNINGS_CODE = "140000".freeze
+  PROFIT_CARRIED_FORWARD_CODE = "693000".freeze
+  LOSS_CARRIED_FORWARD_CODE = "793000".freeze
+
   has_paper_trail
   has_soft_deletion default_scope: true
 
@@ -110,6 +122,8 @@ class GeneralAccount < ApplicationRecord
   # Un produit et un passif augmentent au crédit ; un actif et une charge
   # augmentent au débit. C'est ce qui donne au solde son signe lisible.
   def credit_natured? = %w[liability equity revenue].include?(nature)
+
+  def appropriation? = code.to_s.start_with?(*APPROPRIATION_PREFIXES)
 
   private
 
