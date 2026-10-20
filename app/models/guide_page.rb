@@ -56,6 +56,9 @@ class GuidePage < ApplicationRecord
 
   scope :ordered, -> { order(:position, :id) }
 
+  # Les pages des chapitres que ce compte lit (`GuideChapter.readable_by`).
+  scope :readable_by, ->(user) { joins(:chapter).merge(GuideChapter.readable_by(user)) }
+
   # Recherche dans le titre et le contenu : chaque mot doit s'y trouver.
   scope :search, lambda { |query|
     words = query.to_s.split.first(8)

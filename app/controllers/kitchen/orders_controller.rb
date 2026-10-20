@@ -11,25 +11,33 @@ module Kitchen
                   only: [:edit, :update, :destroy, :status, :assign, :accept, :new_refusal, :refuse,
                          :shopping_list, :attach]
 
-    # Les vues de la page, en onglets. Une table unique, une ligne par service ;
-    # ce qui change d'un onglet à l'autre, c'est le filtre. « Cuisine » et
-    # « Accueil » sont les deux vues de travail : chacune ne montre que les
-    # lignes où ce métier a la main (`MealOrder#next_actor`).
+    # DEUX VUES (2026-10-19), au lieu de sept onglets qui se recoupaient : une
+    # même demande apparaissait dans trois onglets à la fois, et ni Stéphanie
+    # ni Malau ne savaient lequel ouvrir. Chaque vue montre TOUTES les demandes
+    # à venir, une seule fois, rangées par statut (`MealOrder#board_status`) ;
+    # ce qui change d'une vue à l'autre, c'est l'ordre des sections et les
+    # gestes proposés. La vue choisie est retenue (cookie) : les postes sont
+    # partagés, c'est donc l'appareil qui s'en souvient, pas le compte.
     VIEWS = [
-      # PROCHAINS SERVICES (epic #321, phase 3) — en premier et par défaut :
-      # c'est la question qu'on se pose en arrivant sur la page. Ce qui va
-      # vraiment avoir lieu, pas ce qui reste à traiter.
-      { key: :upcoming,  title: "Prochains services" },
-      { key: :all,       title: "À venir" },
       { key: :kitchen,   title: "Cuisine" },
-      { key: :reception, title: "Accueil" },
-      { key: :info,      title: "Info" },
-      { key: :past,      title: "Archives" },
-      { key: :out,       title: "Annulés" }
+      { key: :reception, title: "Accueil" }
     ].freeze
-    VIEW_KEYS = VIEWS.map { |v| v[:key] }.freeze
+    # Hors du jeu, en pied de page : le passé et les annulés.
+    ARCHIVE_VIEWS = [
+      { key: :past, title: "Passé, 12 derniers mois" },
+      { key: :out,  title: "Annulés" }
+    ].freeze
+    WORKING_VIEW_KEYS = VIEWS.map { |v| v[:key] }.freeze
+    VIEW_KEYS = (VIEWS + ARCHIVE_VIEWS).map { |v| v[:key] }.freeze
+    VIEW_COOKIE = :kitchen_view
 
-    # Ce qui fait l'état de la page (onglet, filtres) : la suppression le renvoie
+    # L'ordre des sections : d'abord ce que CE métier doit faire.
+    SECTIONS = {
+      kitchen:   %w[to_validate planned inquiry to_cover],
+      reception: %w[to_cover inquiry to_validate planned]
+    }.freeze
+
+    # Ce qui fait l'état de la page (vue, filtres) : la suppression le renvoie
     # pour qu'on retombe là où l'on était.
     INDEX_PARAMS = %i[view family origin responsible_human_id old_archives].freeze
 
@@ -39,6 +47,7 @@ module Kitchen
 
     def index
       @view         = view_param
+      remember_view
       @origin       = origin_filter
       @family       = family_filter
       @responsible  = responsible_filter
@@ -47,16 +56,18 @@ module Kitchen
       # Le menu d'une demande orpheline propose de la rattacher (issue #315) :
       # il lui faut la même liste de séjours que le formulaire de création.
       @stays        = assignable_stays
-      # UNE LIGNE PAR SERVICE, triée par date (epic #321, phase 1). Le groupement
-      # par séjour a disparu : le client est devenu une colonne. Lire la page par
-      # date, c'est lire dans l'ordre où le travail arrive — l'en-tête de séjour
-      # obligeait à parcourir toute la page pour savoir ce qu'on cuisine demain.
-      @rows         = MealOrderDecorator.decorate_collection(rows_for(@view))
       @counts       = view_counts
       # Les montants n'intéressent que le Pôle Accueil : ils ne s'affichent que
       # dans sa vue.
       @show_money   = @view == :reception
-      @total_cents  = @rows.select(&:billable?).sum { |o| o.price_cents.to_i }
+
+      if working_view?
+        grouped   = decorated_live_rows.group_by(&:board_status)
+        @sections = SECTIONS[@view].map { |status| [status, grouped[status] || []] }
+        @total_cents = (grouped["planned"] || []).select(&:billable?).sum { |o| o.price_cents.to_i }
+      else
+        @rows = MealOrderDecorator.decorate_collection(rows_for(@view))
+      end
     end
 
     def new
@@ -170,6 +181,13 @@ module Kitchen
       end
 
       @order.responsible_human = human
+      # « À couvrir » → « Confier à… » : la demande refusée repart vers la
+      # nouvelle personne, qui doit à son tour dire oui (repas) ou qui l'accepte
+      # en s'en chargeant (buffet, apéro).
+      if @order.refused?
+        @order.validation     = "pending"
+        @order.refusal_reason = nil
+      end
       accept_when_someone_takes_it(@order)
 
       if @order.save
@@ -400,21 +418,17 @@ module Kitchen
       scope
     end
 
-    def family_filter
-      value = params[:family].to_s
-      MealOrder::FAMILIES.include?(value) ? value : nil
-    end
-
     def responsible_filter
       value = params[:responsible_human_id].to_s
       value.presence && (Human.exists?(id: value) ? value : nil)
     end
 
-    # Filtre par ORIGINE (epic #321, phase 2). Il n'a de sens que dans les vues
-    # de travail : c'est là qu'on se demande qui relancer. Ailleurs — archives,
-    # annulés, plan de charge — un paramètre resté dans l'URL filtrerait une
+    # Les filtres ont chacun leur vue (maquette du 2026-10-19) : la famille
+    # dans la vue Cuisine (qui cuisine quoi), l'origine dans la vue Accueil
+    # (qui relancer). Ailleurs, un paramètre resté dans l'URL filtrerait une
     # liste dont l'écran ne montre aucun sélecteur, donc sans rien expliquer.
-    ORIGIN_FILTER_VIEWS = %i[kitchen reception info].freeze
+    ORIGIN_FILTER_VIEWS = %i[reception].freeze
+    FAMILY_FILTER_VIEWS = %i[kitchen].freeze
 
     def origin_filter
       return nil unless ORIGIN_FILTER_VIEWS.include?(@view)
@@ -423,55 +437,57 @@ module Kitchen
       MealOrder::ORIGINS.include?(value) ? value : nil
     end
 
-    def view_param
-      key = params[:view].to_s.to_sym
-      VIEW_KEYS.include?(key) ? key : :upcoming
+    def family_filter
+      return nil unless FAMILY_FILTER_VIEWS.include?(@view)
+
+      value = params[:family].to_s
+      MealOrder::FAMILIES.include?(value) ? value : nil
     end
 
+    # La vue demandée ; à défaut, la dernière vue de travail ouverte sur cet
+    # appareil ; à défaut, Cuisine. Les anciens onglets (« upcoming », « all »,
+    # « info »…) d'un lien gardé retombent ainsi sur une vue qui existe.
+    def view_param
+      key = params[:view].to_s.to_sym
+      return key if VIEW_KEYS.include?(key)
+
+      remembered = cookies[VIEW_COOKIE].to_s.to_sym
+      WORKING_VIEW_KEYS.include?(remembered) ? remembered : :kitchen
+    end
+
+    def remember_view
+      cookies.permanent[VIEW_COOKIE] = @view.to_s if working_view?
+    end
+
+    def working_view? = WORKING_VIEW_KEYS.include?(@view)
+
     # Tout ce qui est encore à venir et pas annulé par le client — y compris ce
-    # que la cuisine a refusé, qu'il faut couvrir. Chargé une fois, filtré en
-    # mémoire : les vues de travail se recoupent, et `next_actor` lit une
-    # association.
+    # que la cuisine a refusé, qu'il faut couvrir. Les demandes sans date en
+    # tête : elles sont encore à traiter.
     def live_rows
       @live_rows ||= base_scope.upcoming.where.not(status: "cancelled").undated_first.to_a
     end
 
+    def decorated_live_rows
+      @decorated_live_rows ||= MealOrderDecorator.decorate_collection(live_rows)
+    end
+
     def rows_for(view)
       case view
-      when :upcoming  then upcoming_scope.to_a
-      when :all       then live_rows.reject(&:inquiry?)
-      when :kitchen   then live_rows.select { |o| o.next_actor == :kitchen }
-      when :reception then live_rows.select { |o| %i[reception to_cover].include?(o.next_actor) }
-      when :info      then live_rows.select(&:inquiry?)
-      when :past      then archive_scope.antichronological.limit(ARCHIVE_LIMIT).to_a
-      when :out       then out_scope.antichronological.limit(CANCELLED_LIMIT).to_a
+      when :past then archive_scope.antichronological.limit(ARCHIVE_LIMIT).to_a
+      when :out  then out_scope.antichronological.limit(CANCELLED_LIMIT).to_a
       end
     end
 
-    # Les compteurs des onglets. Les vues vivantes se comptent sur ce qui est
-    # déjà chargé ; les deux autres par une requête, sans la limite d'affichage.
+    # Les compteurs du sélecteur : ce que chaque métier a à FAIRE, pas tout ce
+    # qu'il voit. Le passé et les annulés se comptent par une requête, sans la
+    # limite d'affichage.
     def view_counts
-      VIEWS.to_h do |v|
-        count = case v[:key]
-                when :upcoming then upcoming_scope.count
-                when :past then archive_scope.count
-                when :out  then out_scope.count
-                else rows_for(v[:key]).size
-                end
-        [v[:key], count]
-      end
-    end
-
-    # CE QUI VA VRAIMENT AVOIR LIEU (epic #321, phase 3) : accepté par la cuisine,
-    # non annulé, daté et à venir. Les lignes SANS DATE en sont exclues — un
-    # service sans date n'aura pas lieu, il est encore à traiter et vit dans
-    # « À venir ». Les deux onglets ne font pas doublon : l'un est une liste de
-    # travail, l'autre un plan de charge.
-    def upcoming_scope
-      base_scope.where(validation: "accepted")
-                .where.not(status: "cancelled")
-                .where("date >= ?", Date.current)
-                .order(:date, :id)
+      statuses = live_rows.map(&:board_status)
+      { kitchen:   statuses.count("to_validate"),
+        reception: statuses.count { |s| %w[to_cover inquiry].include?(s) },
+        past:      archive_scope.count,
+        out:       out_scope.count }
     end
 
     # Déjà servi. Un refus passé n'a rien été servi : il va dans « Annulés ».

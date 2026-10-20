@@ -16,11 +16,12 @@ module Mcp
         def call(arguments)
           return recherche(arguments["recherche"].to_s.strip) if arguments["recherche"].present?
 
-          chapitres = GuideChapter.ordered.includes(pages: { last_editor: :human }).to_a
+          chapitres = chapitres_lisibles.ordered.includes(pages: { last_editor: :human }).to_a
           return "Le Guide est vide : aucun chapitre pour l'instant." if chapitres.empty?
 
           lignes = chapitres.map do |chapitre|
             entete = "Chapitre ##{chapitre.id} « #{chapitre.title} »#{" — #{chapitre.description}" if chapitre.description.present?}"
+            entete += "\n  Lu par : #{['Sourciers', *chapitre.reader_labels].join(', ')}" if user.guide_writer?
             pages = chapitre.pages.map { |page| "  - #{ligne_page(page)}" }
             [entete, *(pages.presence || ["  (aucune page)"])].join("\n")
           end
@@ -30,7 +31,7 @@ module Mcp
         private
 
         def recherche(texte)
-          pages = GuidePage.search(texte).includes(:chapter, last_editor: :human).order(:title).limit(30).to_a
+          pages = pages_lisibles.search(texte).includes(:chapter, last_editor: :human).order(:title).limit(30).to_a
           return "Aucune page du Guide ne contient « #{texte} »." if pages.empty?
 
           lignes = pages.map { |page| "- #{ligne_page(page)} (chapitre « #{page.chapter.title} »)\n  #{page.excerpt(220)}" }

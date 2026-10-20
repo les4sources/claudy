@@ -50,7 +50,8 @@ RSpec.describe "Le Guide des 4 Sources", type: :request do
     end
   end
 
-  it "est ouvert à tous les rôles" do
+  it "est ouvert à tous les rôles quand le chapitre les coche tous" do
+    chapitre.update!(access_roles: GuideChapter::READER_ROLES)
     Access::ROLE_NAMES.each do |role|
       sign_in User.create!(email: "#{role}@les4sources.be", password: "password123", access_roles: [role])
       get guide_page_path(page)

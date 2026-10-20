@@ -30,18 +30,26 @@ module Accounting
       # Rendre « réaffectable » une ligne dont l'exercice est clos serait un
       # mensonge : sa date d'origine ne rentre plus nulle part, et on ne
       # rouvrirait le passé qu'en falsifiant la date du mouvement.
-      if journal_entry.fiscal_year.closed?
+      #
+      # Toutes les écritures nées de cette ligne, y compris le miroir chez une
+      # entité tierce : n'en contre-passer qu'une laisserait un compte courant
+      # bancal chez l'autre. Le miroir a son propre exercice, qui peut être clos
+      # quand celui de la ligne ne l'est pas.
+      ecritures = JournalEntry.where(source_type: "CashEntry", source_id: @entry.id).includes(:fiscal_year).to_a
+      if (close = ecritures.map(&:fiscal_year).find(&:closed?))
         raise ClosedFiscalYear,
-              "L'exercice #{journal_entry.fiscal_year.label} est clôturé — une correction s'y fait " \
+              "L'exercice #{close.label} est clôturé — une correction s'y fait " \
               "par écriture de contre-passation datée de l'exercice ouvert, pas en réaffectant la ligne."
       end
 
       ApplicationRecord.transaction do
-        # Toutes les écritures nées de cette ligne, y compris le miroir chez une
-        # entité tierce : n'en contre-passer qu'une laisserait un compte courant
-        # bancal chez l'autre.
-        JournalEntry.where(source_type: "CashEntry", source_id: @entry.id).find_each do |ecriture|
-          ReverseEntry.new(journal_entry: ecriture, entry_date: Date.current,
+        # La contre-passation prend la date de l'écriture qu'elle annule, pas
+        # celle du jour : la ligne réaffectée se recomptabilise à sa date de
+        # mouvement. Datée du jour, l'annulation d'une ligne 2025 tomberait en
+        # 2026 pendant que la nouvelle affectation s'ajoute en 2025 — la charge
+        # y serait comptée deux fois, et 2026 en porterait une en moins.
+        ecritures.each do |ecriture|
+          ReverseEntry.new(journal_entry: ecriture, entry_date: ecriture.entry_date,
                            whodunnit: @whodunnit).run!
         end
 

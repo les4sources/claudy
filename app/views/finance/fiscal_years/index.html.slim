@@ -5,7 +5,7 @@
 
 .mb-4.p-4.rounded-lg.border.border-amber-100(class="bg-amber-50/60")
   p.text-sm.text-gray-700
-    | Clôturer un exercice rend ses écritures définitives : elles ne se corrigent plus que par contre-passation. Les à-nouveaux ne se calculent pas, ils se reprennent — ils attendent le bilan d'ouverture du comptable.
+    | Clôturer un exercice affecte son résultat au résultat reporté, rend ses écritures définitives (elles ne se corrigent plus que par contre-passation) et pose l'à-nouveau de l'exercice suivant. On clôture dans l'ordre, et seul le dernier exercice clôturé d'une entité peut se rouvrir, motif à l'appui.
 
 - if @entity_filter
   .mb-4.flex.items-center.gap-3.text-sm
@@ -35,9 +35,14 @@
               = year.status_label
           td.py-4.px-6.text-right= year.journal_entries.size
           td.py-4.px-6.text-right
-            = link_to "Modifier", edit_finance_fiscal_year_path(year), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+            = link_to "Comptes annuels", finance_annual_accounts_path(fiscal_year_id: year.id), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
             - unless year.closed?
-              = button_to "Clôturer", close_finance_fiscal_year_path(year), method: :post, class: "ml-3 text-sm text-gray-500 hover:text-gray-700", form: { class: "inline" }, data: { turbo_confirm: "Clôturer l'exercice #{year.label} ? Ses écritures deviennent définitives." }
+              = link_to "Modifier", edit_finance_fiscal_year_path(year), class: "ml-3 text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+              = link_to "Clôturer…", closing_finance_fiscal_year_path(year), class: "ml-3 font-medium text-blue-600 border-b-2 border-blue-300 hover:text-blue-800"
+            - if @reopenable_ids.include?(year.id)
+              = form_with url: reopen_finance_fiscal_year_path(year), method: :post, class: "mt-2 flex items-center justify-end gap-2" do |f|
+                = f.text_field :reason, placeholder: "Motif de la réouverture", required: true, label: false, class: "w-56 rounded-md border-gray-300 text-xs shadow-sm"
+                button.rounded-md.border.border-red-200.bg-white.px-3.py-1.text-xs.font-medium.text-red-700(type="submit" class="hover:bg-red-50" data-turbo-confirm="Rouvrir l'exercice #{year.label} ? Son affectation et l'à-nouveau suivant seront contre-passés.") Rouvrir
             /  Un exercice VIDE et OUVERT se supprime : c'est le cas d'une
                entité créée par erreur, à qui on a posé un exercice avant de
                s'apercevoir de l'erreur. Dès qu'il porte une écriture, le

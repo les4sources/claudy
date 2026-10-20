@@ -220,6 +220,8 @@ Rails.application.routes.draw do
   # Paramètres › Accès : les rôles d'accès des comptes (2026-10-09).
   get "access", to: "access_roles#index", as: :access_roles
   patch "access", to: "access_roles#update"
+  # Les chapitres du Guide que lit chaque rôle (Michael, 2026-10-19).
+  patch "access/guide", to: "access_roles#update_guide_chapters", as: :access_guide_chapters
   resources :roles
   resources :rooms
   resources :services
@@ -280,6 +282,11 @@ Rails.application.routes.draw do
     # lectures — grand livre et balance. Aucune route ne permet de SAISIR une
     # écriture : elles se génèrent, elles ne se saisissent jamais.
     get "accounting", to: "accounting#index"
+    # Le détail d'un montant de « Peut-on dépenser ? » (2026-10-19), ouvert en
+    # fenêtre au clic : les séjours à encaisser, ce qui est à payer, les dettes
+    # au-delà de l'horizon, les prêts à rendre.
+    get "accounting/verdict/:legal_entity_id/:part", to: "accounting#verdict_detail", as: :accounting_verdict_detail,
+                                                     constraints: { part: /incoming|outgoing|liabilities_later|loans/ }
     # Le guide de la personne qui démarre (2026-10-17) : circuit, routine,
     # lexique. L'aide posée sous le titre de chaque écran y renvoie.
     get "guide", to: "guide#show", as: :guide
@@ -290,6 +297,19 @@ Rails.application.routes.draw do
     get "budget", to: "budgets#show", as: :budget
     patch "budget", to: "budgets#update"
     get "ledger", to: "ledger#index"
+    # Les comptes annuels au schéma BNB (2026-10-20) : bilan, compte de
+    # résultats et affectation d'un exercice, en regard du précédent.
+    get "annual_accounts", to: "annual_accounts#show", as: :annual_accounts
+    # Ce que le comptable emporte : un ZIP de CSV par entité et par exercice.
+    get "accountant_export", to: "accountant_exports#show", as: :accountant_export
+    get "accountant_export/download", to: "accountant_exports#download", as: :download_accountant_export
+    # Le registre des immobilisations et les dotations aux amortissements. Pas
+    # de `show` : un bien se lit dans le registre. Une dotation se passe pour
+    # tout l'exercice et s'annule bien par bien.
+    resources :fixed_assets, path: "immobilisations", except: [:show] do
+      collection { post :depreciate }
+    end
+    post "immobilisations/dotations/:id/annuler", to: "fixed_assets#cancel_depreciation", as: :cancel_fixed_asset_depreciation
     get "trial_balance", to: "trial_balance#index"
     # Journal de trésorerie (issue #179). `unallocated` est nommée AVANT la
     # ressource : sinon `/finance/cash_entries/unallocated` serait capté par
@@ -488,8 +508,15 @@ Rails.application.routes.draw do
     # corrige. La création, l'entité et le compte général restent à l'API et au
     # connecteur (`compte_tresorerie`), qui gardent leurs garde-fous.
     resources :cash_accounts, only: [:index, :edit, :update]
+    # La clôture annuelle (2026-10-20) : un aperçu (`closing`), puis la
+    # clôture qui affecte le résultat, verrouille et pose l'à-nouveau. La
+    # réouverture, motivée, ne vaut que pour le dernier exercice clôturé.
     resources :fiscal_years, except: [:show] do
-      member { post :close }
+      member do
+        get :closing
+        post :close
+        post :reopen
+      end
     end
 
     resources :statements, only: [:index] do

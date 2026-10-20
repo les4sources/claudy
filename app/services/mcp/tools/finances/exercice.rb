@@ -2,17 +2,24 @@ module Mcp
   module Tools
     module Finances
       # Comptabilité > Exercices (FiscalYearsController #create, #update,
-      # #close et #destroy). Clôturer est le geste qui fige : les écritures de
-      # l'exercice ne se corrigent plus que par contre-passation.
+      # #close, #reopen et #destroy). Clôturer est le geste qui fige : le
+      # résultat est affecté, les écritures se verrouillent et l'à-nouveau de
+      # l'exercice suivant est posé (`Accounting::CloseFiscalYear`).
       class Exercice < Ecriture
         include Commun
 
         tool "exercice",
              title: "Créer, corriger, clôturer ou supprimer un exercice comptable",
              description: "L'exercice d'une entité : dates de début et de fin (sans chevaucher un autre exercice de la " \
-                          "même entité). `cloturer` le fige : plus aucune écriture ne s'y passe ni ne s'y corrige, sauf " \
-                          "par contre-passation ; dis-le avant qu'il accepte. `supprimer` retire un exercice ouvert et " \
-                          "vide. Les exercices : parametrage_compta exercices.",
+                          "même entité). `cloturer` : affecte le résultat (bénéfice 693 → 140, perte 140 → 793, OD au " \
+                          "dernier jour), verrouille toutes les écritures, clôture, puis pose l'à-nouveau de l'exercice " \
+                          "suivant au 1er jour (classes 1 à 5, par compte et par tiers ; l'exercice suivant est créé s'il " \
+                          "manque). On clôture dans l'ordre des années. `a_nouveau` : `poser` (défaut, refusé s'il en " \
+                          "existe déjà un), `remplacer` (contre-passe l'existant) ou `aucun`. Plus rien ne s'y passe " \
+                          "ensuite, sauf par contre-passation : dis-le avant qu'il accepte. `rouvrir` (motif obligatoire) : " \
+                          "seulement le dernier exercice clôturé de l'entité ; contre-passe l'affectation et l'à-nouveau. " \
+                          "`supprimer` retire un exercice ouvert et vide. Les exercices : parametrage_compta exercices ; " \
+                          "le bilan : comptes_annuels.",
              schema: {
                properties: {
                  exercice: { type: %w[integer string], description: "Pour corriger, clôturer ou supprimer : l'exercice (#id, ou l'année avec `entite`). Absent : nouvel exercice." },
@@ -20,6 +27,8 @@ module Mcp
                  debut: DATE.merge(description: "Défaut à la création : le 1er janvier de l'année en cours."),
                  fin: DATE.merge(description: "Défaut à la création : le 31 décembre de l'année de début."),
                  cloturer: { type: "boolean" },
+                 a_nouveau: { type: "string", enum: %w[poser remplacer aucun], description: "À la clôture : que faire de l'à-nouveau de l'exercice suivant. Défaut : poser." },
+                 rouvrir: { type: "boolean", description: "Rouvrir le dernier exercice clôturé de l'entité. Exige `motif`." },
                  supprimer: { type: "boolean" }
                }
              }
@@ -28,10 +37,11 @@ module Mcp
 
         def planifier(arguments)
           exercice = arguments["exercice"].present? ? exercice!(arguments) : nil
-          if arguments["cloturer"] || arguments["supprimer"]
+          if arguments["cloturer"] || arguments["supprimer"] || arguments["rouvrir"]
             raise Error, "Donne l'exercice." if exercice.nil?
+            return cloture(exercice, arguments["a_nouveau"]) if arguments["cloturer"]
 
-            return arguments["cloturer"] ? cloture(exercice) : suppression(exercice)
+            return arguments["rouvrir"] ? reouverture(exercice) : suppression(exercice)
           end
 
           attributs = attributs!(arguments, exercice)
@@ -43,14 +53,47 @@ module Mcp
                    donnees: { id: exercice&.id, attributs: attributs })
         end
 
-        def cloture(exercice)
-          raise Error, "Cet exercice est déjà clôturé." if exercice.closed?
+        A_NOUVEAU = { "poser" => "generate", "remplacer" => "replace", "aucun" => "none" }.freeze
 
-          attente = CashEntry.pending.in_period(exercice.starts_on, exercice.ends_on).count
+        def cloture(exercice, a_nouveau)
+          mode = A_NOUVEAU.fetch(a_nouveau.presence || "poser") { raise Error, "a_nouveau : poser, remplacer ou aucun." }
+          apercu = ::Accounting::CloseFiscalYear.new(fiscal_year: exercice, opening: mode).preview
+          raise Error, apercu.blockers.join("\n") if apercu.blockers.any?
+
           resume = ["Clôturer #{ligne_exercice(exercice)}",
-                    "IRRÉVERSIBLE depuis Claude : ses #{exercice.journal_entries.count} écriture(s) se figent, plus rien ne s'y passe.",
-                    ("⚠ #{attente} ligne(s) de trésorerie de cette période sont encore à affecter." if attente.positive?)].compact
-          Plan.new(resume: resume.join("\n"), empreinte: [etat_de(exercice), "cloturer"], donnees: { id: exercice.id, geste: "cloturer" })
+                    "Résultat : #{solde_resultat(apercu.result_cents)}",
+                    *apercu.appropriation.map { |l| "  Affectation · #{l.account.code} #{l.account.name} · #{l.debit_cents.positive? ? "débit #{euros(l.debit_cents)}" : "crédit #{euros(l.credit_cents)}"}" },
+                    "Verrouille ses #{exercice.journal_entries.count} écriture(s) : IRRÉVERSIBLE depuis Claude, plus rien ne s'y passe.",
+                    ligne_a_nouveau(apercu, mode),
+                    *apercu.warnings.map { |w| "⚠ #{w}" }]
+          Plan.new(resume: resume.join("\n"),
+                   empreinte: [etat_de(exercice), "cloturer", mode, apercu.result_cents, apercu.opening_lines.size, apercu.opening_debit_cents],
+                   donnees: { id: exercice.id, geste: "cloturer", mode: mode })
+        end
+
+        def ligne_a_nouveau(apercu, mode)
+          return "À-nouveau #{apercu.next_year_label} : aucun (l'exercice suivant garde ses soldes d'ouverture)." if mode == "none"
+
+          ["À-nouveau #{apercu.next_year_label} au 1er jour : #{apercu.opening_lines.size} ligne(s), " \
+           "débit #{euros(apercu.opening_debit_cents)} = crédit #{euros(apercu.opening_credit_cents)}",
+           ("(exercice #{apercu.next_year_label} créé)" unless apercu.next_year_exists),
+           ("— remplace l'à-nouveau existant, contre-passé" if mode == "replace" && apercu.existing_opening)].compact.join(" ")
+        end
+
+        def solde_resultat(cents)
+          return "nul" if cents.zero?
+
+          cents.positive? ? "bénéfice de #{euros(cents)}" : "perte de #{euros(-cents)}"
+        end
+
+        def reouverture(exercice)
+          reouvrir = ::Accounting::ReopenFiscalYear.new(fiscal_year: exercice, reason: @motif)
+          refus = reouvrir.refusal
+          raise Error, refus if refus
+
+          Plan.new(resume: ["Rouvrir #{ligne_exercice(exercice)} — motif : #{@motif}",
+                            "Contre-passe l'affectation du résultat et l'à-nouveau posés par la clôture, et déverrouille ses écritures."].join("\n"),
+                   empreinte: [etat_de(exercice), "rouvrir", @motif], donnees: { id: exercice.id, geste: "rouvrir" })
         end
 
         def suppression(exercice)
@@ -66,8 +109,14 @@ module Mcp
           case d[:geste]
           when "cloturer"
             exercice = FiscalYear.find(d[:id])
-            metier! { exercice.close! }
-            "Exercice clôturé : #{ligne_exercice(exercice)}. Ses écritures ne se corrigent plus que par contre-passation."
+            metier! { ::Accounting::CloseFiscalYear.new(fiscal_year: exercice, opening: d[:mode], whodunnit: whodunnit).run! }
+            suivant = exercice.legal_entity.fiscal_years.find_by(starts_on: exercice.ends_on + 1)
+            ["Exercice clôturé : #{ligne_exercice(exercice.reload)}. Résultat affecté, écritures verrouillées.",
+             (suivant && d[:mode] != "none" ? "À-nouveau posé au #{suivant.starts_on} (exercice ##{suivant.id})." : nil)].compact.join(" ")
+          when "rouvrir"
+            exercice = FiscalYear.find(d[:id])
+            metier! { ::Accounting::ReopenFiscalYear.new(fiscal_year: exercice, reason: @motif, whodunnit: whodunnit).run! }
+            "Exercice rouvert : #{ligne_exercice(exercice.reload)}. Affectation et à-nouveau contre-passés."
           when "supprimer"
             exercice = FiscalYear.find(d[:id])
             raise Error, (exercice.errors.full_messages.to_sentence.presence || "Cet exercice ne se supprime pas.") unless exercice.destroy

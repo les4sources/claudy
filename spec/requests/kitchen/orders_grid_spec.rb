@@ -292,15 +292,15 @@ RSpec.describe "Cuisine — grille jours × services", type: :request do
     end
   end
 
-  # Un service refusé par la cuisine mais encore à venir est « à couvrir » :
-  # il reste dans « À venir » et dans la vue Accueil, avec un bord rouge, et ne
-  # tombe dans « Annulés » qu'une fois passé.
+  # Un service refusé par la cuisine mais encore à venir est « à couvrir » : il
+  # ouvre la vue Accueil, avec son motif, et ne tombe dans « Annulés » qu'une
+  # fois passé.
   describe "un service à couvrir" do
     def row_for(order)
       Nokogiri::HTML(response.body).at_css("#order-#{order.id}")
     end
 
-    it "se lit dans la vue Accueil, avec son motif, son jour et un bord rouge" do
+    it "se lit en tête de la vue Accueil, avec son motif et son jour" do
       order = MealOrder.create!(stay: stay, kind: "repas", moment: "midi", date: lundi,
                                 people: 4, status: "requested", skip_notifications: true)
       order.refuse!("Steph n'est pas là ce mercredi")
@@ -309,7 +309,8 @@ RSpec.describe "Cuisine — grille jours × services", type: :request do
 
       row = row_for(order)
       expect(row).to be_present
-      expect(CGI.unescapeHTML(row.to_html)).to include("Steph n'est pas là ce mercredi", "border-l-red-500")
+      expect(CGI.unescapeHTML(row.to_html)).to include("Steph n'est pas là ce mercredi")
+      expect(row.ancestors("section").first["id"]).to eq("section-to_cover")
       expect(row.text).to include(I18n.l(lundi, format: "%-d %b"))
     end
 
@@ -321,7 +322,7 @@ RSpec.describe "Cuisine — grille jours × services", type: :request do
       get kitchen_orders_path(view: :out)
       expect(row_for(order)).to be_nil
 
-      get kitchen_orders_path(view: :all)
+      get kitchen_orders_path(view: :kitchen)
       expect(row_for(order)).to be_present
     end
 

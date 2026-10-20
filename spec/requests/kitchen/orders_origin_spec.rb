@@ -131,27 +131,36 @@ RSpec.describe "Cuisine — origine de la demande (epic #321, phase 2)", type: :
       Nokogiri::HTML(response.body).css("tr[id^=order-]").map { |tr| tr["id"].delete_prefix("order-").to_i }
     end
 
-    it "ne montre que l'origine demandée dans les vues de travail" do
+    it "ne montre que l'origine demandée dans la vue Accueil" do
       from_client    = line(origin: "client")
       from_reception = line(origin: "reception")
 
-      expect(ids_on(view: :kitchen)).to contain_exactly(from_client.id, from_reception.id)
-      expect(ids_on(view: :kitchen, origin: "client")).to eq([from_client.id])
-      expect(ids_on(view: :kitchen, origin: "reception")).to eq([from_reception.id])
+      expect(ids_on(view: :reception)).to contain_exactly(from_client.id, from_reception.id)
+      expect(ids_on(view: :reception, origin: "client")).to eq([from_client.id])
+      expect(ids_on(view: :reception, origin: "reception")).to eq([from_reception.id])
     end
 
     def origin_filter_links
       Nokogiri::HTML(response.body).css("a[href*='origin=']").map { |a| a.text.strip }
     end
 
-    it "propose le filtre dans les vues Cuisine, Accueil et Info, nulle part ailleurs" do
-      %i[kitchen reception info].each do |view|
-        get kitchen_orders_path(view: view)
-        expect(origin_filter_links).to include("Demande du client"), "filtre attendu dans #{view}"
-      end
+    # Qui relancer : c'est la question de l'accueil. La vue Cuisine filtre,
+    # elle, par famille.
+    it "propose le filtre dans la vue Accueil, nulle part ailleurs" do
+      get kitchen_orders_path(view: :reception)
+      expect(origin_filter_links).to include("Demande du client")
 
-      get kitchen_orders_path(view: :past)
-      expect(origin_filter_links).to be_empty
+      %i[kitchen past].each do |view|
+        get kitchen_orders_path(view: view)
+        expect(origin_filter_links).to be_empty, "pas de filtre attendu dans #{view}"
+      end
+    end
+
+    it "ignore l'origine dans la vue Cuisine" do
+      from_client    = line(origin: "client")
+      from_reception = line(origin: "reception")
+
+      expect(ids_on(view: :kitchen, origin: "client")).to contain_exactly(from_client.id, from_reception.id)
     end
 
     it "ignore un paramètre d'origine resté dans l'URL d'une vue sans sélecteur" do

@@ -99,7 +99,7 @@ nav.bg-4s-main.shadow-sm.lg:px-6.relative.z-40
 
         / Le Guide des 4 Sources (Michael, 2026-10-19) : le manuel du collectif,
           ouvert à TOUS les rôles — c'est souvent la seule entrée commune.
-        - if section_readable?(:guide)
+        - if guide_readable?
           li
             = link_to guide_root_path,
                       class: "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-all duration-150 #{!@guide_view.nil? ? nav_active : nav_idle}",

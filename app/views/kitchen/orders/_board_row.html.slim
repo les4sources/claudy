@@ -1,0 +1,120 @@
+/ Une ligne : un service. Les colonnes viennent de la section
+  (`KitchenHelper#board_columns`) ; les gestes du quotidien sont des boutons
+  visibles, le reste vit dans le « ⋯ ».
+
+  Les menus (note, « je m'en charge », annulation, ⋯) sont des popovers en
+  `position: fixed` : la table défile horizontalement, et un menu absolu y
+  serait rogné par le conteneur.
+- dom   = "order-#{order.id}"
+- past  = order.past?
+- muted = order.cancelled? || past
+- btn_go  = "inline-flex min-h-[36px] items-center rounded-md bg-4s-main px-3 text-sm font-medium text-white hover:opacity-90"
+- btn_no  = "inline-flex min-h-[36px] items-center rounded-md bg-white px-3 text-sm font-medium text-red-700 ring-1 ring-red-200 hover:bg-red-50"
+- btn_alt = "inline-flex min-h-[36px] items-center rounded-md bg-white px-3 text-sm font-medium text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50"
+- panel   = "absolute left-0 top-0 z-40 invisible opacity-0 transition-opacity rounded-lg bg-white shadow-lg ring-1 ring-gray-200 text-left font-normal"
+- pop     = ->(target, placement) { { "controller" => "popover", "action" => "click->popover#toggle click@window->popover#hideOnClickOutside", "popover-target-value" => target, "popover-strategy-value" => "fixed", "popover-placement-value" => placement } }
+
+tr(id=dom class=(muted ? "text-gray-500" : "text-gray-800"))
+  - columns.each do |column|
+    - case column
+    - when :date
+      td(class="whitespace-nowrap px-3 py-2 first:pl-4")
+        span.font-semibold(class=(muted ? '' : 'text-gray-900')) = order.day_label
+        - if order.moment_label.present?
+          span.ml-1.text-gray-500 = order.moment_label
+
+    - when :moment
+      td.whitespace-nowrap.px-3.py-2.pl-4.text-gray-700 = order.moment_label.presence || "—"
+
+    / CLIENT : le lien vers le séjour, la pastille « sans séjour » d'une demande
+      orpheline (issue #315) et l'origine (epic #321, phase 2).
+    - when :client
+      td.px-3.py-2
+        .flex.flex-wrap.items-center.gap-2
+          - if order.stay
+            = link_to order.client_label, stay_path(order.stay), class: "font-medium hover:underline #{muted ? '' : 'text-gray-900'}"
+          - else
+            span(class=(muted ? '' : 'text-gray-900')) = order.client_label
+          = order.orphan_badge
+          = order.origin_badge
+
+    - when :kind
+      td.whitespace-nowrap.px-3.py-2
+        .flex.items-center.gap-1
+          span = order.label
+          = order.trio_badge
+          - if !past && order.warnings.any?
+            span.text-amber-600(title=order.warnings.join(". ")) ⚠
+          / Les précisions du client : derrière un picto, lues au clic.
+          - if order.notes.present?
+            button.rounded.p-1.text-gray-400(type="button" aria-label="Précisions" class="hover:bg-gray-100 hover:text-gray-700" data=pop.call("#{dom}-note", "bottom"))
+              svg.h-4.w-4(viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true")
+                path d="M4 2.5h6.5L13 5v8.5H4z"
+                path d="M6 7h4M6 9.5h4"
+            .w-64.whitespace-normal.p-3.text-sm.text-gray-700(id="#{dom}-note" role="tooltip" class=panel)
+              p = order.notes
+
+    - when :people
+      td.whitespace-nowrap.px-3.py-2.text-right.font-semibold.tabular-nums
+        = order.people
+        span.ml-1
+          = render "kitchen/orders/meal_icon"
+
+    - when :responsible
+      td.whitespace-nowrap.px-3.py-2
+        - if order.responsible_missing?
+          span.font-medium.text-amber-700 Personne
+        - else
+          = order.responsible_label
+
+    / DEMANDÉE LE (epic #321, phase 1) : au-delà de deux semaines sans réponse
+      de la cuisine, la date passe en ambre.
+    - when :requested_at
+      td.whitespace-nowrap.px-3.py-2
+        span(class=(order.stale_request? ? 'font-semibold text-amber-700' : 'text-gray-500')) = order.requested_at_label
+
+    - when :client_status
+      td.whitespace-nowrap.px-3.py-2 = order.status_badge
+
+    - when :reason
+      td.px-3.py-2.text-red-800 = order.reason || "—"
+
+    - when :price
+      td.whitespace-nowrap.px-3.py-2.text-right.tabular-nums = order.price
+
+    / Ce qu'attend une demande que la cuisine n'a pas tranchée.
+    - when :waiting_for
+      td.whitespace-nowrap.px-3.py-2
+        - if order.pending? && !order.responsible_missing?
+          = "Réponse de #{order.responsible_label}"
+        - else
+          span.font-medium.text-amber-700 Quelqu'un qui s'en charge
+
+    / LES GESTES, selon la vue et la section. Répondre depuis n'importe quel
+      compte : les comptes sont partagés, et la personne qui s'en charge est
+      TOUJOURS nommée, jamais déduite du compte connecté.
+    - when :actions
+      td.whitespace-nowrap.py-2.pl-2.pr-3.text-right
+        .inline-flex.items-center.gap-2
+          - unless muted
+            - if @view == :kitchen && status == "to_validate"
+              /  Personne ne s'en charge : on nomme d'abord quelqu'un (ce qui vaut
+                 acceptation pour un buffet ou un apéro), sinon « Ok ! » laisserait
+                 la ligne dans « À valider », sans porteur.
+              - if order.responsible_missing?
+                button(type="button" class=btn_go data=pop.call("#{dom}-assign", "bottom-end")) Je m'en charge
+                = render "kitchen/orders/assign_panel", order: order, dom: dom, panel: panel
+              - else
+                = button_to "Ok !", accept_kitchen_order_path(order), method: :patch, class: btn_go
+              - if order.pending?
+                = link_to "Pas possible", new_refusal_kitchen_order_path(order), class: btn_no
+            - elsif @view == :reception && status == "inquiry"
+              = button_to "Demande ferme", status_kitchen_order_path(order), method: :patch, params: { status: "requested" }, class: btn_go
+              = render "kitchen/orders/cancel_button", order: order, dom: dom, panel: panel, btn: btn_alt, pop: pop
+            - elsif @view == :reception && status == "planned" && order.requested?
+              = button_to "Confirmer", status_kitchen_order_path(order), method: :patch, params: { status: "confirmed" }, class: btn_alt
+            - elsif @view == :reception && status == "to_cover"
+              button(type="button" class=btn_go data=pop.call("#{dom}-assign", "bottom-end")) Confier à…
+              = render "kitchen/orders/assign_panel", order: order, dom: dom, panel: panel
+              = render "kitchen/orders/cancel_button", order: order, dom: dom, panel: panel, btn: btn_alt, pop: pop
+          = render "kitchen/orders/menu", order: order, dom: dom, panel: panel, pop: pop, past: past

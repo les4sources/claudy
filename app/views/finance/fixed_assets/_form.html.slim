@@ -1,0 +1,72 @@
+/ Une immobilisation du registre. Les montants se saisissent en euros.
+- money = ->(value) { value && format("%.2f", value).tr(".", ",") }
+- input_class = "mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+- class_two = GeneralAccount.actives.in_class(2).ordered
+= form_with model: [:finance, asset], class: "space-y-6" do |f|
+  = render "finance/shared/form_errors", record: asset
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-3.text-sm.font-semibold.text-gray-900 Le bien
+    .grid.gap-4(class="md:grid-cols-2")
+      div(class="md:col-span-2")
+        = f.text_field :name, label: "Désignation *", required: true, placeholder: "Poêle à bois de la grange", class: input_class
+      div
+        = f.label :legal_entity_id, "Entité propriétaire *", class: "block text-sm font-medium text-gray-700"
+        div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une entité…" class="relative")
+          = f.collection_select :legal_entity_id, LegalEntity.actives.ordered, :id, :name, {}, class: input_class, data: { searchable_select_target: "select" }
+          = render "shared/searchable_select_search", label: "Chercher une entité"
+      div
+        = f.label :team_id, "Pôle qui l'utilise", class: "block text-sm font-medium text-gray-700"
+        div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucun" data-searchable-select-clearable-value="true" class="relative")
+          = f.collection_select :team_id, Team.ordered, :id, :name, { include_blank: "Aucun" }, class: input_class, data: { searchable_select_target: "select" }
+          = render "shared/searchable_select_search", label: "Chercher un pôle"
+        p.mt-1.text-xs.text-gray-500 La dotation lui sera imputée, comme une charge du pôle.
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-1.text-sm.font-semibold.text-gray-900 Valeur et durée
+    p.mb-3.text-xs.text-gray-500
+      | Amortissement linéaire, au prorata des mois : un bien acheté en septembre prend quatre mois de dotation la première année. « Déjà amorti avant Claudy » reprend ce qui figure au compte d'amortissements au moment où le bien entre au registre.
+    .grid.gap-4(class="md:grid-cols-4")
+      div
+        = f.date_field :acquired_on, label: "Acquis le *", required: true, class: input_class
+      div
+        = f.text_field :acquisition, label: "Valeur d'acquisition (€) *", required: true, inputmode: "decimal", placeholder: "4 800", value: money.(asset.acquisition), class: input_class
+      div
+        = f.number_field :useful_life_years, label: "Durée (années) *", min: 1, max: 100, required: true, class: input_class
+      div
+        = f.text_field :prior_depreciation, label: "Déjà amorti avant Claudy (€)", inputmode: "decimal", placeholder: "0", value: (asset.prior_depreciation_cents.to_i.positive? ? money.(asset.prior_depreciation) : nil), class: input_class
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-3.text-sm.font-semibold.text-gray-900 Les comptes
+    .grid.gap-4(class="md:grid-cols-3")
+      div
+        = f.label :general_account_id, "Compte d'immobilisation *", class: "block text-sm font-medium text-gray-700"
+        div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative")
+          = f.collection_select :general_account_id, class_two, :id, :to_s, {}, class: input_class, data: { searchable_select_target: "select" }
+          = render "shared/searchable_select_search", label: "Chercher un compte"
+        p.mt-1.text-xs.text-gray-500 Où le bien est à l'actif (240000 pour le mobilier).
+      div
+        = f.label :depreciation_account_id, "Compte d'amortissements *", class: "block text-sm font-medium text-gray-700"
+        div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative")
+          = f.collection_select :depreciation_account_id, class_two, :id, :to_s, {}, class: input_class, data: { searchable_select_target: "select" }
+          = render "shared/searchable_select_search", label: "Chercher un compte"
+        p.mt-1.text-xs.text-gray-500 Où s'accumulent les amortissements (240001 pour le mobilier).
+      div
+        = f.label :expense_account_id, "Compte de dotation *", class: "block text-sm font-medium text-gray-700"
+        div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative")
+          = f.collection_select :expense_account_id, GeneralAccount.actives.in_class(6).ordered, :id, :to_s, {}, class: input_class, data: { searchable_select_target: "select" }
+          = render "shared/searchable_select_search", label: "Chercher un compte"
+        p.mt-1.text-xs.text-gray-500 La charge de l'année (#{FixedAsset::DEFAULT_EXPENSE_CODE}).
+
+  .p-4.bg-white.rounded-lg.border.border-gray-100
+    h3.mb-3.text-sm.font-semibold.text-gray-900 Sortie et notes
+    .grid.gap-4(class="md:grid-cols-3")
+      div
+        = f.date_field :disposed_on, label: "Sorti le (vendu, cassé, donné)", class: input_class
+        p.mt-1.text-xs.text-gray-500 Plus aucune dotation après cette date.
+      div(class="md:col-span-2")
+        = f.text_area :notes, label: "Notes", rows: 2, placeholder: "Facture, fournisseur, où il se trouve…", class: input_class
+
+  .flex.items-center.gap-3
+    = f.submit "Enregistrer", class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+    = link_to "Annuler", finance_fixed_assets_path(legal_entity_id: asset.legal_entity_id), class: "text-sm text-gray-500 hover:text-gray-700"

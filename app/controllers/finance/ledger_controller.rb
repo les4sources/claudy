@@ -24,12 +24,11 @@ module Finance
       scope = scope.where(journal_entries: { legal_entity_id: @entity.id }) if @entity
 
       # Le solde d'ouverture est celui d'AVANT la période lue, sinon la première
-      # ligne affichée semblerait sortir de nulle part.
-      opening_scope = JournalLine.joins(:journal_entry)
-                                 .where(general_account_id: @account.id)
-                                 .where("journal_entries.entry_date < ?", @from)
-      opening_scope = opening_scope.where(journal_entries: { legal_entity_id: @entity.id }) if @entity
-      @opening_cents = opening_scope.sum(:debit_cents) - opening_scope.sum(:credit_cents)
+      # ligne affichée semblerait sortir de nulle part. Il suit la convention
+      # de `Accounting::Balances` : l'à-nouveau de l'exercice quand il existe,
+      # et des charges et produits qui repartent de zéro chaque année.
+      entities = @entity ? [@entity] : @entities.to_a
+      @opening_cents = entities.sum { |entity| Accounting::Balances.new(entity).before(@from, only: [@account.id])[@account.id] }
 
       running = @opening_cents
       @lines = scope.map do |line|

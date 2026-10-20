@@ -1,0 +1,113 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Immobilisations",
+           links: [link_to("➕ Nouvelle immobilisation", new_finance_fixed_asset_path(legal_entity_id: @entity&.id), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+- money = ->(cents) { cents.nil? ? "—" : humanized_money_with_symbol(Money.new(cents, "EUR")) }
+
+= form_with url: finance_fixed_assets_path, method: :get, class: "mb-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap items-end gap-4" do |f|
+  div(data-controller="searchable-select" class="relative w-64")
+    = f.label :legal_entity_id, "Entité", class: "block text-sm font-medium text-gray-700"
+    = f.select :legal_entity_id, options_from_collection_for_select(@entities, :id, :name, @entity&.id), {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher une entité"
+  - if @years.any?
+    div(data-controller="searchable-select" class="relative w-40")
+      = f.label :fiscal_year_id, "Exercice", class: "block text-sm font-medium text-gray-700"
+      = f.select :fiscal_year_id, options_for_select(@years.map { |year| [year.label, year.id] }, @year&.id), {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+      = render "shared/searchable_select_search", label: "Chercher un exercice"
+  button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="submit" class="hover:bg-gray-50") Afficher
+
+- if @year
+  - due = @posting.rows
+  .mb-6.p-4.rounded-lg.border(class="#{due.any? ? 'border-amber-200 bg-amber-50/70' : 'border-green-100 bg-green-50'}" data-depreciation-panel="")
+    .flex.flex-wrap.items-center.justify-between.gap-4
+      div
+        p.text-sm.font-semibold.text-gray-900 Dotations de l'exercice #{@year.label}
+        - if due.any?
+          p.mt-1.text-sm.text-amber-900
+            | #{due.size} dotation(s) à passer au #{l(@year.ends_on, format: :long)}, pour #{money.call(@posting.total_cents)}.
+            - catch_ups = due.select(&:catch_up?)
+            - if catch_ups.any?
+              |  Dont #{catch_ups.size} avec un rattrapage d'années non amorties : vérifie « déjà amorti avant Claudy ».
+        - elsif @year.closed?
+          p.mt-1.text-sm.text-gray-700 Exercice clôturé : ses dotations sont définitives.
+        - else
+          p.mt-1.text-sm.text-green-800 Tout est doté pour cet exercice.
+      - if due.any? && !@year.closed?
+        = button_to "Passer les dotations #{@year.label}", depreciate_finance_fixed_assets_path, method: :post,
+                    params: { fiscal_year_id: @year.id },
+                    class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90",
+                    data: { turbo_confirm: "Passer #{due.size} dotation(s) au #{l(@year.ends_on)} pour #{money.call(@posting.total_cents)} ?" }
+
+- if @assets.empty?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    p.font-medium.text-gray-700 Aucune immobilisation au registre de #{@entity&.name}.
+    p.mt-1 Un bien qui sert plusieurs années (mobilier, machines, véhicule) s'amortit sur sa durée d'utilisation : inscris-le ici pour que chaque exercice porte sa part.
+- else
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-4[scope="col"] Bien
+          th.py-3.px-4[scope="col"] Acquis le
+          th.py-3.px-4.text-right[scope="col"] Valeur
+          th.py-3.px-4.text-right[scope="col"] Durée
+          th.py-3.px-4.text-right[scope="col"] Amortissements cumulés
+          th.py-3.px-4.text-right[scope="col"] Valeur nette
+          th.py-3.px-4.text-right[scope="col"]= @year ? "Dotation #{@year.label}" : "Dotation"
+          th.py-3.px-4[scope="col"]
+      tbody
+        - @assets.each do |asset|
+          - done = @year && asset.depreciation_for(@year)
+          - pending = @year && !done ? asset.depreciation_due_cents(@year) : 0
+          tr.border-b.bg-white(class="#{'opacity-60' if asset.disposed?}")
+            td.py-3.px-4
+              p.font-medium.text-gray-900= asset.name
+              p.text-xs.text-gray-500
+                span.font-mono= asset.general_account.code
+                - if asset.team
+                  |  · #{asset.team.name}
+                - if asset.disposed?
+                  |  · sorti le #{l(asset.disposed_on)}
+            td.py-3.px-4.whitespace-nowrap= l(asset.acquired_on)
+            td.py-3.px-4.text-right.tabular-nums= money.call(asset.acquisition_cents)
+            td.py-3.px-4.text-right= "#{asset.useful_life_years} ans"
+            td.py-3.px-4.text-right.tabular-nums= money.call(asset.depreciated_cents)
+            td.py-3.px-4.text-right.tabular-nums.font-semibold.text-gray-900= money.call(asset.net_book_value_cents)
+            td.py-3.px-4.text-right.tabular-nums
+              - if done
+                span.text-green-700= "✓ #{money.call(done.amount_cents)}"
+                - unless @year.closed?
+                  = button_to "Annuler", finance_cancel_fixed_asset_depreciation_path(done), method: :post, form: { class: "inline" },
+                              class: "ml-2 text-xs text-red-600 hover:text-red-800",
+                              data: { turbo_confirm: "Contre-passer la dotation #{@year.label} de « #{asset.name} » ?" }
+              - elsif pending.to_i.positive?
+                span.text-amber-700= "à passer : #{money.call(pending)}"
+              - else
+                span.text-gray-400 —
+            td.py-3.px-4.text-right
+              = link_to "Modifier", edit_finance_fixed_asset_path(asset), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+      tfoot
+        tr.bg-gray-50.font-semibold.text-gray-900
+          td.py-3.px-4(colspan="2") Total
+          td.py-3.px-4.text-right.tabular-nums= money.call(@assets.sum(&:acquisition_cents))
+          td
+          td.py-3.px-4.text-right.tabular-nums= money.call(@assets.sum(&:depreciated_cents))
+          td.py-3.px-4.text-right.tabular-nums= money.call(@assets.sum(&:net_book_value_cents))
+          td(colspan="2")
+
+  - if @ledger_check.present?
+    .mt-6.p-4.bg-white.rounded-lg.border.border-gray-100(data-ledger-check="")
+      p.text-sm.font-medium.text-gray-700 Le registre face au grand livre, au #{l(@year.ends_on, format: :long)}
+      p.mt-1.text-xs.text-gray-500 Un écart, c'est un bien acheté qui n'est pas au registre (ou l'inverse), ou des amortissements passés ailleurs.
+      table.mt-3.w-full.text-sm.text-gray-600
+        tbody
+          - @ledger_check.each do |row|
+            - gap = row[:ledger_cents] - row[:registry_cents]
+            tr.border-b
+              td.py-2
+                span.font-mono.text-gray-900= row[:account].code
+                span.ml-2= row[:account].name
+              td.py-2.text-right.tabular-nums= "registre #{money.call(row[:registry_cents])}"
+              td.py-2.text-right.tabular-nums= "grand livre #{money.call(row[:ledger_cents])}"
+              td(class="py-2 text-right tabular-nums #{gap.zero? ? 'text-green-700' : 'text-amber-700'}")= gap.zero? ? "✓" : "écart #{money.call(gap)}"

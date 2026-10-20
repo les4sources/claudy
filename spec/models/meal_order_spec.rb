@@ -91,6 +91,27 @@ RSpec.describe MealOrder do
     end
   end
 
+  # Le statut affiché sur la page Cuisine : un seul mot pour deux états.
+  describe "#board_status" do
+    let(:steph) { Human.create!(name: "Stéphanie", email: "steph-board@les4sources.be", status: "active") }
+
+    def board(**attrs) = described_class.new({ kind: "repas", people: 2, responsible_human: steph }.merge(attrs)).board_status
+
+    it "lit les deux états, la cuisine d'abord" do
+      expect(board(status: "requested", validation: "pending")).to eq("to_validate")
+      expect(board(status: "inquiry", validation: "pending")).to eq("to_validate")
+      expect(board(status: "inquiry", validation: "accepted")).to eq("inquiry")
+      expect(board(status: "requested", validation: "accepted")).to eq("planned")
+      expect(board(status: "confirmed", validation: "accepted")).to eq("planned")
+      expect(board(status: "requested", validation: "refused")).to eq("to_cover")
+      expect(board(status: "cancelled", validation: "accepted")).to be_nil
+    end
+
+    it "attend la cuisine tant que personne ne s'en charge" do
+      expect(board(validation: "accepted", responsible_human: nil)).to eq("to_validate")
+    end
+  end
+
   describe "prix" do
     it "calcule le total depuis le barème et le nombre de convives" do
       expect(order(kind: "repas", people: 4).price_cents).to eq(6_000)

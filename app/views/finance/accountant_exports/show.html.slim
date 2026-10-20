@@ -1,0 +1,24 @@
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Export pour le comptable"
+
+= form_with url: finance_download_accountant_export_path, method: :get, data: { turbo: false }, class: "mb-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap items-end gap-4" do |f|
+  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un exercice…" class="relative w-80")
+    = f.label :fiscal_year_id, "Exercice", class: "block text-sm font-medium text-gray-700"
+    = f.select :fiscal_year_id, options_for_select(@years.map { |year| ["#{year.legal_entity.name} · #{year.label}#{' (clôturé)' if year.closed?}", year.id] }, @year&.id), {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher un exercice"
+  button.inline-flex.items-center.rounded-md.border.border-transparent.bg-4s-main.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(type="submit" class="hover:opacity-90") ⬇ Télécharger le ZIP
+
+.p-5.bg-white.rounded-lg.border.border-gray-100
+  p.text-sm.font-medium.text-gray-700 Ce que contient le ZIP
+  dl.mt-3.grid.grid-cols-1.gap-x-6.gap-y-3.text-sm(class="md:grid-cols-2")
+    - [["journaux.csv", "Toutes les écritures de l'exercice, ligne par ligne, par journal et numéro de pièce, avec le tiers, le pôle et l'origine."],
+       ["grand-livre.csv", "Chaque compte : solde d'ouverture, mouvements et solde qui court."],
+       ["balance.csv", "Ouverture, débit, crédit et solde de clôture de chaque compte."],
+       ["balance-tiers.csv", "Les soldes de fin d'exercice, tiers par tiers : fournisseurs, clients, prêteurs."],
+       ["comptes-annuels.csv", "Bilan, compte de résultats et affectation au schéma abrégé de la BNB, avec l'exercice précédent."],
+       ["immobilisations.csv", "Le registre des immobilisations et leurs amortissements."]].each do |name, text|
+      div
+        dt.font-mono.text-gray-900= name
+        dd.text-gray-600= text
+  p.mt-4.text-xs.text-gray-500
+    | Format belge : point-virgule, virgule décimale, UTF-8. Excel l'ouvre d'un double clic. Un exercice encore ouvert donne des chiffres provisoires : le fichier LISEZMOI le rappelle.

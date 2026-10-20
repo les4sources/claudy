@@ -47,6 +47,8 @@ p.-mt-4.mb-6.max-w-3xl.text-sm.text-stone-600
     - if guide_writer?
       .mt-1.text-xs.text-stone-500 Commence par un chapitre, par exemple « Procédures » ou « Arriver aux 4 Sources ».
       = link_to "Créer le premier chapitre", new_guide_chapter_path, class: "mt-4 #{primary_button}"
+    - elsif GuideChapter.exists?
+      .mt-1.text-xs.text-stone-500 Aucun chapitre n'est encore ouvert à ton rôle.
     - else
       .mt-1.text-xs.text-stone-500 Les Sourciers y rangeront bientôt les procédures et les infos utiles.
 
@@ -72,6 +74,11 @@ p.-mt-4.mb-6.max-w-3xl.text-sm.text-stone-600
               h2.text-lg.font-semibold.text-stone-900 = chapter.title
               - if chapter.description.present?
                 p.mt-0.5.text-sm.text-stone-600 = chapter.description
+              / Qui le lit, pour celles et ceux qui l'écrivent.
+              - if guide_writer?
+                p.mt-1.text-xs.text-stone-400
+                  - labels = chapter.reader_labels
+                  = labels.any? ? "Lu par les Sourciers et : #{labels.join(', ')}" : "Lu par les Sourciers seulement"
             - if guide_writer?
               .flex.shrink-0.items-center.gap-3.text-xs
                 = link_to "Ajouter une page", new_guide_page_path(chapter_id: chapter.id), class: "font-medium text-emerald-700 hover:underline"

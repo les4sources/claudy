@@ -62,6 +62,15 @@ module Finance
 
     def lowest_point = treasury.lowest_point
 
+    # Les prêteurs derrière `loans_cents`, compte par compte : un compte à
+    # long terme n'y est pas, un compte débiteur y est mais ne compte pas.
+    def short_term_loan_accounts
+      return {} unless loans_group
+
+      loans_group.lenders.reject(&:long_term?).group_by(&:account)
+                 .sort_by { |account, rows| [-rows.sum(&:owed_cents), account.code] }.to_h
+    end
+
     def verdict
       @verdict ||= if treasury.anchored_accounts.empty? then "inconnu"
                    elsif margin_cents.negative? || lowest_point.balance_cents.negative? then "non"

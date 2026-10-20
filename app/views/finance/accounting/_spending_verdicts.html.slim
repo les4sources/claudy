@@ -4,6 +4,13 @@
             "oui" => "border-emerald-200 bg-emerald-50/60", "inconnu" => "border-stone-200 bg-stone-50" }
 - titles = { "non" => "text-red-800", "prudence" => "text-amber-900", "oui" => "text-emerald-900", "inconnu" => "text-stone-800" }
 - euros = ->(cents) { number_to_currency(cents / 100.0, unit: "€", precision: 0) }
+/ Un montant qui a une liste derrière l'ouvre en fenêtre (2026-10-19). Un vrai
+  lien vers une URL, jamais une ancre « # » tenue par du JS : Turbo la suivrait.
+- detail = lambda do |v, part, cents|
+  - next euros.(cents) if cents.zero?
+  - link_to euros.(cents), finance_accounting_verdict_detail_path(v.entity, part),
+            data: { turbo_frame: "modal", spending_detail: part },
+            class: "underline decoration-gray-300 underline-offset-4 hover:decoration-gray-600"
 - if verdicts.any?
   section.mb-8(data-spending-verdicts="")
     h2.mb-3.text-lg.font-semibold.text-gray-900 Peut-on dépenser ?
@@ -22,7 +29,7 @@
                 dd.text-gray-900= euros.(v.balance_cents)
               .flex.justify-between.py-1
                 dt.text-gray-600 + À encaisser (séjours confirmés)
-                dd.text-emerald-700(data-spending-incoming="")= euros.(v.incoming_cents)
+                dd.text-emerald-700(data-spending-incoming="")= detail.(v, "incoming", v.incoming_cents)
               - if v.late_cents.positive?
                 .flex.justify-between.pl-4.text-xs.text-gray-500
                   dt dont séjours passés pas encore soldés
@@ -32,14 +39,14 @@
                   dd= euros.(v.upcoming_incoming_cents)
               .flex.justify-between.py-1
                 dt.text-gray-600= "− À payer (#{Finance::Treasury::HORIZON_DAYS} j, factures, charges fixes, dettes)"
-                dd.text-gray-900= euros.(v.outgoing_cents)
+                dd.text-gray-900= detail.(v, "outgoing", v.outgoing_cents)
               - if v.liabilities_later_cents.positive?
                 .flex.justify-between.py-1
                   dt.text-gray-600 − Dettes et litiges plus tard
-                  dd.text-gray-900= euros.(v.liabilities_later_cents)
+                  dd.text-gray-900= detail.(v, "liabilities_later", v.liabilities_later_cents)
               .flex.justify-between.py-1
                 dt.text-gray-600 − Prêts reçus à rendre (hors long terme)
-                dd.text-gray-900= euros.(v.loans_cents)
+                dd.text-gray-900= detail.(v, "loans", v.loans_cents)
               .flex.justify-between.py-1.mt-1.border-t.border-gray-200.font-semibold
                 dt.text-gray-900 Marge
                 dd(class="#{v.margin_cents.negative? ? 'text-red-700' : 'text-gray-900'}")= euros.(v.margin_cents)

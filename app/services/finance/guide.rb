@@ -31,6 +31,13 @@ module Finance
       Term.new("affecter", "Affecter",
                "Dire à quoi correspond un mouvement d'argent : quel compte du plan comptable (par exemple un achat de " \
                "marchandises), quelle entité et, si possible, quel pôle. Une ligne peut être affectée en plusieurs parts."),
+      Term.new("affectation-resultat", "Affectation du résultat",
+               "Le geste de la clôture qui verse le bénéfice (ou la perte) de l'année dans le « résultat reporté » " \
+               "(compte 14), par les comptes 693 et 793. Après lui, charges et produits de l'année font zéro."),
+      Term.new("amortissement", "Amortissement",
+               "La part du prix d'un bien durable qu'on compte chaque année comme une charge, sur sa durée " \
+               "d'utilisation : un poêle de 5 000 € utilisé 10 ans coûte 500 € par an. L'écriture de l'année s'appelle " \
+               "la dotation (compte 630)."),
       Term.new("analytique", "Analytique (pôle)",
                "La deuxième lecture des chiffres : non plus par nature (achats, loyers…) mais par activité (hébergement, " \
                "épicerie, bar…). C'est le pôle qu'on choisit en affectant. Ce qui n'a pas de pôle reste visible comme " \
@@ -41,6 +48,10 @@ module Finance
       Term.new("balance", "Balance",
                "Le tableau de tous les comptes avec leur total au débit, au crédit et leur solde sur une période. Le " \
                "total des débits égale toujours celui des crédits : sinon, quelque chose cloche."),
+      Term.new("bilan", "Bilan",
+               "La photo de l'entité au dernier jour de l'exercice : ce qu'elle possède (actif : bâtiments, matériel, " \
+               "créances, banque) et ce qui le finance (passif : fonds propres, prêts, dettes). Les deux totaux sont " \
+               "toujours égaux."),
       Term.new("charge-fixe", "Charge fixe",
                "Une dépense qui revient (abonnement, assurance, emprunt), notée une fois pour que la trésorerie la " \
                "prévoie. Ce n'est pas une dette, c'est une prévision. À ne pas confondre avec les charges récurrentes, " \
@@ -52,6 +63,12 @@ module Finance
       Term.new("comptabiliser", "Comptabiliser",
                "Transformer une ligne entièrement affectée en écriture au grand livre (on dit aussi « passer » " \
                "l'écriture). Avant, tout se corrige ; après, on ne corrige plus qu'en contre-passant."),
+      Term.new("cloture", "Clôture d'exercice",
+               "Le geste de fin d'année, une fois les comptes arrêtés avec le comptable : Claudy affecte le résultat, " \
+               "verrouille les écritures de l'année et pose l'à-nouveau de la suivante."),
+      Term.new("compte-resultats", "Compte de résultats",
+               "Le film de l'année : ce que l'entité a gagné (produits, classe 7) et dépensé (charges, classe 6), et " \
+               "la différence, le résultat."),
       Term.new("compte", "Compte du plan comptable",
                "Un numéro à six chiffres qui range chaque montant par nature. Le premier chiffre donne la famille : " \
                "1 fonds propres et prêts, 2 bâtiments et matériel, 4 tiers (40 clients, 44 fournisseurs), 5 banque et " \
@@ -92,6 +109,9 @@ module Finance
       Term.new("facture-vente", "Facture de vente",
                "Une facture que la maison émet (dans OkiOki). Claudy la garde, la relie à ce qu'elle facture et dit si " \
                "elle est payée."),
+      Term.new("immobilisation", "Immobilisation",
+               "Un bien que l'entité garde plusieurs années (mobilier, machines, véhicule). Il est inscrit au registre " \
+               "des immobilisations et s'amortit."),
       Term.new("grand-livre", "Grand livre",
                "Toutes les écritures d'un compte, dans l'ordre, avec le solde qui court. C'est là qu'on répond à " \
                "« d'où vient ce chiffre ? »."),
@@ -169,8 +189,17 @@ module Finance
       ),
       "finance/fiscal_years" => Page.new(
         "Les exercices comptables de chaque entité, ouverts ou clôturés.",
-        ["Un exercice se clôture une fois le bilan arrêté avec le comptable, jamais avant."],
-        %w[exercice a-nouveau]
+        ["Un exercice se clôture une fois le bilan arrêté avec le comptable, jamais avant, et dans l'ordre des années.",
+         "« Clôturer… » montre d'abord ce qui va se passer : rien n'est écrit avant le bouton de confirmation.",
+         "Seul le dernier exercice clôturé d'une entité se rouvre, avec un motif."],
+        %w[exercice cloture a-nouveau]
+      ),
+      "finance/fiscal_years#closing" => Page.new(
+        "L'aperçu de la clôture : le résultat de l'année, son affectation et l'à-nouveau de l'année suivante.",
+        ["Lis ce qui est en rouge (ce qui bloque) et en orange (ce qui mérite un regard) avant de clôturer.",
+         "Choisis ce que devient l'à-nouveau de l'année suivante : le poser, remplacer celui qui existe, ou n'en poser aucun.",
+         "Clôture : les écritures de l'année deviennent définitives."],
+        %w[cloture affectation-resultat a-nouveau]
       ),
       "finance/cash_entries" => Page.new(
         "Le journal de trésorerie : tous les mouvements d'argent réels (banque, caisse, Stripe), un par ligne.",
@@ -371,6 +400,25 @@ module Finance
         ["Regarde la part « non affecté » : plus elle est grande, moins les chiffres des pôles sont fiables."],
         %w[analytique]
       ),
+      "finance/annual_accounts" => Page.new(
+        "Le bilan et le compte de résultats d'un exercice, rangés comme la Banque nationale les demande, à côté de l'année d'avant.",
+        ["Choisis l'exercice ; coche « Détail par compte » pour voir d'où vient chaque montant.",
+         "Lis les avertissements en orange : tant qu'il y en a, les chiffres sont provisoires.",
+         "Le CSV et l'export pour le comptable reprennent ces chiffres."],
+        %w[bilan compte-resultats affectation-resultat]
+      ),
+      "finance/fixed_assets" => Page.new(
+        "Le registre des immobilisations : les biens durables, ce qui en est déjà amorti, et les dotations de l'année.",
+        ["Inscris chaque bien durable avec sa valeur, sa date et sa durée d'utilisation.",
+         "En fin d'année, avant la clôture, « Passer les dotations » écrit la charge de l'année.",
+         "Le cadre du bas compare le registre au grand livre : un écart, c'est un bien oublié."],
+        %w[immobilisation amortissement]
+      ),
+      "finance/accountant_exports" => Page.new(
+        "Tout un exercice d'une entité, en un fichier ZIP pour le comptable.",
+        ["Choisis l'exercice et télécharge : le comptable ouvre chaque fichier dans son tableur."],
+        %w[grand-livre balance bilan]
+      ),
       "finance/budgets" => Page.new(
         "Le budget d'une année, entité par entité : une ligne par pôle et par compte, face au réel de référence.",
         ["Tant que rien n'est enregistré, chaque case propose le réel des 12 derniers mois : corrige ce qui va changer, puis enregistre.",
@@ -403,8 +451,9 @@ module Finance
         Task.new("Regarder l'échéancier : ce qui tombe dans le mois", :finance_compliance_deadlines_path)
       ]],
       ["Chaque année", [
-        Task.new("Préparer le bilan avec le comptable : grand livre et balance", :finance_trial_balance_path),
-        Task.new("Clôturer l'exercice, puis ouvrir le suivant", :finance_fiscal_years_path)
+        Task.new("Passer les dotations aux amortissements de l'année", :finance_fixed_assets_path),
+        Task.new("Lire les comptes annuels et les envoyer au comptable", :finance_annual_accounts_path),
+        Task.new("Une fois les comptes arrêtés, clôturer l'exercice (l'à-nouveau suit)", :finance_fiscal_years_path)
       ]]
     ].freeze
 

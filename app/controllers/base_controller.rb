@@ -24,7 +24,12 @@ class BaseController < ActionController::Base
     # sans eux, un compte cloisonné rebondissait sur son planning et ne pouvait
     # jamais déclarer la tenue de ses propres créneaux. Le geste en masse
     # (`bulk_outcome`) reste hors allowlist : il n'est offert qu'à l'accueil.
-    "experience_bookings" => %w[index update confirm new_refusal refuse outcomes record_outcome]
+    "experience_bookings" => %w[index update confirm new_refusal refuse outcomes record_outcome],
+    # Le Guide, en lecture : les chapitres ouverts aux porteurs (Michael,
+    # 2026-10-19 ; `User#guide_roles`). Clé = `controller_path`, pas
+    # `controller_name` : « pages » serait aussi le calendrier.
+    "guide/pages" => %w[index show],
+    "guide/revisions" => %w[index show]
   }.freeze
 
   # breadcrumb "Calendrier", :root_path
@@ -52,7 +57,7 @@ class BaseController < ActionController::Base
   def restrict_experience_carriers
     return unless current_user&.restricted_to_experiences?
 
-    allowed = RESTRICTED_ALLOWLIST[controller_name]&.include?(action_name)
+    allowed = RESTRICTED_ALLOWLIST[controller_path]&.include?(action_name)
     return if allowed
 
     redirect_to experiences_path

@@ -234,6 +234,30 @@ class MealOrder < ApplicationRecord
     nil
   end
 
+  # LE statut affiché sur la page Cuisine (2026-10-19) : un seul mot, calculé à
+  # partir des deux états, qui dit qui a la main. Les deux colonnes `status` et
+  # `validation` restent la vérité en base ; c'est leur lecture croisée — douze
+  # combinaisons — qui perdait Stéphanie et Malau.
+  #   - to_validate : la cuisine n'a pas dit oui, ou personne ne s'en charge ;
+  #   - inquiry     : la cuisine est d'accord, le client se renseigne encore ;
+  #   - planned     : cuisine et client d'accord (ferme ou confirmé), on cuisine ;
+  #   - to_cover    : la cuisine a dit non, l'accueil cherche une solution.
+  # nil pour une ligne annulée : elle est sortie du jeu.
+  BOARD_STATUSES = %w[to_validate inquiry planned to_cover].freeze
+  BOARD_STATUS_LABELS = { "to_validate" => "À valider", "inquiry" => "Demande d'info",
+                          "planned" => "Prévu", "to_cover" => "À couvrir" }.freeze
+
+  def board_status
+    return nil if cancelled?
+    return "to_cover" if refused?
+    return "to_validate" if pending? || responsible_human.nil?
+    return "inquiry" if inquiry?
+
+    "planned"
+  end
+
+  def board_status_label = BOARD_STATUS_LABELS[board_status]
+
   # Tarif €/pers effectivement appliqué : l'override de la ligne d'abord, le
   # barème (table `rates`, puis constante) ensuite.
   def unit_price_effective_cents

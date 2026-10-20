@@ -31,8 +31,10 @@ module Mcp
 
           base = JournalLine.joins(:journal_entry).where(general_account_id: compte.id)
           base = base.where(journal_entries: { legal_entity_id: entite.id }) if entite
-          ouverture = base.where("journal_entries.entry_date < ?", du)
-          solde = ouverture.sum(:debit_cents) - ouverture.sum(:credit_cents)
+          # Même ouverture que l'écran : l'à-nouveau de l'exercice quand il
+          # existe, et des charges et produits qui repartent de zéro chaque année.
+          entites = entite ? [entite] : LegalEntity.all.to_a
+          solde = entites.sum { |e| ::Accounting::Balances.new(e).before(du, only: [compte.id])[compte.id] }
           lignes = base.where(journal_entries: { entry_date: du..au })
                        .includes(journal_entry: :fiscal_year)
                        .order("journal_entries.entry_date", "journal_entries.id").to_a

@@ -1,0 +1,39 @@
+/ Les séjours derrière « À encaisser » : les passés pas encore soldés (comptés
+  aujourd'hui), puis ceux qui arrivent dans l'horizon, à leur date d'arrivée.
+- euros = ->(cents) { number_to_currency(cents / 100.0, unit: "€") }
+- groups = [["Séjours passés pas encore soldés", treasury.late_receivables],
+            ["Séjours des #{Finance::Treasury::HORIZON_DAYS} prochains jours", treasury.receivables_in_horizon]].reject { |_, rows| rows.empty? }
+- if groups.empty?
+  p.text-sm.text-gray-500 Aucun séjour à encaisser.
+- else
+  div(class="max-h-[60vh] overflow-y-auto rounded border border-gray-200")
+    table.w-full.text-sm
+      thead.bg-gray-50.text-xs.uppercase.text-gray-500
+        tr
+          th.py-2.px-3.text-left[scope="col"] Séjour
+          th.py-2.px-3.text-left[scope="col"] Dates
+          th.py-2.px-3.text-left[scope="col"] Attendu le
+          th.py-2.px-3.text-right[scope="col"] Reste dû
+      - groups.each do |label, receivables|
+        tbody
+          tr.border-t.border-gray-200.bg-gray-50
+            th.py-2.px-3.text-left.font-medium.text-gray-700(scope="rowgroup" colspan="3")
+              = "#{label} · #{receivables.size}"
+            td.py-2.px-3.text-right.font-medium.tabular-nums.whitespace-nowrap.text-gray-700= euros.(receivables.sum(&:amount_cents))
+          - receivables.each do |receivable|
+            - stay = receivable.stay
+            tr.border-t.border-gray-100(data-stay-id=stay.id)
+              td.py-2.px-3.text-gray-900
+                = link_to stay.decorate.display_name.presence || "Séjour ##{stay.id}", stay_path(stay),
+                          data: { turbo_frame: "_top" }, class: "text-blue-600 hover:text-blue-800"
+              td.py-2.px-3.whitespace-nowrap.text-gray-500
+                = [stay.arrival_date, stay.departure_date].compact.map { |date| l(date, format: :ddmmyyyy) }.join(" → ")
+              td.py-2.px-3.whitespace-nowrap.text-gray-500
+                = receivable.due_on < treasury.today ? "en retard" : l(receivable.due_on, format: :ddmmyyyy)
+              td.py-2.px-3.text-right.tabular-nums.whitespace-nowrap.text-gray-900= euros.(receivable.amount_cents)
+      tfoot.bg-gray-50
+        tr.border-t.border-gray-200
+          td.py-2.px-3.font-medium.text-gray-700(colspan="3") Total
+          td.py-2.px-3.text-right.font-semibold.tabular-nums.text-gray-900= euros.(groups.sum { |_, rows| rows.sum(&:amount_cents) })
+  p.mt-4.text-xs.text-gray-500
+    = link_to "Voir la trésorerie en détail", finance_treasury_path, data: { turbo_frame: "_top" }, class: "text-blue-600 hover:text-blue-800"
