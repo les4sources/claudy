@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_22_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1035,6 +1035,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_180000) do
     t.bigint "general_account_id"
     t.string "label", null: false
     t.integer "position", default: 0, null: false
+    t.bigint "purchase_invoice_id"
     t.integer "rate_cents_per_km"
     t.integer "receipt_number"
     t.boolean "receipt_on_paper", default: false, null: false
@@ -1046,6 +1047,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_180000) do
     t.index ["deleted_at"], name: "index_expense_lines_on_deleted_at"
     t.index ["expense_report_id"], name: "index_expense_lines_on_expense_report_id"
     t.index ["general_account_id"], name: "index_expense_lines_on_general_account_id"
+    t.index ["purchase_invoice_id"], name: "index_expense_lines_on_purchase_invoice_id"
     t.index ["team_id"], name: "index_expense_lines_on_team_id"
   end
 
@@ -2939,6 +2941,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_180000) do
   add_foreign_key "expense_lines", "analytic_accounts"
   add_foreign_key "expense_lines", "expense_reports"
   add_foreign_key "expense_lines", "general_accounts"
+  add_foreign_key "expense_lines", "purchase_invoices"
   add_foreign_key "expense_lines", "teams"
   add_foreign_key "expense_reports", "fiscal_years"
   add_foreign_key "expense_reports", "humans"

@@ -76,6 +76,8 @@
                 .font-medium.text-gray-900 = line.label
                 - if line.supplier_name.present?
                   .text-xs.text-gray-400 = line.supplier_name
+                - if line.purchase_invoice
+                  .text-xs = link_to "Règle la facture ##{line.purchase_invoice_id}", finance_purchase_invoice_path(line.purchase_invoice), class: "text-4s-main hover:underline"
               td.py-3.px-4.align-top.text-xs.text-gray-500
                 / Le compte et le pôle s'attribuent ICI, au traitement (Michael, 2026-10-18) :
                   chaque liste appartient au formulaire « Passer en traitement »

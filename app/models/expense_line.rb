@@ -34,6 +34,7 @@
 #  updated_at          :datetime         not null
 #  analytic_account_id :bigint
 #  expense_report_id   :bigint           not null
+#  purchase_invoice_id :bigint
 #  general_account_id  :bigint
 #  team_id             :bigint
 #
@@ -72,6 +73,10 @@ class ExpenseLine < ApplicationRecord
   belongs_to :general_account, optional: true
   belongs_to :team, optional: true
   belongs_to :analytic_account, optional: true
+  # La facture d'achat que cette dépense règle (Michael, 2026-10-22) : payée en
+  # magasin par le membre, elle n'est plus qu'un justificatif, et c'est cette
+  # ligne qui porte la charge.
+  belongs_to :purchase_invoice, optional: true
 
   has_one_attached :receipt
 
@@ -100,6 +105,12 @@ class ExpenseLine < ApplicationRecord
   before_validation :price_mileage
 
   before_destroy :refuse_when_report_frozen
+
+  # Retirer de la note la ligne qui réglait une facture rend la facture à la
+  # comptabilité : sinon elle resterait « payée par un membre » sans que
+  # personne ne la rembourse, et sa charge ne passerait nulle part.
+  after_destroy :release_purchase_invoice
+  after_soft_delete :release_purchase_invoice
 
   scope :ordered, -> { order(:position, :spent_on, :id) }
   scope :chronological, -> { order(:spent_on, :id) }
@@ -156,6 +167,12 @@ class ExpenseLine < ApplicationRecord
   end
 
   private
+
+  def release_purchase_invoice
+    return if purchase_invoice_id.blank?
+
+    PurchaseInvoices::PaidByMember.release_if_unsettled(PurchaseInvoice.find_by(id: purchase_invoice_id))
+  end
 
   # Kilomètres × taux du jour, arrondi au cent. Le taux vient des barèmes datés
   # (`Pricing::Catalog#mileage_per_km_cents(on:)`) et se fige sur la ligne : une

@@ -218,4 +218,69 @@ RSpec.describe "Comptabilité > Achats", type: :request do
       expect(response.body).to include("contre-passation")
     end
   end
+
+  # Payée en magasin par un membre (Michael, 2026-10-22) : sa note de frais la
+  # rembourse et porte la charge.
+  describe "POST /finance/purchases/:id/paid_by_member" do
+    let!(:marie) { Human.create!(name: "Marie Test") }
+
+    it "propose le geste sur une facture à traiter" do
+      facture = cree_facture
+
+      get finance_purchase_invoice_path(facture)
+
+      expect(response.body).to include("Déjà payée par un membre ?", "Payée par ce membre", "Marie Test")
+    end
+
+    it "met la dépense sur la note du membre et affiche le lien" do
+      facture = cree_facture
+
+      post paid_by_member_finance_purchase_invoice_path(facture), params: { human_id: marie.id }
+
+      expect(facture.reload).to be_member_paid
+      note = ExpenseReport.last
+      expect(note.human).to eq(marie)
+      follow_redirect!
+      expect(response.body).to include("Payée par un membre", "remboursée par")
+      expect(response.body).not_to include("Envoyer au paiement")
+
+      get finance_expense_report_path(note)
+      expect(response.body).to include("Règle la facture ##{facture.id}")
+    end
+
+    it "relie la dépense déjà déclarée au même montant" do
+      facture = cree_facture
+      note = ExpenseReport.create!(kind: "expenses", human: marie, legal_entity: entity, submitted_on: Date.new(2026, 6, 2))
+      ticket = note.expense_lines.create!(spent_on: Date.new(2026, 6, 1), label: "Gaz", amount_cents: 12_000, receipt_on_paper: true)
+
+      get finance_purchase_invoice_path(facture)
+      expect(response.body).to include("Déjà sur une note de frais")
+
+      post paid_by_member_finance_purchase_invoice_path(facture), params: { expense_line_id: ticket.id }
+
+      expect(ticket.reload.purchase_invoice).to eq(facture)
+      expect(note.expense_lines.count).to eq(1)
+    end
+
+    it "refuse sans membre" do
+      facture = cree_facture
+
+      post paid_by_member_finance_purchase_invoice_path(facture)
+
+      expect(facture.reload).to be_to_process
+      follow_redirect!
+      expect(response.body).to include("Choisis le membre")
+    end
+
+    it "ne se modifie plus, sauf à la remettre en traitement" do
+      facture = cree_facture
+      post paid_by_member_finance_purchase_invoice_path(facture), params: { human_id: marie.id }
+
+      get edit_finance_purchase_invoice_path(facture)
+      expect(response).to redirect_to(finance_purchase_invoice_path(facture))
+
+      post reopen_finance_purchase_invoice_path(facture)
+      expect(facture.reload).to be_to_process
+    end
+  end
 end

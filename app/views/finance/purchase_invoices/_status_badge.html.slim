@@ -1,4 +1,4 @@
-- couleurs = { "to_process" => "bg-gray-100 text-gray-700", "to_validate" => "bg-amber-100 text-amber-800", "to_pay" => "bg-blue-100 text-blue-800", "paid" => "bg-emerald-100 text-emerald-800", "disputed" => "bg-red-100 text-red-800" }
+- couleurs = { "to_process" => "bg-gray-100 text-gray-700", "to_validate" => "bg-amber-100 text-amber-800", "to_pay" => "bg-blue-100 text-blue-800", "paid" => "bg-emerald-100 text-emerald-800", "member_paid" => "bg-violet-100 text-violet-800", "disputed" => "bg-red-100 text-red-800" }
 span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium #{couleurs[invoice.status]}"
   = invoice.status_label
 - if invoice.quality_flags.include?("no_vat_number")

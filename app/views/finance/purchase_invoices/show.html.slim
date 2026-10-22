@@ -1,7 +1,7 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
            title: @invoice.reference.presence || "Facture ##{@invoice.id}",
-           links: [(link_to("Modifier", edit_finance_purchase_invoice_path(@invoice), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") unless @invoice.frozen_content?),
+           links: [(link_to("Modifier", edit_finance_purchase_invoice_path(@invoice), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") unless @invoice.locked_for_edit?),
                    link_to("🔁 Cette charge revient", new_finance_recurring_expense_path(recurring_expense: RecurringExpense.prefill_from(@invoice)), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
                    link_to("Toutes les factures", finance_purchase_invoices_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")].compact
 
@@ -171,6 +171,21 @@
         - else
           p.text-sm.text-gray-600
             | En attente du pôle #{@invoice.validation_team&.name || "concerné"}. Ses membres ont reçu un lien par email.
+      - elsif @invoice.member_paid?
+        / La facture n'est plus qu'un justificatif : c'est la note qui
+          rembourse le membre et qui porte la charge au grand livre.
+        - if @settling_reports.any?
+          - @settling_reports.each do |report|
+            p.text-sm.text-gray-700
+              | Payée par #{report.human.name}, remboursée par
+              = " "
+              = link_to report.label.sub(/ — .*/, ""), finance_expense_report_path(report), class: "font-medium text-blue-500 hover:text-blue-700"
+              = " (#{report.status_label.downcase})."
+          p.text-xs.text-gray-400
+            | La charge passe au grand livre avec la note de frais : cette facture ne se comptabilise pas elle-même.
+        - else
+          p.text-sm.text-amber-800
+            | Aucune note de frais valable ne rembourse plus cette facture (note rejetée ou supprimée) : remets-la en traitement.
       - elsif @invoice.to_pay?
         p.text-sm.text-gray-600
           | Prête à payer. La file « À payer » et le virement arrivent en phase 4 de l'epic #240.
@@ -182,13 +197,36 @@
         au sens différent (il ne prévient pas la comptabilité et ne trace pas qui
         a répondu). Un seul geste par intention.
       - unless @invoice.frozen_content? || @invoice.to_validate?
-        - if @invoice.disputed?
+        - if @invoice.disputed? || @invoice.member_paid?
           = button_to "Remettre en traitement", reopen_finance_purchase_invoice_path(@invoice), method: :post, class: "w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
         - else
           = form_with url: dispute_finance_purchase_invoice_path(@invoice), method: :post, class: "space-y-2" do
             label.block.text-xs.font-medium.text-gray-500 Contester cette facture
             = text_field_tag :reason, nil, placeholder: "Pourquoi ?", class: "w-full rounded-md border-gray-300 text-sm shadow-sm"
             button.w-full.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="submit") Contester
+
+    / Payée en magasin par un membre (Michael, 2026-10-22) : la dépense passe
+      par sa note de frais, qui porte la charge. Envoyer AUSSI la facture au
+      paiement compterait l'achat deux fois.
+    - if @humans
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-3
+        h3.text-xs.uppercase.tracking-wide.text-gray-400 Déjà payée par un membre ?
+        p.text-xs.text-gray-500
+          | Payée en magasin par un membre qui se la fait rembourser : la dépense va sur sa note de frais, avec cette pièce, et c'est la note qui porte la charge. La facture ne passe pas au journal des achats.
+        = form_with url: paid_by_member_finance_purchase_invoice_path(@invoice), method: :post, class: "space-y-3" do
+          - if @candidate_lines.any?
+            div
+              label.block.text-xs.font-medium.text-gray-500(for="paid_by_member_line") Déjà sur une note de frais (#{number_to_currency(@invoice.total_cents / 100.0)})
+              div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une dépense…" data-searchable-select-clearable-value="true" class="relative mt-1")
+                = select_tag :expense_line_id, options_for_select(@candidate_lines.map { |line| ["#{line.expense_report.reference.presence || "Note ##{line.expense_report_id}"} · #{line.expense_report.human&.name} · #{l(line.spent_on, format: :short)} · #{line.label}", line.id] }), include_blank: "Aucune : l'ajouter à sa note", id: "paid_by_member_line", class: "block w-full rounded-md border-gray-300 text-sm", data: { searchable_select_target: "select" }
+                = render "shared/searchable_select_search", label: "Chercher une dépense"
+          div
+            label.block.text-xs.font-medium.text-gray-500(for="paid_by_member_human") Le membre qui a payé
+            div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un membre…" data-searchable-select-clearable-value="true" class="relative mt-1")
+              = select_tag :human_id, options_from_collection_for_select(@humans, :id, :name), include_blank: true, id: "paid_by_member_human", class: "block w-full rounded-md border-gray-300 text-sm", data: { searchable_select_target: "select" }
+              = render "shared/searchable_select_search", label: "Chercher un membre"
+            p.mt-1.text-xs.text-gray-400 La dépense s'ajoute à sa note de frais encore enregistrée, ou à une nouvelle note.
+          = submit_tag "Payée par ce membre", class: "w-full cursor-pointer rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
 
     - if @invoice.notes.present?
       .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4

@@ -10,12 +10,13 @@ module Mcp
              title: "Factures d'achat",
              description: "Les factures fournisseurs et leur parcours : à traiter (lignes à ventiler) → à valider (un " \
                           "pôle doit dire oui) → à payer (écriture passée) → payée (rapprochée d'une sortie), ou " \
-                          "contestée. Sans `facture` : la liste filtrée, avec les totaux par statut. Avec `facture` : " \
+                          "contestée ; ou payée par un membre (réglée en magasin, remboursée par sa note de frais, " \
+                          "qui porte la charge). Sans `facture` : la liste filtrée, avec les totaux par statut. Avec `facture` : " \
                           "le détail (lignes, paiements, validation, historique).",
              schema: {
                properties: {
                  facture: FACTURE,
-                 statut: { type: "string", enum: PurchaseInvoice::STATUSES, description: "to_process, to_validate, to_pay, paid ou disputed." },
+                 statut: { type: "string", enum: PurchaseInvoice::STATUSES, description: "to_process, to_validate, to_pay, paid, member_paid ou disputed." },
                  recherche: { type: "string", description: "Fournisseur, numéro ou communication." },
                  pole: POLE.merge(description: "Ne garder que les factures dont une ligne va à ce pôle."),
                  du: DATE, au: DATE
@@ -73,6 +74,10 @@ module Mcp
           end
           details << "Paiements :\n#{paiements.join("\n")}" if paiements.any?
           details << "Écriture d'achat passée le #{I18n.l(facture.posted_at.to_date)}." if facture.posted?
+          if facture.member_paid?
+            notes = facture.settling_expense_reports.includes(:human).map { |note| "  #{ligne_note(note)}" }
+            details << (notes.any? ? "Remboursée par (la note porte la charge) :\n#{notes.join("\n")}" : "⚠ Plus aucune note de frais ne la rembourse : à rouvrir.")
+          end
           versions = facture.versions.reorder(created_at: :desc).limit(8).map do |v|
             "  #{I18n.l(v.created_at, format: '%d/%m/%Y %H:%M')} #{v.event} par #{v.whodunnit || '—'}"
           end

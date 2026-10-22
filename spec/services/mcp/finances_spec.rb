@@ -214,6 +214,29 @@ RSpec.describe Mcp::Server, "finances" do
     expect(facture.reload).to have_attributes(status: "disputed", dispute_reason: "pas notre commande")
   end
 
+  it "passe une facture payée en magasin sur la note de frais du membre, sans la comptabiliser" do
+    fournisseur = ThirdParty.create!(name: "AliFar", kind: "supplier")
+    facture = PurchaseInvoice.create!(legal_entity: entity, third_party: fournisseur, issued_on: jour, total_cents: 2_400)
+    facture.purchase_invoice_lines.create!(general_account: fournitures, team: technique, amount_cents: 2_400)
+
+    sans_membre = outil("geste_facture_achat", { "facture" => facture.id, "geste" => "payee_par_membre" })
+    expect(sans_membre[:isError]).to be(true)
+
+    apercu = texte(outil("geste_facture_achat", { "facture" => facture.id, "geste" => "payee_par_membre", "membre" => "moi" }))
+    expect(apercu).to include("NOUVELLE note de frais de Chloé")
+    confirme("geste_facture_achat", { "facture" => facture.id, "geste" => "payee_par_membre", "membre" => "moi" })
+
+    expect(facture.reload).to be_member_paid
+    note = ExpenseReport.last
+    expect(note).to have_attributes(human: chloe, total_cents: 2_400)
+    expect(note.expense_lines.sole).to have_attributes(purchase_invoice_id: facture.id, general_account_id: fournitures.id)
+    expect(texte(outil("factures_achat", { "facture" => facture.id }))).to include("Remboursée par", "Chloé")
+    expect(outil("geste_facture_achat", { "facture" => facture.id, "geste" => "soumettre" })[:isError]).to be(true)
+
+    confirme("geste_facture_achat", { "facture" => facture.id, "geste" => "rouvrir" })
+    expect(facture.reload).to be_to_process
+  end
+
   it "encode une note de frais, la traite et la rembourse en caisse" do
     confirme("enregistrer_note_de_frais", { "membre" => "moi", "lignes" => [
                                               { "date" => jour.iso8601, "libelle" => "Visserie", "montant" => "87,40" }

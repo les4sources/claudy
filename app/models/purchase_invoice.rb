@@ -11,6 +11,12 @@
 # quand le rapprochement bancaire l'a couverte. Plus `disputed`, qui bloque le
 # paiement tant que rien n'est corrigé.
 #
+# Et `member_paid` (Michael, 2026-10-22) : un membre l'a payée en magasin et se
+# la fait rembourser par sa note de frais. C'est la ligne de la note qui porte
+# la charge (`ExpenseLine#purchase_invoice`) : la facture devient son
+# justificatif et ne se comptabilise jamais elle-même, sans quoi les 24 € de
+# l'achat compteraient deux fois.
+#
 # La comptabilisation n'est PAS un statut : c'est `posted_at`. Un statut qui
 # mélangerait l'état administratif et l'état comptable rendrait impossible de
 # dire « payée mais pas encore passée ».
@@ -62,12 +68,13 @@
 class PurchaseInvoice < ApplicationRecord
   # Ordre volontaire : c'est celui du parcours, et l'écran s'en sert pour ses
   # totaux en tête de liste.
-  STATUSES = %w[to_process to_validate to_pay paid disputed].freeze
+  STATUSES = %w[to_process to_validate to_pay paid member_paid disputed].freeze
   STATUS_LABELS = {
     "to_process"  => "À traiter",
     "to_validate" => "À valider",
     "to_pay"      => "À payer",
     "paid"        => "Payée",
+    "member_paid" => "Payée par un membre",
     "disputed"    => "Contestée"
   }.freeze
 
@@ -107,6 +114,10 @@ class PurchaseInvoice < ApplicationRecord
   # Les échéances de paiement que cette facture solde (échéancier comptable) :
   # le précompte immobilier est « fait » quand SA facture est payée.
   has_many :compliance_deadlines, dependent: :nullify
+  # Les lignes de note de frais qui remboursent cette facture au membre qui l'a
+  # payée (`member_paid`). `nullify` : une facture ne disparaît pas, mais si
+  # elle le faisait, la dépense du membre resterait due.
+  has_many :expense_lines, dependent: :nullify
   # `cash_allocations` (le `document` polymorphique de la décision 4) vient du
   # concern `Payable` : c'est ce lien qui fait passer la facture en `paid`.
   has_one_attached :document
@@ -146,8 +157,17 @@ class PurchaseInvoice < ApplicationRecord
   def balanced? = lines_total_cents == total_cents
   def posted? = posted_at.present?
   def frozen_content? = FROZEN_STATUSES.include?(status)
+  # Ce qui ne se modifie plus depuis le formulaire : une facture comptabilisée,
+  # ou payée par un membre (sa note de frais a repris montant, compte et pôle).
+  def locked_for_edit? = frozen_content? || member_paid?
   def double_signature? = total_cents >= DOUBLE_SIGNATURE_CENTS
   def reference = [third_party&.name, number].compact_blank.join(" · ")
+
+  # Les notes de frais qui remboursent cette facture, rejetées et supprimées
+  # exclues : une note rejetée ne rembourse personne.
+  def settling_expense_reports
+    ExpenseReport.where(id: expense_lines.select(:expense_report_id)).where.not(status: "rejected")
+  end
 
   # --- Le contrat `Payable` ------------------------------------------------
   # La communication d'un virement fournisseur : celle qu'il demande sur sa
@@ -249,7 +269,7 @@ class PurchaseInvoice < ApplicationRecord
   end
 
   def lines_cover_total_when_leaving_to_process
-    return if to_process? || disputed?
+    return if to_process? || disputed? || member_paid?
     return if purchase_invoice_lines.reject(&:marked_for_destruction?).sum { |l| l.amount_cents.to_i } == total_cents
 
     errors.add(:base, "Les lignes doivent couvrir exactement le total avant de quitter « À traiter ».")
