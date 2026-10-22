@@ -190,8 +190,14 @@ module Mcp
           CustomerBankAccount.remember!(customer: stay.customer, iban: entry.counterparty_iban, holder_name: entry.counterparty_name)
           ::Accounting::PostCashEntry.new(cash_entry: entry, whodunnit: whodunnit).run! if entry.reload.fully_allocated?
 
+          # L'outil écrit dans UNE transaction : le rapprochement du paiement,
+          # qui tourne d'habitude au commit, est lancé ici pour que la réponse
+          # (et l'aperçu) disent déjà ce qu'il a fait. Il est idempotent.
+          ::Stays::SyncBankPayments.new(stay: stay.reload).run!
+          paiement = ::Stays::SyncBankPayments.summary(stay: stay.reload, cash_entry: entry)
           "#{ligne_tresorerie(entry.reload)}\nVentilation : " +
-            lignes.map { |l| "#{euros(l.amount_cents)} → #{l.general_account&.code}#{" · pôle #{l.team.name}" if l.team} (#{l.label})" }.join(", ")
+            lignes.map { |l| "#{euros(l.amount_cents)} → #{l.general_account&.code}#{" · pôle #{l.team.name}" if l.team} (#{l.label})" }.join(", ") +
+            (paiement ? "\n#{paiement}" : "")
         end
       end
     end

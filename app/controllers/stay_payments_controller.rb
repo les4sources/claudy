@@ -35,6 +35,7 @@ class StayPaymentsController < BaseController
 
   def update
     @payment = @stay.direct_payments.find(params[:id])
+    return refuser_paiement_bancaire if @payment.bank_linked?
 
     if @payment.update(update_params)
       @stay.set_payment_status
@@ -48,6 +49,8 @@ class StayPaymentsController < BaseController
   def destroy
     @payment = @stay.direct_payments.find(params[:id])
 
+    return refuser_paiement_bancaire if @payment.bank_linked?
+
     unless @payment.deletable_from_stay?
       return redirect_to stay_path(@stay),
                          alert: "Ce paiement ne se supprime pas d'ici (Pizza Party ou paiement Stripe)."
@@ -59,6 +62,15 @@ class StayPaymentsController < BaseController
   end
 
   private
+
+  # Un paiement relié à une ligne de banque se gère depuis la ligne (Michael,
+  # 2026-10-22) : le modifier ici le ferait diverger de l'argent reçu, et la
+  # prochaine affectation le remettrait d'aplomb sans prévenir.
+  def refuser_paiement_bancaire
+    redirect_to stay_path(@stay),
+                alert: "Ce paiement vient de la ligne de banque ##{@payment.cash_entry_id} : " \
+                       "retire ou corrige l'affectation de la ligne, le paiement suivra."
+  end
 
   def set_stay
     @stay = Stay.find(params[:stay_id])
