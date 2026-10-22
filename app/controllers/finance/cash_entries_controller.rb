@@ -10,7 +10,8 @@ module Finance
 
     before_action :get_entry,
                   only: [:show, :edit, :update, :post_entry, :unpost, :exclude, :ventilate, :payout,
-                         :pay_invoice, :pay_expense_report, :pay_carrier_statement, :reconcile_payout, :collect_sales_invoice,
+                         :pay_invoice, :pay_expense_report, :pay_carrier_statement, :pay_consignment_report,
+                         :reconcile_payout, :collect_sales_invoice,
                          :settle, :suggestion, :stays, :detail]
     breadcrumb "Trésorerie", :finance_cash_entries_path, match: :exact
 
@@ -276,6 +277,28 @@ module Finance
            Finance::RecordCarrierStatementPayment::TooMuch,
            Finance::RecordCarrierStatementPayment::WrongDirection,
            Finance::RecordCarrierStatementPayment::MissingAccount,
+           Accounting::PostCashEntry::NotFullyAllocated,
+           ActiveRecord::RecordInvalid => e
+      apres_affectation(@entry, finance_cash_entry_path(@entry), alert: e.message)
+    end
+
+    # Rapprocher une ligne sortante d'un relevé de dépôt-vente en mode virement
+    # (epic #248, phase 3), depuis la proposition de la file.
+    def pay_consignment_report
+      releve = ConsignmentReport.find_by(id: params[:consignment_report_id].to_s[/(\d+)\z/, 1])
+      montant = params[:amount].presence && (params[:amount].to_s.tr(",", ".").to_f * 100).round
+
+      Finance::RecordConsignmentReportPayment.new(
+        consignment_report: releve, cash_entry: @entry, amount_cents: montant,
+        whodunnit: current_user&.email
+      ).run!
+
+      apres_affectation(@entry, finance_unallocated_cash_entries_path,
+                        notice: "#{releve.payable_label} rapproché de cette ligne.")
+    rescue Finance::RecordConsignmentReportPayment::NotPayable,
+           Finance::RecordConsignmentReportPayment::TooMuch,
+           Finance::RecordConsignmentReportPayment::WrongDirection,
+           Finance::RecordConsignmentReportPayment::MissingAccount,
            Accounting::PostCashEntry::NotFullyAllocated,
            ActiveRecord::RecordInvalid => e
       apres_affectation(@entry, finance_cash_entry_path(@entry), alert: e.message)

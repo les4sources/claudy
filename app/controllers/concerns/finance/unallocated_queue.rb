@@ -84,6 +84,9 @@ module Finance
       # Les relevés de porteurs émis (epic #244, phase 3) : même geste, autre
       # dette. Chargés UNE fois pour la page.
       @carrier_statement_matches = Finance::MatchCarrierStatements.new.for_entries(entries)
+      # Les relevés de dépôt-vente réglés par virement (epic #248, phase 3) :
+      # même geste, autre dette. Chargés UNE fois pour la page.
+      @consignment_report_matches = Finance::MatchConsignmentReports.new.for_entries(entries)
       # Les versements Stripe (epic #250, phase 2) : une ligne bancaire ENTRANTE
       # dont le montant et la date correspondent à un versement pas encore
       # rapproché. Les versements sont chargés UNE fois pour la page.

@@ -153,6 +153,26 @@ RSpec.describe Mcp::Server, "finances : reversements" do
       expect(texte(outil("depot_vente", { "annee" => Date.current.year }))).to include("Eline · 1 relevé(s)")
     end
 
+    # Ligne #12216 (Eline, octobre 2026) : le virement suivait la suggestion de
+    # Jev et le relevé restait dû. La fiche de la ligne propose désormais le
+    # relevé, et rapprocher_ligne le solde.
+    it "paie le relevé réglé depuis la ligne bancaire qui porte sa référence" do
+      banque = build_cash_account(entity, build_general_account(code: "550000", name: "Banque", klass: 5, nature: "asset"))
+      Consignments::Verify.new(consignment_report: releve).run!
+      Consignments::Settle.new(consignment_report: releve.reload).run!
+      virement = build_cash_entry(banque, amount_cents: -5_120, entry_date: Date.current,
+                                          label: "Eline — #{releve.reference} Ventes artisan")
+      virement.update!(communication: "#{releve.reference} Ventes artisan")
+
+      expect(texte(outil("fiche_ligne_tresorerie", { "ligne" => virement.id })))
+        .to include("avec: releve_depot_vente, releve: #{releve.reference}", "La communication porte la référence")
+
+      resultat = confirme("rapprocher_ligne", { "ligne" => virement.id, "avec" => "releve_depot_vente", "releve" => releve.reference })
+      expect(resultat).to include("soldé, il passe « réglé »")
+      expect(virement.reload.cash_allocations.sole).to have_attributes(document: releve.reload, amount_cents: -5_120)
+      expect(releve).to be_settled
+    end
+
     it "lie la facture d'un artisan qui facture" do
       eline.update!(settlement_mode: "invoice")
       releve.update!(status: "verified", net_cents: 5_120)

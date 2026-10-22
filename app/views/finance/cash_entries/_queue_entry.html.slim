@@ -20,6 +20,8 @@
   - indice = piste.invoice.payable_label
 - elsif (piste = @expense_report_matches[entry.id]&.first)
   - indice = piste.report.payable_label
+- elsif (piste = @consignment_report_matches&.dig(entry.id)&.first)
+  - indice = piste.report.payable_label
 - elsif (piste = @stripe_matches[entry.id]&.first)
   - indice = "Versement Stripe"
 /  L'identifiant est la cible des réponses Turbo Stream (Michael,
@@ -136,6 +138,26 @@
               p.mt-0.5.text-xs
                 = link_to "Voir le relevé", finance_carrier_statement_path(match.statement), class: "text-blue-500 hover:text-blue-700"
             = button_to "Payer ce relevé", pay_carrier_statement_finance_cash_entry_path(entry, carrier_statement_id: match.statement.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+
+    / Un relevé de dépôt-vente réglé par virement qui attend son paiement
+      (epic #248, phase 3). Même forme que le relevé de porteur juste au-dessus.
+      LA PROPOSITION N'A RIEN ÉCRIT — c'est ce bouton qui crée l'allocation sur
+      le 440000 avec le relevé en document, et le fait passer « réglé ».
+    - depots = @consignment_report_matches&.dig(entry.id)
+    - if depots.present?
+      - depots.first(2).each do |match|
+        .mb-3.p-3.rounded-lg.border.border-amber-100(class="bg-amber-50/60")
+          .flex.flex-wrap.items-center.justify-between.gap-2
+            div
+              p.text-sm.text-gray-800
+                strong = "Paiement : #{match.report.payable_label}"
+                = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus à #{match.beneficiary}"
+              p.mt-0.5.text-xs.text-gray-500
+                = match.reason
+                = " (#{match.confidence} % de confiance)"
+              p.mt-0.5.text-xs
+                = link_to "Voir le relevé", finance_consignment_report_path(match.report), class: "text-blue-500 hover:text-blue-700"
+            = button_to "Payer ce relevé", pay_consignment_report_finance_cash_entry_path(entry, consignment_report_id: match.report.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
 
     / Un versement Stripe (epic #250, phase 2). Une ligne bancaire ENTRANTE du
       montant exact d'un versement, à trois jours près : c'est le rapprochement
