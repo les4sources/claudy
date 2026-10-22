@@ -4,6 +4,7 @@
 #
 #  id                         :uuid             not null, primary key
 #  amount_cents               :integer          default(0), not null
+#  created_from_cash_entry    :boolean          default(FALSE), not null
 #  deleted_at                 :datetime
 #  paid_on                    :date
 #  payment_method             :string
@@ -11,6 +12,7 @@
 #  created_at                 :datetime         not null
 #  updated_at                 :datetime         not null
 #  booking_id                 :bigint
+#  cash_entry_id              :bigint
 #  coworking_pack_id          :bigint
 #  space_booking_id           :bigint
 #  stay_id                    :bigint
@@ -20,6 +22,7 @@
 # Indexes
 #
 #  index_payments_on_booking_id         (booking_id)
+#  index_payments_on_cash_entry_id      (cash_entry_id)
 #  index_payments_on_coworking_pack_id  (coworking_pack_id)
 #  index_payments_on_id                 (id) UNIQUE
 #  index_payments_on_space_booking_id   (space_booking_id)
@@ -28,6 +31,7 @@
 # Foreign Keys
 #
 #  fk_rails_...  (booking_id => bookings.id)
+#  fk_rails_...  (cash_entry_id => cash_entries.id) ON DELETE => nullify
 #  fk_rails_...  (coworking_pack_id => coworking_packs.id)
 #  fk_rails_...  (space_booking_id => space_bookings.id)
 #  fk_rails_...  (stay_id => stays.id)
@@ -59,6 +63,13 @@ class Payment < ApplicationRecord
   # le portent. Sert de trace d'audit ET de clé d'idempotence de cette rake
   # (un seul Payment `paid` + un seul Payment `pending` par SpaceBooking).
   belongs_to :space_booking, optional: true
+
+  # La ligne de banque (ou de caisse) qui prouve ce paiement (Michael,
+  # 2026-10-22). Posée par `Stays::SyncBankPayments` quand une ligne est
+  # ventilée sur le séjour : `created_from_cash_entry` si l'affectation l'a
+  # créé, faux si elle a relié un paiement déjà encodé. Un paiement relié se
+  # gère depuis la ligne, pas depuis la fiche séjour.
+  belongs_to :cash_entry, optional: true
 
   # Miroir d'une Pizza Party Tranches de Vie (issue #339) : le paiement porte la
   # party pour que la ligne de paiement sache lier vers l'admin de l'autre app.
@@ -165,7 +176,13 @@ class Payment < ApplicationRecord
   #   * un paiement encaissé par Stripe se rembourse depuis Stripe — l'effacer
   #     ici laisserait l'argent reçu sans paiement en face.
   def deletable_from_stay?
-    stay_id.present? && !tranchesdevie? && stripe_payment_intent_id.blank?
+    stay_id.present? && !tranchesdevie? && stripe_payment_intent_id.blank? && !bank_linked?
+  end
+
+  # Relié à une ligne de trésorerie : ni modifiable ni supprimable depuis la
+  # fiche séjour. On retire l'affectation de la ligne, et le paiement suit.
+  def bank_linked?
+    cash_entry_id.present?
   end
 
   # Date qui fait FOI pour l'affichage et le rapprochement bancaire : la date

@@ -396,8 +396,10 @@ module Finance
         end
       end
 
+      paiement = Stays::SyncBankPayments.summary(stay: stay.reload, cash_entry: @entry)
       apres_affectation(@entry, finance_cash_entry_path(@entry),
-                        notice: "Séjour ##{stay.id} ventilé en #{lignes.size} ligne(s) — l'IBAN est mémorisé pour ce client.")
+                        notice: ["Séjour ##{stay.id} ventilé en #{lignes.size} ligne(s) — l'IBAN est mémorisé pour ce client.",
+                                 paiement].compact.join(" "))
     rescue Finance::VentilateStay::EmptyQuote, Finance::VentilateStay::MissingMapping,
            Accounting::PostDocument::MissingFiscalYear => e
       apres_affectation(@entry, finance_cash_entry_path(@entry), alert: e.message)

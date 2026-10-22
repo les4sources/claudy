@@ -141,4 +141,54 @@ namespace :payments do
     end
     puts "OK — #{a_changer.size} paiement(s) passé(s) en #{libelle}."
   end
+
+  desc "Donne aux séjours le paiement des lignes de banque déjà ventilées sur eux (DRY-RUN par défaut, APPLY=1 pour écrire)"
+  task depuis_banque: :environment do
+    apply = ENV["APPLY"] == "1"
+
+    # Le rattrapage de `Stays::SyncBankPayments` (Michael, 2026-10-22) : les
+    # lignes ventilées AVANT que l'affectation ne pose le paiement. La règle est
+    # celle du quotidien, rien de plus : relier le paiement encodé à la main du
+    # même montant, ne RIEN créer si un paiement à la main d'un autre montant
+    # attend encore sa ligne (« souvent ils ont été créés à la main ») ou si le
+    # séjour est déjà soldé. L'aperçu fait le vrai travail dans une transaction
+    # annulée : ce qu'il montre est exactement ce qu'APPLY écrira.
+    sejours = Stay.where(id: CashAllocation.outside_stripe.where(document_type: "Stay").select(:document_id))
+                  .includes(:customer).order(:id).to_a
+
+    libelles = {
+      created: "Paiement créé",
+      linked: "Paiement à la main relié",
+      kept: "Déjà relié",
+      unmatched: "À VÉRIFIER — paiement à la main d'un autre montant, rien créé",
+      settled: "Séjour déjà soldé, rien créé"
+    }
+    resultats = Hash.new { |h, k| h[k] = [] }
+
+    PaperTrail.request(whodunnit: "rake payments:depuis_banque") do
+      ApplicationRecord.transaction do
+        sejours.each do |stay|
+          avant = stay.payment_status
+          sync = Stays::SyncBankPayments.new(stay: stay)
+          sync.run!
+          sync.outcomes.each do |ligne_id, issue|
+            ligne = CashEntry.find(ligne_id)
+            montant = CashAllocation.where(cash_entry_id: ligne_id, document: stay).sum(:amount_cents)
+            resultats[issue] << "  séjour ##{stay.id} #{stay.decorate.display_name} · ligne ##{ligne_id} du " \
+                                "#{ligne.entry_date} · #{format('%.2f', montant / 100.0)} € · " \
+                                "statut #{avant} → #{stay.reload.payment_status}"
+          end
+        end
+        raise ActiveRecord::Rollback unless apply
+      end
+    end
+
+    puts "=== Paiements des séjours depuis les lignes de banque (#{apply ? 'APPLY' : 'DRY-RUN'}) ==="
+    puts "Séjours avec une ligne ventilée : #{sejours.size}"
+    libelles.each do |issue, libelle|
+      puts "#{libelle} : #{resultats[issue].size}"
+      resultats[issue].each { |ligne| puts ligne } unless issue == :kept
+    end
+    puts(apply ? "OK — écrit." : "Rien n'est écrit. Relancer avec APPLY=1 pour appliquer.")
+  end
 end

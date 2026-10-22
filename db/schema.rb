@@ -1932,8 +1932,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_170000) do
   create_table "payments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.integer "amount_cents", default: 0, null: false
     t.bigint "booking_id"
+    t.bigint "cash_entry_id"
     t.bigint "coworking_pack_id"
     t.datetime "created_at", null: false
+    t.boolean "created_from_cash_entry", default: false, null: false
     t.datetime "deleted_at", precision: nil
     t.date "paid_on"
     t.string "payment_method"
@@ -1944,6 +1946,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_170000) do
     t.string "stripe_payment_intent_id"
     t.datetime "updated_at", null: false
     t.index ["booking_id"], name: "index_payments_on_booking_id"
+    t.index ["cash_entry_id"], name: "index_payments_on_cash_entry_id"
     t.index ["coworking_pack_id"], name: "index_payments_on_coworking_pack_id"
     t.index ["id"], name: "index_payments_on_id", unique: true
     t.index ["space_booking_id"], name: "index_payments_on_space_booking_id"
@@ -3026,6 +3029,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_170000) do
   add_foreign_key "party_reservations", "payments"
   add_foreign_key "party_reservations", "stays"
   add_foreign_key "payments", "bookings"
+  add_foreign_key "payments", "cash_entries", on_delete: :nullify
   add_foreign_key "payments", "coworking_packs"
   add_foreign_key "payments", "space_bookings"
   add_foreign_key "payments", "stays"
