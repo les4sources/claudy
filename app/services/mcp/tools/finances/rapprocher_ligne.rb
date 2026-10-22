@@ -3,7 +3,7 @@ module Mcp
     module Finances
       # Les rapprochements de la file « À affecter » (CashEntriesController) :
       # une ligne bancaire qui paie une facture, rembourse une note de frais,
-      # solde un relevé de porteur, règle le compte d'un habitant, vire à un membre son crédit, paie un
+      # solde un relevé de porteur ou de dépôt-vente, règle le compte d'un habitant, vire à un membre son crédit, paie un
       # séjour, une facture de vente ou porte un versement Stripe. Chaque fois,
       # l'affectation et le document avancent ensemble ou pas du tout.
       class RapprocherLigne < Ecriture
@@ -14,6 +14,8 @@ module Mcp
           "note_de_frais" => "rembourser une note en traitement (ligne sortante ; `note`, `montant` facultatif)",
           "releve_porteur" => "payer un relevé de porteur d'activité émis, aussi quand le porteur a été payé sur " \
                               "facture, en un ou plusieurs virements (ligne sortante ; `releve`, `montant` facultatif)",
+          "releve_depot_vente" => "payer le relevé d'un artisan du dépôt-vente réglé par virement (ligne sortante ; " \
+                                  "`releve`, `montant` facultatif)",
           "virement_membre" => "virer à un membre le crédit de son compte courant (ligne sortante ; `compte`, `montant` facultatif)",
           "reglement_membre" => "encaisser le règlement d'un habitant sur son compte courant (ligne entrante ; `compte`, " \
                                 "`poste` et `montant` facultatifs)",
@@ -36,7 +38,9 @@ module Mcp
                  avec: { type: "string", enum: AVEC.keys },
                  facture: FACTURE,
                  note: NOTE,
-                 releve: { type: %w[integer string], description: "Pour releve_porteur : le relevé (#16 ou ACT-16-202601)." },
+                 releve: { type: %w[integer string],
+                          description: "Pour releve_porteur : le relevé (#16 ou ACT-16-202601). Pour releve_depot_vente : " \
+                                       "le relevé (#1 ou DV-202610-1)." },
                  compte: COMPTE,
                  poste: POSTE.merge(description: "Pour reglement_membre : le poste payé. Défaut : celui que devine Claudy."),
                  montant: MONTANT.merge(description: "Montant à imputer, si ce n'est pas tout ce que la ligne peut porter."),
@@ -94,6 +98,9 @@ module Mcp
           when "releve_porteur"
             releve = releve_porteur!(arguments["releve"])
             [releve, ligne_releve_porteur(releve)]
+          when "releve_depot_vente"
+            releve = releve_depot_vente!(arguments)
+            [releve, ligne_releve_depot(releve)]
           when "virement_membre", "reglement_membre", "reglement_deja_encode"
             compte = compte!(arguments["compte"])
             [compte, "#{compte.code} — #{compte.name} (#{postes_dus(compte)})"]
@@ -135,6 +142,11 @@ module Mcp
                                                            amount_cents: d[:montant], whodunnit: whodunnit).run!
               releve = CarrierStatement.find(d[:cible])
               "#{ligne_tresorerie(entry.reload)}\n#{releve.payable_label} : reste #{euros(releve.remaining_cents)}#{' · soldé, il passe « payé »' if releve.payable_settled?}"
+            when "releve_depot_vente"
+              ::Finance::RecordConsignmentReportPayment.new(consignment_report: ConsignmentReport.find(d[:cible]), cash_entry: entry,
+                                                            amount_cents: d[:montant], whodunnit: whodunnit).run!
+              releve = ConsignmentReport.find(d[:cible])
+              "#{ligne_tresorerie(entry.reload)}\n#{releve.payable_label} : reste #{euros(releve.remaining_cents)}#{' · soldé, il passe « réglé »' if releve.payable_settled?}"
             when "virement_membre"
               ::Finance::RecordMemberPayout.new(member_account: MemberAccount.find(d[:cible]), cash_entry: entry,
                                                 amount_cents: d[:montant], whodunnit: whodunnit).run!

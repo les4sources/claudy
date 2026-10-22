@@ -182,6 +182,40 @@ RSpec.describe "Dépôt-vente — vérification et règlement (epic #248, phase 
     end
   end
 
+  # Ligne #12216 (Eline, octobre 2026) : la file « À affecter » ne proposait
+  # jamais le relevé, seulement la suggestion de Jev (619105).
+  describe "le paiement depuis la file « À affecter »" do
+    let(:report) do
+      r = report_for(eline)
+      Consignments::Verify.new(consignment_report: r).run!
+      Consignments::Settle.new(consignment_report: r.reload).run!
+    end
+
+    let!(:virement) do
+      build_cash_entry(banque, amount_cents: -5_120, entry_date: Date.new(2026, 10, 22),
+                               label: "Eline Vanhamme").tap do |e|
+        e.update!(communication: "#{report.reference} Ventes artisan 08/2026")
+      end
+    end
+
+    it "propose le relevé sur la ligne qui porte sa référence" do
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to include("Paiement : #{report.payable_label}")
+      expect(response.body).to include("Payer ce relevé")
+      expect(response.body).to include(pay_consignment_report_finance_cash_entry_path(virement, consignment_report_id: report.id))
+    end
+
+    it "solde le relevé d'un clic" do
+      post pay_consignment_report_finance_cash_entry_path(virement, consignment_report_id: report.id)
+
+      expect(response).to redirect_to(finance_unallocated_cash_entries_path)
+      expect(report.reload).to be_settled
+      expect(virement.reload.cash_allocations.sole).to have_attributes(general_account: fournisseurs, document: report)
+      expect(virement).to be_posted
+    end
+  end
+
   describe "le mode facture" do
     let!(:artisan) do
       Consignor.create!(name: "Atelier du Bocq", email: "atelier@example.com",

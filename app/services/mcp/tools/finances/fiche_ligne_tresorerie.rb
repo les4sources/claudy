@@ -118,6 +118,9 @@ module Mcp
           ::Finance::MatchCarrierStatements.new.for_entry(entry).each do |m|
             pistes << "avec: releve_porteur, releve: #{m.statement.reference} — #{m.statement.payable_label} reste #{euros(m.due_cents)} (#{m.reason})"
           end
+          ::Finance::MatchConsignmentReports.new.for_entry(entry).each do |m|
+            pistes << "avec: releve_depot_vente, releve: #{m.report.reference} — #{m.report.payable_label} reste #{euros(m.due_cents)} (#{m.reason})"
+          end
           ::Finance::MatchMemberPayouts.new.for_entry(entry).each do |m|
             pistes << "avec: virement_membre, compte: #{m.member_account.code} — #{m.member_account.name} attend #{euros(m.due_cents)} (#{m.reason})"
           end

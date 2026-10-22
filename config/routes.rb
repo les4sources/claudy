@@ -470,6 +470,9 @@ Rails.application.routes.draw do
         # Rapprocher une ligne sortante d'un relevé de porteur (epic #244,
         # phase 3).
         post :pay_carrier_statement
+        # Rapprocher une ligne sortante d'un relevé de dépôt-vente (epic #248,
+        # phase 3).
+        post :pay_consignment_report
         # Rapprocher une ligne bancaire entrante de son versement Stripe
         # (epic #250, phase 2).
         post :reconcile_payout
