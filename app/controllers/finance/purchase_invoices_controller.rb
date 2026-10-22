@@ -6,7 +6,7 @@ module Finance
   # blocage implicite, donc invisible, et on découvrait au moment de payer que
   # personne n'avait dit oui.
   class PurchaseInvoicesController < Finance::AccountingBaseController
-    before_action :get_invoice, only: %i[show edit update submit dispute reopen validate_by_team pay_in_cash]
+    before_action :get_invoice, only: %i[show edit update submit dispute reopen validate_by_team pay_in_cash paid_by_member]
     before_action :get_form_collections, only: %i[new create edit update]
 
     breadcrumb "Achats", :finance_purchase_invoices_path, match: :exact
@@ -33,6 +33,13 @@ module Finance
       # dire de laquelle l'argent sort — la première venue serait un choix muet.
       @cash_accounts = CashAccount.actives.where(kind: "cash", legal_entity_id: @invoice.legal_entity_id).ordered
       @versions = @invoice.versions.reorder(created_at: :desc).limit(20)
+      # « Payée par un membre » : qui a payé, ou la dépense qu'il a déjà
+      # déclarée sur sa note (même montant).
+      if PurchaseInvoices::PaidByMember::OPEN_STATUSES.include?(@invoice.status)
+        @humans = Human.ordered_all
+        @candidate_lines = PurchaseInvoices::PaidByMember.candidate_lines(@invoice).limit(20)
+      end
+      @settling_reports = @invoice.settling_expense_reports.includes(:human).to_a if @invoice.member_paid?
     end
 
     # Depuis une échéance de paiement de l'échéancier (« Encoder la facture ») :
@@ -48,7 +55,7 @@ module Finance
     end
 
     def edit
-      return redirect_to finance_purchase_invoice_path(@invoice), alert: gel_message if @invoice.frozen_content?
+      return redirect_to finance_purchase_invoice_path(@invoice), alert: gel_message if @invoice.locked_for_edit?
 
       @invoice.purchase_invoice_lines.build if @invoice.purchase_invoice_lines.empty?
     end
@@ -72,7 +79,7 @@ module Finance
     end
 
     def update
-      return redirect_to finance_purchase_invoice_path(@invoice), alert: gel_message if @invoice.frozen_content?
+      return redirect_to finance_purchase_invoice_path(@invoice), alert: gel_message if @invoice.locked_for_edit?
 
       @invoice.assign_attributes(invoice_params)
       attach_document(@invoice)
@@ -99,6 +106,23 @@ module Finance
            Accounting::PostCashEntry::NotFullyAllocated,
            Accounting::PostDocument::MissingFiscalYear,
            ActiveRecord::RecordInvalid, Date::Error => e
+      redirect_to finance_purchase_invoice_path(@invoice), alert: e.message
+    end
+
+    # « Payée par un membre » (Michael, 2026-10-22) : la facture est réglée en
+    # magasin, sa note de frais la rembourse et porte sa charge. Soit on choisit
+    # le membre (la dépense s'ajoute à sa note), soit la dépense qu'il a déjà
+    # déclarée.
+    def paid_by_member
+      line = PurchaseInvoices::PaidByMember.candidate_lines(@invoice).find_by(id: params[:expense_line_id].presence)
+      report = PurchaseInvoices::PaidByMember.new(purchase_invoice: @invoice, user: current_user,
+                                                  human: (Human.find_by(id: params[:human_id].presence) unless line),
+                                                  expense_line: line).run!
+      redirect_to finance_purchase_invoice_path(@invoice),
+                  notice: "Facture payée par #{report.human.name} : elle est sur #{report.label.sub(/ — .*/, '')}, " \
+                          "qui la remboursera et portera sa charge."
+    rescue PurchaseInvoices::PaidByMember::BadStatus, PurchaseInvoices::PaidByMember::MissingMember,
+           PurchaseInvoices::PaidByMember::LineNotEligible, ActiveRecord::RecordInvalid => e
       redirect_to finance_purchase_invoice_path(@invoice), alert: e.message
     end
 
@@ -151,8 +175,14 @@ module Finance
     end
 
     def reopen
+      reports = @invoice.member_paid? ? @invoice.settling_expense_reports.to_a : []
       PurchaseInvoices::Advance.new(purchase_invoice: @invoice, whodunnit: current_user&.email).reopen!
-      redirect_to finance_purchase_invoice_path(@invoice), notice: "Facture remise en traitement."
+      notice = "Facture remise en traitement."
+      if reports.any?
+        notice += " La dépense reste sur #{reports.map { |r| r.label.sub(/ — .*/, '') }.to_sentence} : " \
+                  "retire-la si elle n'est pas à rembourser."
+      end
+      redirect_to finance_purchase_invoice_path(@invoice), notice: notice
     rescue PurchaseInvoices::Advance::AlreadyPayable, ActiveRecord::RecordInvalid => e
       redirect_to finance_purchase_invoice_path(@invoice), alert: e.message
     end
@@ -189,6 +219,8 @@ module Finance
     end
 
     def gel_message
+      return "Cette facture est payée par un membre — remets-la en traitement pour la modifier." if @invoice.member_paid?
+
       "Cette facture est déjà comptabilisée — corrige-la par contre-passation."
     end
 

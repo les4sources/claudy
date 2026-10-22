@@ -28,7 +28,7 @@ module Finance
     def show
       breadcrumb @report.reference.presence || "Note ##{@report.id}",
                  finance_expense_report_path(@report), match: :exact
-      @lines = @report.expense_lines.chronological.includes(:general_account, :team)
+      @lines = @report.expense_lines.chronological.includes(:general_account, :team, :purchase_invoice)
       @entry = @report.journal_entry
       if @report.recorded?
         @accounts = ExpenseLine.assignable_accounts

@@ -19,6 +19,7 @@ module PurchaseInvoices
     # blocage devient visible au lieu de rester implicite.
     def submit!
       raise AlreadyPayable, "Cette facture est déjà #{@invoice.status_label.downcase}." if @invoice.frozen_content?
+      refuse_member_paid!
 
       unless @invoice.balanced?
         raise NotBalanced,
@@ -45,6 +46,7 @@ module PurchaseInvoices
     def dispute!(reason)
       raise MissingReason, "Dis pourquoi tu contestes cette facture." if reason.blank?
       raise AlreadyPayable, "Cette facture est déjà comptabilisée — contre-passe-la." if @invoice.frozen_content?
+      refuse_member_paid!
 
       PaperTrail.request(whodunnit: @whodunnit || "purchase_invoices") do
         @invoice.update!(status: "disputed", dispute_reason: reason)
@@ -54,15 +56,32 @@ module PurchaseInvoices
     end
 
     # Retour au traitement : une facture contestée qu'on a corrigée repart de
-    # zéro dans le parcours.
+    # zéro dans le parcours. Une facture payée par un membre se détache de sa
+    # note de frais (`PaidByMember#undo!`).
     def reopen!
       raise AlreadyPayable, "Cette facture est déjà comptabilisée — contre-passe-la." if @invoice.frozen_content?
+      if @invoice.member_paid?
+        PaidByMember.new(purchase_invoice: @invoice, whodunnit: @whodunnit).undo!
+        return @invoice.reload
+      end
 
       PaperTrail.request(whodunnit: @whodunnit || "purchase_invoices") do
         @invoice.update!(status: "to_process", dispute_reason: nil)
       end
 
       @invoice.reload
+    end
+
+    private
+
+    # Payée par un membre, la facture est le justificatif de sa note de frais :
+    # l'envoyer au paiement passerait sa charge une seconde fois.
+    def refuse_member_paid!
+      return unless @invoice.member_paid?
+
+      raise AlreadyPayable,
+            "Cette facture est payée par un membre : sa note de frais la rembourse. " \
+            "Remets-la d'abord en traitement si ce n'est pas le cas."
     end
   end
 end

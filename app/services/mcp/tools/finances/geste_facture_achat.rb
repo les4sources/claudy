@@ -13,8 +13,12 @@ module Mcp
           "valider" => "l'aval du pôle (réservé à ses membres et aux comptes sans membre) : la facture passe « à payer »",
           "contester" => "bloquer la facture avec un motif (motif obligatoire) ; si elle attendait la validation, c'est le " \
                          "refus du pôle et la comptabilité est prévenue par email",
-          "rouvrir" => "la remettre « à traiter » après correction",
-          "payer_en_especes" => "le fournisseur est payé en caisse : crée la sortie de caisse affectée et comptabilisée"
+          "rouvrir" => "la remettre « à traiter » après correction (payée par un membre : la détache de sa note de frais)",
+          "payer_en_especes" => "le fournisseur est payé en caisse : crée la sortie de caisse affectée et comptabilisée",
+          "payee_par_membre" => "un membre l'a payée en magasin et se la fait rembourser : la dépense va sur sa note de " \
+                                "frais (`membre`, ajoutée à sa note enregistrée ou à une nouvelle) ou se relie à celle " \
+                                "qu'il a déjà déclarée (`depense`), et c'est la note qui porte la charge ; la facture ne " \
+                                "se comptabilise pas"
         }.freeze
 
         # L'aval signé au nom de Claude, comme toute écriture du connecteur :
@@ -39,7 +43,11 @@ module Mcp
                  facture: FACTURE,
                  geste: { type: "string", enum: GESTES.keys },
                  date: DATE.merge(description: "Pour payer_en_especes : la date du paiement. Défaut : aujourd'hui."),
-                 caisse: { type: "string", description: "Pour payer_en_especes : la caisse, s'il y en a plusieurs." }
+                 caisse: { type: "string", description: "Pour payer_en_especes : la caisse, s'il y en a plusieurs." },
+                 membre: { type: "string", description: "Pour payee_par_membre : le membre qui a payé (nom, ou « moi »)." },
+                 depense: { type: ["integer", "string"],
+                            description: "Pour payee_par_membre : la ligne de note de frais (#id) qu'il a déjà déclarée pour " \
+                                         "cet achat, au même montant. L'aperçu sans membre ni dépense liste les candidates." }
                },
                required: %w[facture geste]
              }
@@ -87,6 +95,12 @@ module Mcp
               ::PurchaseInvoices::PayInCash.new(purchase_invoice: facture, paid_on: d[:date], cash_account: CashAccount.find(d[:caisse]),
                                                 whodunnit: whodunnit).run!
               "Facture payée en espèces, sortie de caisse enregistrée : #{ligne_facture(facture.reload)}"
+            when "payee_par_membre"
+              note = ::PurchaseInvoices::PaidByMember.new(
+                purchase_invoice: facture, user: user, whodunnit: whodunnit,
+                human: (Human.find(d[:membre]) if d[:membre]), expense_line: (ExpenseLine.find(d[:depense]) if d[:depense])
+              ).run!
+              "Facture payée par un membre : #{ligne_facture(facture.reload)}\nRemboursée par #{ligne_note(note.reload)}"
             end
           end
         end
@@ -105,6 +119,7 @@ module Mcp
         def plan_soumettre(facture, _arguments)
           raise Error, "Cette facture est déjà #{facture.status_label.downcase}." if facture.frozen_content?
           raise Error, "Elle attend déjà la validation du pôle." if facture.to_validate?
+          raise Error, "Elle est payée par un membre : sa note de frais la rembourse. Rouvre-la d'abord si ce n'est pas le cas." if facture.member_paid?
           unless facture.balanced?
             raise Error, "Il reste #{euros(facture.total_cents - facture.lines_total_cents)} à ventiler avant de l'envoyer au paiement."
           end
@@ -128,6 +143,7 @@ module Mcp
         def plan_contester(facture, _arguments)
           motif!({ "motif" => @motif })
           raise Error, "Cette facture est déjà comptabilisée : elle se corrige par contre-passation." if facture.frozen_content?
+          raise Error, "Elle est payée par un membre : rouvre-la d'abord." if facture.member_paid?
 
           if facture.to_validate?
             raise Error, "Seuls les membres du pôle #{facture.validation_team&.name} peuvent la refuser." unless facture.validatable_by?(user)
@@ -143,7 +159,48 @@ module Mcp
           raise Error, "Cette facture est déjà comptabilisée : elle se corrige par contre-passation." if facture.frozen_content?
           raise Error, "Elle est déjà à traiter." if facture.to_process?
 
+          if facture.member_paid?
+            notes = facture.settling_expense_reports.map { |note| note.reference.presence || "##{note.id}" }
+            return ["→ À TRAITER, détachée de sa note de frais#{" (#{notes.join(', ')})" if notes.any?}. La dépense reste " \
+                    "sur la note : à en retirer si elle n'est pas à rembourser.", {}]
+          end
+
           ["→ À TRAITER (le motif de contestation est effacé).", {}]
+        end
+
+        def plan_payee_par_membre(facture, arguments)
+          unless ::PurchaseInvoices::PaidByMember::OPEN_STATUSES.include?(facture.status)
+            raise Error, "Cette facture est #{facture.status_label.downcase} : seule une facture à traiter, à valider ou " \
+                         "contestée (pas encore comptabilisée) passe en payée par un membre."
+          end
+
+          candidates = ::PurchaseInvoices::PaidByMember.candidate_lines(facture)
+          if arguments["depense"].present?
+            ligne = candidates.find_by(id: arguments["depense"].to_s.delete_prefix("#"))
+            raise Error, "Cette dépense ne peut pas régler la facture (même montant, même entité, note non rejetée, pas déjà reliée)." if ligne.nil?
+
+            note = ligne.expense_report
+            return ["→ PAYÉE PAR UN MEMBRE : reliée à la dépense ##{ligne.id} « #{ligne.label} » de #{ligne_note(note)}. " \
+                    "Rien n'est ajouté à la note, qui porte déjà la charge ; la facture ne se comptabilise pas.",
+                    { depense: ligne.id }]
+          end
+
+          if arguments["membre"].blank?
+            liste = candidates.limit(10).map do |l|
+              "  dépense ##{l.id} · #{l.expense_report.reference.presence || "note ##{l.expense_report_id}"} · " \
+                "#{l.expense_report.human&.name} · #{l.spent_on} · #{l.label}"
+            end
+            raise Error, "Donne le membre qui a payé (`membre`)#{", ou la dépense déjà déclarée (`depense`) :\n#{liste.join("\n")}" if liste.any?}."
+          end
+
+          humain = membre!(arguments["membre"])
+          ouverte = ExpenseReport.where(kind: "expenses", human: humain, legal_entity: facture.legal_entity, status: "recorded")
+                                 .recent_first.first
+          lignes = facture.purchase_invoice_lines.any? && facture.balanced? ? facture.purchase_invoice_lines.size : 1
+          cible = ouverte ? "ajoutée à #{ligne_note(ouverte)}" : "sur une NOUVELLE note de frais de #{humain.name}"
+          ["→ PAYÉE PAR UN MEMBRE : #{lignes} dépense(s) de #{euros(facture.total_cents)} #{cible}, avec la pièce de la " \
+           "facture comme justificatif et ses comptes et pôles. La note portera la charge ; la facture ne se comptabilise pas.",
+           { membre: humain.id }]
         end
 
         def plan_payer_en_especes(facture, arguments)

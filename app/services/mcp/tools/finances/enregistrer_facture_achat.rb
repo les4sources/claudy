@@ -62,6 +62,7 @@ module Mcp
           if facture&.frozen_content?
             raise Error, "Cette facture est #{facture.status_label.downcase} : son écriture est passée, elle se corrige par contre-passation."
           end
+          raise Error, "Cette facture est payée par un membre : rouvre-la (geste_facture_achat rouvrir) pour la corriger." if facture&.member_paid?
 
           attributs = attributs!(arguments, facture)
           raise Error, "Rien à changer." if facture && attributs.empty?

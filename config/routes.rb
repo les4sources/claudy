@@ -414,6 +414,8 @@ Rails.application.routes.draw do
         post :validate_by_team
         # Règlement en espèces depuis la fiche (epic #240, phase 4).
         post :pay_in_cash
+        # Payée en magasin par un membre : sa note de frais la rembourse.
+        post :paid_by_member
       end
     end
     resources :cash_motifs, path: "cash/motifs", except: %i[show destroy] do
