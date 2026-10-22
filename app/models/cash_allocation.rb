@@ -113,9 +113,25 @@ class CashAllocation < ApplicationRecord
     # Aucune écriture de vente n'est générée au passage (décision 8).
     when SalesInvoice
       SalesInvoices::RefreshPayment.new(sales_invoice: document.reload).run!
+    # Un séjour reçoit le paiement que la ligne lui apporte (Michael,
+    # 2026-10-22) : créé, ou relié à celui que l'Accueil avait déjà encodé.
+    when Stay
+      Stays::SyncBankPayments.new(stay: document.reload).run!
     end
+    refresh_previous_stay
   rescue ActiveRecord::RecordNotFound
     nil
+  end
+
+  # Une affectation déplacée d'un séjour à un autre (ou vers un compte sans
+  # document) doit rendre au premier séjour le paiement qu'elle lui avait donné.
+  def refresh_previous_stay
+    return unless saved_change_to_document_id? || saved_change_to_document_type?
+    return unless document_type_before_last_save == "Stay" && document_id_before_last_save.present?
+    return if document_type == "Stay" && document_id == document_id_before_last_save
+
+    ancien = Stay.find_by(id: document_id_before_last_save)
+    Stays::SyncBankPayments.new(stay: ancien).run! if ancien
   end
 
   # La part note la date à laquelle le virement a été constaté, et le règlement

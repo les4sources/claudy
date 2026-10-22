@@ -147,6 +147,25 @@ RSpec.describe "Stay payments (modale séjour)", type: :request do
         expect(response.body).not_to include("Supprimer ce paiement")
       end
 
+      # Relié à une ligne de banque (Michael, 2026-10-22) : il se gère depuis
+      # la ligne, jamais depuis la fiche séjour.
+      it "refuse un paiement venu d'une ligne de banque, et renvoie vers la ligne" do
+        entite = LegalEntity.create!(name: "Fondation de test", form: "foundation", vat_regime: "exempt")
+        compte = GeneralAccount.find_by(code: "550000") || GeneralAccount.create!(code: "550000", name: "Banque", klass: 5, nature: "asset")
+        banque = CashAccount.create!(name: "Triodos", kind: "bank", legal_entity: entite, general_account: compte)
+        ligne = CashEntry.create!(cash_account: banque, entry_date: Date.new(2026, 6, 15), amount_cents: 10_000, label: "Virement")
+        payment.update!(cash_entry: ligne, created_from_cash_entry: true)
+
+        delete stay_payment_path(stay, payment)
+        patch stay_payment_path(stay, payment), params: { payment: { amount: 1 } }
+
+        expect(flash[:alert]).to include("ligne de banque ##{ligne.id}")
+        expect(payment.reload).to have_attributes(deleted_at: nil, amount_cents: 10_000)
+        get stay_path(stay)
+        expect(response.body).to include("Créé depuis la banque")
+        expect(response.body).not_to include("Supprimer ce paiement")
+      end
+
       it "ne touche pas au paiement d'un autre séjour" do
         autre = Stay.create!(customer: customer, source: "manual", status: "confirmed",
                              arrival_date: from, departure_date: to, total_amount_cents: 5_000)
