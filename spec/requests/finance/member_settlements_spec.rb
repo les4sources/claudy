@@ -99,4 +99,30 @@ RSpec.describe "Finances — rapprocher un virement entrant", type: :request do
       expect(compte.reload.balance_cents).to eq(7_500)
     end
   end
+
+  describe "un règlement resté sur le compte sans sa ligne" do
+    before do
+      post settle_finance_cash_entry_path(entry, member_account_id: compte.id, flow: "charges")
+      Accounting::UnpostCashEntry.new(cash_entry: entry.reload).run!
+      entry.reload.cash_allocations.each(&:destroy!)
+    end
+
+    it "propose de relier la ligne, plus d'encaisser" do
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to include("Relier la ligne à ce règlement")
+      expect(response.body).to include("déjà encodés (Charges)")
+      expect(response.body).not_to include("Enregistrer le règlement")
+    end
+
+    it "relie la ligne et la sort de la file" do
+      post settle_finance_cash_entry_path(entry, member_account_id: compte.id)
+
+      expect(flash[:notice]).to include("reliée au règlement")
+      expect(compte.account_settlements.count).to eq(1)
+      expect(compte.reload.balance_cents).to eq(0)
+      expect(entry.reload.status).to eq("allocated")
+      expect(CashEntry.pending).not_to include(entry)
+    end
+  end
 end

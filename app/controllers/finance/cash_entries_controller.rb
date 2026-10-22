@@ -193,14 +193,19 @@ module Finance
       # c'est le geste courant. Le paramètre existe pour un règlement partiel.
       montant = params[:amount].presence && (params[:amount].to_s.tr(",", ".").to_f * 100).round
 
-      Finance::RecordMemberSettlement.new(
+      reglement = Finance::RecordMemberSettlement.new(
         member_account: compte, cash_entry: @entry, amount_cents: montant,
         flow: params[:flow], whodunnit: current_user&.email
-      ).run!
+      )
+      reglement.run!
 
-      apres_affectation(@entry, finance_unallocated_cash_entries_path,
-                        notice: "Règlement de #{compte.name} enregistré sur le poste " \
-                                "#{AccountEntry::FLOW_LABELS.fetch(params[:flow], 'Divers')}.")
+      notice = if reglement.linked_existing?
+                 "Ligne reliée au règlement de #{compte.name} déjà sur son compte — aucun second règlement."
+               else
+                 "Règlement de #{compte.name} enregistré sur le poste " \
+                   "#{AccountEntry::FLOW_LABELS.fetch(params[:flow], 'Divers')}."
+               end
+      apres_affectation(@entry, finance_unallocated_cash_entries_path, notice: notice)
     # La contrainte d'unicité sur `account_entries.idempotency_key` a tranché :
     # ce virement est déjà imputé sur ce compte, et la transaction n'a rien
     # écrit. Ce n'est pas une erreur — sur un écran qui aligne des dizaines de

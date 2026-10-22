@@ -36,6 +36,16 @@ module Finance
     # (la reprise de 2025-2026 a encodé bar, repas et charges sans ligne
     # bancaire en face). Seule l'affectation de la ligne sur le 400000 se fait :
     # encoder un second règlement compterait le paiement deux fois.
+    #
+    # Le même lien se fait D'OFFICE quand le règlement de CETTE ligne est déjà
+    # sur le compte mais que la ligne n'est plus affectée : son affectation a
+    # été retirée après coup (annuler la passation, puis retirer), et le
+    # règlement est resté (Frennet, ligne #11195, 2026-10-19). Recréer le
+    # règlement buterait sur la clé d'unicité — « déjà imputé », et la ligne ne
+    # quittait jamais la file. `linked_existing?` dit que c'est ce qui s'est passé.
+    attr_reader :linked_existing
+    alias linked_existing? linked_existing
+
     def initialize(member_account:, cash_entry:, amount_cents: nil, flow: nil, whodunnit: nil, already_recorded: false)
       @account = member_account
       @entry = cash_entry
@@ -55,6 +65,9 @@ module Finance
       raise WrongDirection, "Un règlement s'encaisse depuis une ligne ENTRANTE." unless @entry.amount_cents.positive?
       return link_only if @already_recorded
 
+      existant = AccountEntry.unscoped.find_by(idempotency_key: idempotency_key)
+      return link_existing(existant) if existant && existant.deleted_at.nil? && !linked_to_account?
+
       # Ce que le compte doit encore POSTE PAR POSTE, pas son solde global : une
       # avance sur les charges n'éteint pas une dette de bar, et ne doit pas
       # empêcher d'encaisser le virement qui la paie.
@@ -71,6 +84,7 @@ module Finance
       PaperTrail.request(whodunnit: @whodunnit || "member_settlement") do
         ApplicationRecord.transaction do
           @entry.lock!
+          free_deleted_key(existant)
 
           Finance::RecordSettlement.new(
             member_account: @account,
@@ -94,6 +108,24 @@ module Finance
       end
 
       @account.reload
+    end
+
+    # Le règlement existe et la ligne ne le porte plus : on refait le lien, pour
+    # le montant de ce règlement, sans en écrire un second.
+    def link_existing(settlement)
+      @linked_existing = true
+      @amount_cents ||= [settlement.amount_cents.abs, @entry.remaining_cents].min
+      link_only
+    end
+
+    def linked_to_account? = @entry.cash_allocations.exists?(document: @account)
+
+    # Un règlement SUPPRIMÉ garde sa clé (la suppression est douce) et
+    # bloquerait le nouveau : on la libère, en la gardant lisible.
+    def free_deleted_key(existant)
+      return if existant.nil? || existant.deleted_at.nil?
+
+      existant.update_column(:idempotency_key, "#{idempotency_key}:supprime:#{existant.id}")
     end
 
     def link_only
@@ -131,7 +163,9 @@ module Finance
     # règlement. L'unicité est tenue en BASE, par l'index sur
     # `account_entries.idempotency_key` : un garde applicatif se ferait doubler
     # par deux clics simultanés, pas la contrainte.
-    def idempotency_key = "settlement:cash_entry:#{@entry.id}:account:#{@account.id}"
+    def idempotency_key = self.class.idempotency_key(@entry, @account)
+
+    def self.idempotency_key(entry, account) = "settlement:cash_entry:#{entry.id}:account:#{account.id}"
 
     # Le tiers est celui de la PERSONNE, quand le compte en désigne une : c'est
     # la ligne 400000 qu'on lettrera contre ce virement. Un compte de ménage n'a

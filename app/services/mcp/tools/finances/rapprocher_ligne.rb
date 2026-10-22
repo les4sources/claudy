@@ -153,10 +153,12 @@ module Mcp
               compte = MemberAccount.find(d[:cible])
               "#{ligne_tresorerie(entry.reload)}\n#{compte.code} : #{postes_dus(compte)}"
             when "reglement_membre"
-              ::Finance::RecordMemberSettlement.new(member_account: MemberAccount.find(d[:cible]), cash_entry: entry,
-                                                    amount_cents: d[:montant], flow: d[:poste], whodunnit: whodunnit).run!
+              reglement = ::Finance::RecordMemberSettlement.new(member_account: MemberAccount.find(d[:cible]), cash_entry: entry,
+                                                                amount_cents: d[:montant], flow: d[:poste], whodunnit: whodunnit)
+              reglement.run!
               compte = MemberAccount.find(d[:cible])
-              "#{ligne_tresorerie(entry.reload)}\n#{compte.code} : #{postes_dus(compte)}"
+              relie = reglement.linked_existing? ? "\nRelié au règlement déjà sur le compte, sans second règlement." : ""
+              "#{ligne_tresorerie(entry.reload)}#{relie}\n#{compte.code} : #{postes_dus(compte)}"
             when "reglement_deja_encode"
               ::Finance::RecordMemberSettlement.new(member_account: MemberAccount.find(d[:cible]), cash_entry: entry,
                                                     amount_cents: d[:montant], whodunnit: whodunnit,

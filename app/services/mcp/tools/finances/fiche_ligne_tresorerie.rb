@@ -94,6 +94,12 @@ module Mcp
             pistes << "avec: sejour, sejour: #{sejour.stay.id} — #{sejour.stay.decorate.display_name} (confiance #{sejour.confidence} %, #{sejour.rationale}) · #{ventilation}"
           end
           ::Finance::MatchMemberSettlements.new.for_entry(entry).each do |m|
+            if m.already_recorded?
+              pistes << "avec: reglement_membre, compte: #{m.member_account.code} — le règlement de cette ligne " \
+                        "(#{euros(m.recorded_cents)}, poste #{m.flow_label}, ligne de compte ##{m.recorded_entry.id}) est déjà sur " \
+                        "le compte de #{m.member_account.name} : rapprocher relie la ligne, sans second règlement"
+              next
+            end
             pistes << "avec: reglement_membre, compte: #{m.member_account.code} — #{m.member_account.name} doit #{euros(m.due_cents)}, " \
                       "poste probable #{m.flow_label} (#{m.reason}, #{m.confidence} %)"
           end

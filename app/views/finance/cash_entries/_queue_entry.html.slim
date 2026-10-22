@@ -11,7 +11,7 @@
    son bouton, est dans le détail qui s'ouvre au clic.
 - indice = nil
 - if (piste = @settlement_matches[entry.id]&.first)
-  - indice = "#{piste.member_account.name} · #{piste.flow_label}"
+  - indice = "#{piste.member_account.name} · #{piste.already_recorded? ? 'règlement déjà encodé' : piste.flow_label}"
 - elsif (piste = @payout_matches[entry.id]&.first)
   - indice = "Virement à #{piste.member_account.name}"
 - elsif (piste = @stay_matches[entry.id])
@@ -200,26 +200,36 @@
             div
               p.text-sm.text-gray-800
                 strong = "Règlement de #{match.member_account.name}"
-                = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus"
+                - if match.already_recorded?
+                  = " — #{humanized_money_with_symbol(Money.new(match.recorded_cents, 'EUR'))} déjà encodés (#{match.flow_label})"
+                - else
+                  = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus"
               p.mt-0.5.text-xs.text-gray-500
                 = match.reason
-                = " (#{match.confidence} % de confiance)"
+                - unless match.already_recorded?
+                  = " (#{match.confidence} % de confiance)"
               p.mt-0.5.text-xs
                 = link_to "Voir le compte", finance_account_path(match.member_account), class: "text-blue-500 hover:text-blue-700"
-            /  Le POSTE se choisit ICI, avant d'enregistrer. La proposition le
-               présélectionne d'après la communication, mais c'est le clic
-               humain qui tranche : depuis le lettrage par poste, un règlement
-               rangé au mauvais endroit crée une dette imaginaire d'un côté et
-               une avance imaginaire de l'autre.
-            = form_with url: settle_finance_cash_entry_path(entry, member_account_id: match.member_account.id), method: :post, class: "flex items-center gap-2" do
-              div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un poste…" class="relative w-48")
-                = select_tag :flow,
-                             options_for_select(AccountEntry::FLOWS.map { |f| [AccountEntry::FLOW_LABELS.fetch(f, f), f] }, match.flow),
-                             class: "rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
-                             aria: { label: "Poste réglé" },
-                             data: { searchable_select_target: "select" }
-                = render "shared/searchable_select_search", label: "Chercher un poste réglé"
-              button.inline-flex.items-center.rounded-md.border.border-transparent.px-3.py-1.5.text-xs.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit") Enregistrer le règlement
+            /  Le règlement est déjà sur le compte : le poste a été choisi à
+               l'époque, il ne reste qu'à relier la ligne. Le même geste
+               `settle` le reconnaît et n'écrit pas de second règlement.
+            - if match.already_recorded?
+              = button_to "Relier la ligne à ce règlement", settle_finance_cash_entry_path(entry, member_account_id: match.member_account.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+            - else
+              /  Le POSTE se choisit ICI, avant d'enregistrer. La proposition le
+                 présélectionne d'après la communication, mais c'est le clic
+                 humain qui tranche : depuis le lettrage par poste, un règlement
+                 rangé au mauvais endroit crée une dette imaginaire d'un côté et
+                 une avance imaginaire de l'autre.
+              = form_with url: settle_finance_cash_entry_path(entry, member_account_id: match.member_account.id), method: :post, class: "flex items-center gap-2" do
+                div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un poste…" class="relative w-48")
+                  = select_tag :flow,
+                               options_for_select(AccountEntry::FLOWS.map { |f| [AccountEntry::FLOW_LABELS.fetch(f, f), f] }, match.flow),
+                               class: "rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500",
+                               aria: { label: "Poste réglé" },
+                               data: { searchable_select_target: "select" }
+                  = render "shared/searchable_select_search", label: "Chercher un poste réglé"
+                button.inline-flex.items-center.rounded-md.border.border-transparent.px-3.py-1.5.text-xs.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit") Enregistrer le règlement
 
     / Une facture de VENTE qui attend son encaissement (epic #240, phase 6).
       Une ligne ENTRANTE du montant exact d'une facture émise, ou venant de
