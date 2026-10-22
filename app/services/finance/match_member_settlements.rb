@@ -31,9 +31,16 @@ module Finance
   # notes de bar restaient « non payées » alors qu'elles l'étaient (famille
   # Vanhamme, bar de mai et juin 2026).
   class MatchMemberSettlements
-    Match = Struct.new(:member_account, :due_cents, :reason, :confidence, :flow, keyword_init: true) do
+    # `recorded_entry` : le règlement de CETTE ligne, déjà sur le compte alors
+    # que la ligne n'est plus affectée. Le geste n'est plus d'encaisser mais de
+    # relier — un second règlement compterait le virement deux fois.
+    Match = Struct.new(:member_account, :due_cents, :reason, :confidence, :flow, :recorded_entry, keyword_init: true) do
       def flow_label = AccountEntry::FLOW_LABELS.fetch(flow, "Divers")
+      def already_recorded? = recorded_entry.present?
+      def recorded_cents = recorded_entry&.amount_cents.to_i.abs
     end
+
+    CONFIDENCE_RECORDED = 100
 
     CONFIDENCE_CODE = 95
     CONFIDENCE_IBAN = 85
@@ -58,8 +65,11 @@ module Finance
       return [] unless entry.amount_cents.positive?
       return [] if entry.cash_allocations.any?
 
-      debtors.filter_map { |compte, du| match_for(entry, compte, du) }
-             .sort_by { |match| [-match.confidence, match.member_account.name.to_s] }
+      deja = already_recorded(entry)
+      comptes_relies = deja.map { |match| match.member_account.id }
+      deja + debtors.reject { |compte, _| comptes_relies.include?(compte.id) }
+                    .filter_map { |compte, du| match_for(entry, compte, du) }
+                    .sort_by { |match| [-match.confidence, match.member_account.name.to_s] }
     end
 
     # Une passe sur toute une page. Les soldes, les IBAN déjà vus et les noms des
@@ -67,6 +77,7 @@ module Finance
     # le rapprochement ligne à ligne qui avait fait tomber l'écran « À affecter »
     # à l'issue #202.
     def for_entries(entries)
+      preload_recorded(entries)
       entries.each_with_object({}) do |entry, hash|
         matches = for_entry(entry)
         hash[entry.id] = matches if matches.any?
@@ -74,6 +85,44 @@ module Finance
     end
 
     private
+
+    # Le règlement que `RecordMemberSettlement` a écrit pour cette ligne, resté
+    # sur le compte quand l'affectation a été retirée. Le compte n'est peut-être
+    # plus débiteur — c'est justement ce règlement qui a éteint sa dette —, d'où
+    # cette recherche à part, hors des débiteurs.
+    def already_recorded(entry)
+      recorded_by_entry.fetch(entry.id) { recorded_for([entry]).fetch(entry.id, []) }.map do |settlement|
+        compte = settlement.member_account
+        Match.new(member_account: compte, due_cents: MemberAccounts::Outstanding.du(nets_for(compte)),
+                  reason: "Le règlement de ce virement est déjà sur le compte, mais la ligne n'y est plus reliée",
+                  confidence: CONFIDENCE_RECORDED, flow: settlement.flow, recorded_entry: settlement)
+      end
+    end
+
+    def recorded_by_entry = @recorded_by_entry ||= {}
+
+    def preload_recorded(entries)
+      ids = entries.select { |entry| entry.amount_cents.positive? }.map(&:id)
+      found = recorded_for(entries.select { |entry| ids.include?(entry.id) })
+      ids.each { |id| recorded_by_entry[id] = found.fetch(id, []) }
+    end
+
+    KEY_PATTERN = /\Asettlement:cash_entry:(\d+):account:(\d+)\z/
+
+    def recorded_for(entries)
+      return {} if entries.empty?
+
+      cles = entries.map { |entry| "settlement:cash_entry:#{entry.id}:account:%" }
+      AccountEntry.where(kind: "settlement").where("idempotency_key LIKE ANY (ARRAY[?])", cles)
+                  .includes(:member_account).to_a
+                  .select { |settlement| settlement.idempotency_key.match?(KEY_PATTERN) }
+                  .group_by { |settlement| settlement.idempotency_key[KEY_PATTERN, 1].to_i }
+    end
+
+    # Les soldes par poste d'un compte qui n'est pas forcément dans la page.
+    def nets_for(compte)
+      nets.fetch(compte.id) { MemberAccounts::Outstanding.nets_par_poste([compte]).fetch(compte.id, {}) }
+    end
 
     def match_for(entry, compte, du)
       if code_cite?(entry, compte)

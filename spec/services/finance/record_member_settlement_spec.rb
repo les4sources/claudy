@@ -182,4 +182,47 @@ RSpec.describe Finance::RecordMemberSettlement do
     expect(compte.account_settlements.count).to eq(1)
     expect(entry.reload.cash_allocations.count).to eq(1)
   end
+
+  # Frennet, ligne #11195 (2026-10-19) : la passation annulée puis l'affectation
+  # retirée, le règlement est resté sur le compte. Le bouton le recréait, la clé
+  # d'unicité refusait — « déjà imputé » — et la ligne ne quittait plus la file.
+  describe "un règlement resté sur le compte sans sa ligne" do
+    def detacher(entry)
+      Accounting::UnpostCashEntry.new(cash_entry: entry).run!
+      entry.reload.cash_allocations.each(&:destroy!)
+      entry.reload
+    end
+
+    it "relie la ligne au règlement existant, sans en écrire un second" do
+      entry = entrante(7_500)
+      described_class.new(member_account: compte, cash_entry: entry, flow: "charges").run!
+      detacher(entry)
+      expect(compte.reload.balance_cents).to eq(0)
+
+      service = described_class.new(member_account: compte, cash_entry: entry, flow: "charges")
+      service.run!
+
+      expect(service).to be_linked_existing
+      expect(compte.account_settlements.count).to eq(1)
+      expect(compte.reload.balance_cents).to eq(0)
+      allocation = entry.reload.cash_allocations.sole
+      expect([allocation.general_account, allocation.document, allocation.amount_cents]).to eq([clients, compte, 7_500])
+      expect(entry.status).to eq("allocated")
+    end
+
+    it "réencaisse quand le règlement d'origine a été supprimé" do
+      entry = entrante(7_500)
+      described_class.new(member_account: compte, cash_entry: entry, flow: "charges").run!
+      detacher(entry)
+      compte.account_entries.where(kind: "settlement").sole.soft_delete!(validate: false)
+
+      service = described_class.new(member_account: compte, cash_entry: entry, flow: "charges")
+      service.run!
+
+      expect(service).not_to be_linked_existing
+      expect(compte.account_entries.where(kind: "settlement").count).to eq(1)
+      expect(compte.reload.balance_cents).to eq(0)
+      expect(entry.reload.cash_allocations.sole.document).to eq(compte)
+    end
+  end
 end
