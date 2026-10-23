@@ -32,6 +32,11 @@
               = @service.price
 
             dt.text-sm.font-medium.text-gray-500
+              | Compte de recette
+            dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
+              = @service.general_account ? "#{@service.general_account.code} #{@service.general_account.name}" : "Services annexes (par défaut)"
+
+            dt.text-sm.font-medium.text-gray-500
               | Résumé
             dd.mt-1.text-sm.text-gray-900.sm:col-span-2.sm:mt-0
               = @service.summary

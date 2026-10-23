@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_23_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2373,12 +2373,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_100000) do
     t.datetime "created_at", null: false
     t.datetime "deleted_at", precision: nil
     t.text "description"
+    t.bigint "general_account_id"
     t.bigint "human_id"
     t.string "name"
     t.string "photo"
     t.integer "price_cents"
     t.string "summary"
     t.datetime "updated_at", null: false
+    t.index ["general_account_id"], name: "index_services_on_general_account_id"
     t.index ["human_id"], name: "index_services_on_human_id"
   end
 
@@ -2544,6 +2546,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_100000) do
     t.index ["bookable_type", "bookable_id"], name: "index_stay_items_on_bookable_type_and_bookable_id"
     t.index ["stay_id", "bookable_type", "bookable_id"], name: "index_stay_items_on_stay_and_bookable_unique_live", unique: true, where: "(deleted_at IS NULL)"
     t.index ["stay_id"], name: "index_stay_items_on_stay_id"
+  end
+
+  create_table "stay_service_lines", force: :cascade do |t|
+    t.integer "amount_cents", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "general_account_id"
+    t.string "label", null: false
+    t.bigint "service_id"
+    t.bigint "stay_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_stay_service_lines_on_deleted_at"
+    t.index ["general_account_id"], name: "index_stay_service_lines_on_general_account_id"
+    t.index ["service_id"], name: "index_stay_service_lines_on_service_id"
+    t.index ["stay_id"], name: "index_stay_service_lines_on_stay_id"
   end
 
   create_table "stays", force: :cascade do |t|
@@ -3071,6 +3088,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_100000) do
   add_foreign_key "sales_invoices", "customers"
   add_foreign_key "sales_invoices", "legal_entities"
   add_foreign_key "sent_emails", "customers"
+  add_foreign_key "services", "general_accounts"
   add_foreign_key "services", "humans"
   add_foreign_key "shop_monthly_checks", "users", column: "validated_by_id"
   add_foreign_key "shop_settings", "general_accounts", column: "bread_account_id"
@@ -3081,6 +3099,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_23_100000) do
   add_foreign_key "space_reservations", "spaces"
   add_foreign_key "stay_change_requests", "stays"
   add_foreign_key "stay_items", "stays"
+  add_foreign_key "stay_service_lines", "general_accounts"
+  add_foreign_key "stay_service_lines", "services"
+  add_foreign_key "stay_service_lines", "stays"
   add_foreign_key "stays", "customers"
   add_foreign_key "stripe_balance_transactions", "cash_accounts"
   add_foreign_key "stripe_balance_transactions", "payments"

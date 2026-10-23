@@ -220,6 +220,9 @@ class Stay < ApplicationRecord
   # 2026-10-13) : sans occupation calendrier, comme les draps. Elles comptent
   # dans le total, donc dans la facture du séjour.
   has_many :bar_consumptions, dependent: :destroy
+  # Services annexes (Michael, 2026-10-23) : prêt d'un set de disc-golf…, un
+  # libellé et un montant par ligne, ajoutés au total comme le bar.
+  has_many :service_lines, class_name: "StayServiceLine", dependent: :destroy
   # Photos de la feuille de bar rendue par le groupe : la pièce justificative
   # des lignes ci-dessus, consultable pendant l'encodage.
   has_many_attached :bar_sheet_photos
@@ -497,6 +500,18 @@ class Stay < ApplicationRecord
     bar_consumptions.sum(:price_cents).to_i
   end
 
+  # Total des services annexes du séjour (Michael, 2026-10-23).
+  def service_lines_amount_cents
+    service_lines.sum(:amount_cents).to_i
+  end
+
+  # Ce qui s'ajoute au total MÊME sous prix imposé : le bar et les services
+  # annexes. Un prix imposé fixe le prix négocié du séjour, pas ce qu'on y a
+  # ajouté ensuite.
+  def amount_beyond_override_cents
+    bar_amount_cents + service_lines_amount_cents
+  end
+
   # Le séjour porte-t-il un prix imposé (epic #81, Phase 3) ? Quand oui, le total
   # est FIXÉ par l'admin et court-circuite le devis B2C forfaitaire ; l'exigible
   # (`payable_amount_cents` / `balance_due_cents`) en découle automatiquement,
@@ -543,16 +558,17 @@ class Stay < ApplicationRecord
     # court-circuite le devis calculé depuis la composition. Les DATES, elles,
     # restent toujours dérivées des bookables (l'override ne borne que le montant).
     # Le BAR s'ajoute dans les deux cas (Michael, 2026-10-13) : un prix imposé
-    # fixe le prix négocié du séjour, pas ce que le groupe a bu sur place.
+    # fixe le prix négocié du séjour, pas ce que le groupe a bu sur place. Les
+    # services annexes aussi (Michael, 2026-10-23).
     amount = if price_overridden?
-      price_override_cents + bar_amount_cents
+      price_override_cents + amount_beyond_override_cents
     else
       items.sum { |b| b.try(:price_cents).to_i } +
         experience_bookings.active.sum(&:price_cents) +
         meal_orders.billable.sum(:price_cents).to_i +
         linen_orders.sum(:price_cents).to_i +
         party_reservations.active.sum(:price_cents).to_i +
-        bar_amount_cents
+        amount_beyond_override_cents
     end
     # Séjour SANS hébergement (epic #66, Phase 2) : les dates viennent des
     # SpaceBooking (Booking ET SpaceBooking exposent from_date/to_date), donc un

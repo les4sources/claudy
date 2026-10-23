@@ -15,6 +15,19 @@
                      class: "w-1/2 md:w-1/2 lg:w-1/4",
                      step: "0.01"
 
+    / Compte de recette (Michael, 2026-10-23) : une ligne de séjour reprise
+      de ce service y est ventilée (700006 pour le disc-golf). Vide : les
+      services annexes du plan comptable par défaut.
+    div(class="relative md:w-1/2 lg:w-2/3" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" data-searchable-select-clearable-value="true")
+      = f.label :general_account_id, "Compte de recette", class: "block text-sm font-medium text-gray-700"
+      = f.select :general_account_id,
+                 options_for_select(GeneralAccount.in_class(7).actives.ordered.map { |compte| ["#{compte.code} #{compte.name}", compte.id] }, f.object.general_account_id),
+                 { include_blank: "— Services annexes (par défaut) —" },
+                 class: "mt-1 w-full rounded-md border-gray-300 shadow-sm sm:text-sm",
+                 data: { "searchable-select-target": "select" }
+      = render "shared/searchable_select_search", label: "Compte de recette"
+      p.mt-1.text-xs.text-gray-500 Le compte sur lequel la compta range ce service quand il est ajouté à un séjour.
+
     .flex.space-x-4
       - if f.object.photo?
         = image_tag f.object.photo_url(:thumb),

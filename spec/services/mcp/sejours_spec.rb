@@ -219,5 +219,26 @@ RSpec.describe Mcp::Server, "séjours" do
       confirme("supprimer_sejour", { "sejour" => sejour.id, "motif" => "doublon du séjour saisi par Malau" })
       expect(Stay.find_by(id: sejour.id)).to be_nil
     end
+    # Services annexes (Michael, 2026-10-23) : prêt d'un set de disc-golf…
+    it "ajoute un service du catalogue au séjour, puis le retire" do
+      discgolf = Service.create!(name: "Prêt d'un set de disc-golf", price_cents: 1_500)
+      total = sejour.total_amount_cents
+
+      expect(texte(outil("services_annexes_sejour", { "action" => "catalogue" }))).to include("##{discgolf.id} Prêt d'un set de disc-golf : 15,00 €")
+
+      apercu = outil("services_annexes_sejour", { "sejour" => sejour.id, "service" => "disc-golf" })
+      expect(texte(apercu)).to include("Prêt d'un set de disc-golf", "15,00 €", "Aucun email au client")
+      expect(sejour.service_lines).to be_empty
+
+      outil("services_annexes_sejour", { "sejour" => sejour.id, "service" => "disc-golf", "confirmation" => code_de(apercu) })
+      ligne = sejour.reload.service_lines.sole
+      expect(ligne).to have_attributes(label: "Prêt d'un set de disc-golf", amount_cents: 1_500, service: discgolf)
+      expect(sejour.total_amount_cents).to eq(total + 1_500)
+      expect(texte(outil("fiche_sejour", { "sejour" => sejour.id }))).to include("Service annexe ##{ligne.id} Prêt d'un set de disc-golf : 15,00 €")
+
+      confirme("services_annexes_sejour", { "sejour" => sejour.id, "action" => "retirer", "ligne" => ligne.id })
+      expect(sejour.reload.service_lines).to be_empty
+      expect(sejour.total_amount_cents).to eq(total)
+    end
   end
 end

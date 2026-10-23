@@ -130,6 +130,45 @@ RSpec.describe Finance::VentilateStay do
     expect(lignes.to_h { |l| [l.category, l.team] }).to eq("lodging" => nil, "meals" => cuisine)
   end
 
+  # Services annexes (Michael, 2026-10-23) : hors devis, leur montant saisi
+  # entre dans les poids ; une ligne reprise d'un service garde son compte.
+  describe "services annexes" do
+    let!(:discgolf_compte) { build_general_account(code: "700006", name: "Location discogolf", klass: 7, nature: "revenue") }
+    let(:discgolf) { Service.create!(name: "Prêt d'un set de disc-golf", price_cents: 2_000, general_account: discgolf_compte) }
+
+    before { RevenueMapping.create!(category: "services", general_account: hebergement) }
+
+    it "range une ligne reprise d'un service sur le compte du service, au pôle Accueil" do
+      accueil = Team.create!(name: "Pôle Accueil")
+      stub_quote(lodging: 8_000)
+      Stays::AddServiceLine.new(stay: stay).run!(label: nil, amount_cents: nil, service: discgolf)
+
+      lignes = described_class.new(stay: stay, amount_cents: 10_000).run!
+
+      service = lignes.find { |l| l.category == "services" }
+      expect(service).to have_attributes(amount_cents: 2_000, general_account: discgolf_compte, team: accueil)
+      expect(lignes.sum(&:amount_cents)).to eq(10_000)
+    end
+
+    it "range une ligne libre sur la catégorie « services »" do
+      stub_quote(lodging: 8_000)
+      Stays::AddServiceLine.new(stay: stay).run!(label: "Vélos", amount_cents: 2_000)
+
+      lignes = described_class.new(stay: stay, amount_cents: 10_000).run!
+
+      expect(lignes.find { |l| l.category == "services" }.general_account).to eq(hebergement)
+    end
+
+    it "ventile un séjour qui n'a que des services annexes" do
+      stub_quote(lodging: 0)
+      Stays::AddServiceLine.new(stay: stay).run!(label: nil, amount_cents: nil, service: discgolf)
+
+      lignes = described_class.new(stay: stay, amount_cents: 2_000).run!
+
+      expect(lignes.map { |l| [l.general_account, l.amount_cents] }).to eq([[discgolf_compte, 2_000]])
+    end
+  end
+
   # L'anti-critère du lot, vérifié en spec : la couche Finances ne calcule
   # jamais un prix, et ce fichier est le seul autorisé à toucher PricingModel.
   it "est le seul service Finances à consommer un moteur de prix" do

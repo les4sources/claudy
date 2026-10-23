@@ -41,6 +41,9 @@ module Finance
       # sait pas coter). Les prix ENREGISTRÉS sur la composition donnent les
       # mêmes proportions ; on ne refuse que s'ils sont vides eux aussi.
       poids = recorded_weights if poids.values.sum <= 0
+      # Les services annexes (Michael, 2026-10-23) ne sont pas dans le devis :
+      # leur montant saisi s'ajoute aux poids, à côté du reste.
+      poids = poids.merge(service_weights)
       if poids.values.sum <= 0
         raise EmptyQuote,
               "Le devis reconstruit du séjour ##{@stay.id} est vide, et sa composition ne porte aucun prix : " \
@@ -54,15 +57,16 @@ module Finance
         montant = parts[index]
         next if montant.zero?
 
-        mapping = mappings[category]
-        raise MissingMapping, "Aucun compte de recette pour la catégorie « #{category} »." if mapping.nil?
+        nature, compte = category.is_a?(Array) ? category : [category, nil]
+        mapping = mappings[nature]
+        raise MissingMapping, "Aucun compte de recette pour la catégorie « #{nature} »." if mapping.nil? && compte.nil?
 
         Line.new(
-          category: category,
-          label: "#{RevenueMapping::CATEGORY_LABELS.fetch(category, category)} — séjour ##{@stay.id}",
+          category: nature,
+          label: "#{RevenueMapping::CATEGORY_LABELS.fetch(nature, nature)} — séjour ##{@stay.id}",
           amount_cents: @amount_cents.negative? ? -montant : montant,
-          general_account: mapping.general_account,
-          team: accueil || mapping.team
+          general_account: compte || mapping.general_account,
+          team: accueil || mapping&.team
         )
       end
     end
@@ -107,6 +111,17 @@ module Finance
       poids["meals"] += @stay.meal_orders.active.sum(:price_cents).to_i
       poids["experiences"] += @stay.experience_bookings.active.sum { |activite| activite.price_cents.to_i }
       poids.reject { |_category, montant| montant <= 0 }
+    end
+
+    # Les services annexes, regroupés par compte de recette : celui que la
+    # ligne a repris de son service (700006 pour le disc-golf), sinon la
+    # catégorie « services » de `RevenueMapping`. Clé `["services", compte]`
+    # quand la ligne porte son compte, `"services"` sinon.
+    def service_weights
+      @stay.service_lines.includes(:general_account).each_with_object(Hash.new(0)) do |ligne, poids|
+        cle = ligne.general_account ? ["services", ligne.general_account] : "services"
+        poids[cle] += ligne.amount_cents.to_i
+      end.reject { |_cle, montant| montant <= 0 }
     end
 
     def mappings

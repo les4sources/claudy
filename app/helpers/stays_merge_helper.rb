@@ -109,7 +109,8 @@ module StaysMergeHelper
     van:      "Van",
     activity: "Activités",
     meal:     "Repas",
-    bar:      "Bar"
+    bar:      "Bar",
+    service:  "Services annexes"
   }.freeze
 
   def merge_type_label(type)

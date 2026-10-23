@@ -34,7 +34,7 @@
 #  fk_rails_...  (team_id => teams.id)
 #
 class RevenueMapping < ApplicationRecord
-  CATEGORIES = %w[lodging spaces camping van meals terrace hamac experiences].freeze
+  CATEGORIES = %w[lodging spaces camping van meals terrace hamac experiences services].freeze
   CATEGORY_LABELS = {
     "lodging" => "Hébergement",
     "spaces" => "Salles",
@@ -43,7 +43,8 @@ class RevenueMapping < ApplicationRecord
     "meals" => "Repas",
     "terrace" => "Terrasse",
     "hamac" => "Hamacs",
-    "experiences" => "Activités"
+    "experiences" => "Activités",
+    "services" => "Services annexes"
   }.freeze
 
   has_paper_trail

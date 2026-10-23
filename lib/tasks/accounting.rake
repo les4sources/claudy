@@ -114,7 +114,8 @@ namespace :accounting do
       "van" => "700000",
       "terrace" => "700000",
       "hamac" => "700000",
-      "experiences" => "700400"
+      "experiences" => "700400",
+      "services" => "700000"
     }
     mappings.each do |category, code|
       compte = GeneralAccount.find_by(code: code)
