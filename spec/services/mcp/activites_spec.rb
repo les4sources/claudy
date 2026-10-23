@@ -68,6 +68,19 @@ RSpec.describe Mcp::Server, "activités" do
     expect(resa.reload).to have_attributes(performed_by: nil, carrier_fee_cents: nil)
   end
 
+  it "corrige la durée effective, et la rémunération suit" do
+    resa = ExperienceBooking.create!(experience_availability: creneau, stay: sejour, participants: 3, status: "confirmed")
+    expect(resa.carrier_fee_cents).to eq(8_000)
+
+    apercu = outil("modifier_reservation_activite", { "reservation" => resa.id, "duree_effective" => "1h30" })
+    expect(texte(apercu)).to include("Durée : 2h → 1h30", "Rémunération : 80,00 € → 60,00 €")
+    confirme("modifier_reservation_activite", { "reservation" => resa.id, "duree_effective" => "1h30" })
+
+    expect(resa.reload).to have_attributes(duration_minutes: 90, carrier_fee_cents: 6_000)
+    expect(texte(outil("fiche_sejour", { "sejour" => sejour.id }))).to include("1h30 prestées")
+    expect(outil("modifier_reservation_activite", { "reservation" => resa.id, "duree_effective" => "un moment" })[:isError]).to be(true)
+  end
+
   it "retire une activité puis la rétablit, sans prévenir personne" do
     resa = ExperienceBooking.create!(experience_availability: creneau, stay: sejour, participants: 3, status: "confirmed")
     sejour.recompute_aggregates!

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_22_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_23_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -1095,6 +1095,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_22_170000) do
   create_table "experience_bookings", force: :cascade do |t|
     t.integer "carrier_fee_cents"
     t.datetime "created_at", null: false
+    t.integer "duration_minutes"
     t.bigint "experience_availability_id", null: false
     t.text "notes"
     t.string "outcome"

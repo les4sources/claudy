@@ -41,7 +41,7 @@ RSpec.describe "ExperienceBookings — retour visible dans la modale séjour", t
       expect(response).to have_http_status(:ok)
       expect(response.media_type).to eq("text/vnd.turbo-stream.html")
       expect(response.body).to include(frame)
-      expect(response.body).to include("Nombre de participants enregistré : 2.")
+      expect(response.body).to include("Activité enregistrée : 2 participant(s)")
       expect(response.body).to include('role="status"')
     end
 

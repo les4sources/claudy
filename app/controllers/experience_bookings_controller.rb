@@ -125,7 +125,8 @@ class ExperienceBookingsController < BaseController
     end
   end
 
-  # Édition du nombre de participants d'une activité (Phase 6) — et toggle
+  # Édition du nombre de participants et de la durée effective d'une activité
+  # (Phase 6 ; durée : Michael 2026-10-23) — et toggle
   # historique de statut (Phase 1), conservé. Le modèle interdit de passer en
   # `refused` sans raison. Toute modification recalcule le total du séjour.
   def update
@@ -134,10 +135,7 @@ class ExperienceBookingsController < BaseController
     if @booking.update(booking_update_params)
       refresh_stay_totals!(@booking.stay)
       respond_to do |format|
-        format.turbo_stream do
-          render_stay_panels(@booking.stay,
-                             notice: "Nombre de participants enregistré : #{@booking.participants}.")
-        end
+        format.turbo_stream { render_stay_panels(@booking.stay, notice: update_notice) }
         format.html { redirect_to stay_path(@booking.stay), notice: "Activité mise à jour." }
         format.any  { head :ok }
       end
@@ -299,7 +297,7 @@ class ExperienceBookingsController < BaseController
   # Vide = le porteur de l'activité. Désigner le porteur lui-même revient au
   # même : on ne garde un nom que s'il diffère.
   def payout_params
-    attrs = params.require(:experience_booking).permit(:performed_by_id, :carrier_fee).to_h
+    attrs = params.require(:experience_booking).permit(:performed_by_id, :effective_duration, :carrier_fee).to_h
     attrs["performed_by_id"] = nil if attrs["performed_by_id"].to_s == @booking.experience&.human_id.to_s
     attrs["performed_by_id"] = attrs["performed_by_id"].presence
     attrs
@@ -324,9 +322,24 @@ class ExperienceBookingsController < BaseController
     attrs = {}
     attrs[:status] = params[:status] if params.key?(:status)
     if params[:experience_booking].present?
-      attrs.merge!(params.require(:experience_booking).permit(:participants).to_h.symbolize_keys)
+      attrs.merge!(params.require(:experience_booking).permit(:participants, :effective_duration).to_h.symbolize_keys)
     end
+    # La durée fait la rémunération : comme `payout`, c'est un geste de l'équipe.
+    attrs.delete(:effective_duration) if current_user&.restricted_to_own_activities?
     attrs
+  end
+
+  # Ce qui a été enregistré, durée et rémunération comprises : une durée
+  # raccourcie change ce que touche le porteur, autant le voir tout de suite.
+  def update_notice
+    duree = @booking.effective_duration
+    duree = "#{duree} (prévu #{ExperienceBooking.format_duration(@booking.planned_duration_minutes)})" if @booking.duration_adjusted?
+    morceaux = ["#{@booking.participants} participant(s)"]
+    morceaux << duree if duree
+    if @booking.carrier_fee_cents
+      morceaux << "porteur : #{helpers.humanized_money_with_symbol(Money.new(@booking.carrier_fee_cents, 'EUR'))}"
+    end
+    "Activité enregistrée : #{morceaux.join(' · ')}."
   end
 
   # Toute mutation d'activité recalcule le TOTAL du séjour (activités actives

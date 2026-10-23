@@ -64,7 +64,7 @@ module Mcp
           stay.experience_bookings.includes(experience_availability: :experience).order(:id).each do |activite|
             creneau = activite.experience_availability
             lignes << "- Activité ##{activite.id} #{creneau&.experience&.name} le #{creneau&.available_on} à #{creneau&.starts_at}" \
-                      " — #{activite.participants} pers., #{ACTIVITES.fetch(activite.status, activite.status)} : #{euros(activite.price_cents)}"
+                      " — #{activite.participants} pers.#{", #{activite.effective_duration} prestées" if activite.duration_adjusted?}, #{ACTIVITES.fetch(activite.status, activite.status)} : #{euros(activite.price_cents)}"
           end
           stay.meal_orders.order(:date, :id).each do |repas|
             lignes << "- Repas ##{repas.id} #{repas.label} le #{repas.date || '?'} #{repas.moment} — #{repas.people} pers., " \

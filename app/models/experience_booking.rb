@@ -4,6 +4,7 @@
 #
 #  id                         :bigint           not null, primary key
 #  carrier_fee_cents          :integer
+#  duration_minutes           :integer
 #  notes                      :text
 #  outcome                    :string
 #  outcome_recorded_at        :datetime
@@ -120,6 +121,7 @@ class ExperienceBooking < ApplicationRecord
   before_save :freeze_carrier_fee
 
   validates :participants, numericality: { greater_than: 0 }
+  validate :duration_readable
   validates :status, inclusion: { in: STATUSES }
   # Un refus n'existe jamais sans motif — c'est l'information que le client
   # reçoit et qui justifie l'invitation à re-choisir un créneau.
@@ -229,18 +231,85 @@ class ExperienceBooking < ApplicationRecord
   # Le montant est FIGÉ au moment de la confirmation (décision 2), au tarif en
   # vigueur à la DATE DU CRÉNEAU : un changement de barème ultérieur ne réécrit
   # jamais le passé. Un montant déjà posé n'est pas recalculé.
+  #
+  # Seule exception : la durée effective qui change. Le montant suit alors la
+  # nouvelle durée (1 h 30 au lieu de 2 h = trois quarts du montant), sauf si le
+  # même geste pose aussi un montant à la main.
   def freeze_carrier_fee
     return unless confirmed?
-    return if carrier_fee_cents.present?
+    return if carrier_fee_cents.present? && !refresh_fee_for_new_duration?
 
     self.carrier_fee_cents = computed_carrier_fee_cents
   end
 
-  # Ce que la prestation vaudrait, au tarif de la date de son créneau. nil quand
-  # l'activité n'a pas de durée : sans durée, pas de rémunération calculable —
-  # l'écran le dit et propose de compléter la durée.
+  def refresh_fee_for_new_duration?
+    will_save_change_to_duration_minutes? && !will_save_change_to_carrier_fee_cents?
+  end
+
+  # Ce que la prestation vaudrait, au tarif de la date de son créneau et pour
+  # la durée effectivement prestée. nil quand l'activité n'a pas de durée : sans
+  # durée, pas de rémunération calculable — l'écran le dit et propose de
+  # compléter la durée.
   def computed_carrier_fee_cents
-    experience&.carrier_fee_cents_on(experience_availability&.available_on)
+    experience&.carrier_fee_cents_on(experience_availability&.available_on, minutes: duration_minutes)
+  end
+
+  # --- Durée effective (Michael, 2026-10-23) ---
+  #
+  # Une activité a une durée prévue, mais ce n'est pas toujours elle qu'on
+  # preste : les ânes de Béné, 2 h au catalogue, 1 h 30 avec des tout-petits
+  # (séjour #1567). `duration_minutes` vide = la durée prévue de l'activité.
+
+  def planned_duration_minutes = experience&.block_duration_minutes
+
+  def effective_duration_minutes = duration_minutes || planned_duration_minutes
+
+  def duration_adjusted? = duration_minutes.present? && duration_minutes != planned_duration_minutes
+
+  # Saisie libre : « 1h30 », « 1 h 30 », « 1:30 », « 1,5 » (heures), « 90 min ».
+  # Un nombre seul est en heures jusqu'à 10, en minutes au-delà (« 90 »).
+  # Vide, ou égale à la durée prévue, rend la main à la durée prévue.
+  def effective_duration
+    self.class.format_duration(effective_duration_minutes)
+  end
+
+  def effective_duration=(value)
+    minutes = self.class.parse_duration(value)
+    if minutes == :invalid
+      @invalid_duration = value.to_s
+      return
+    end
+
+    @invalid_duration = nil
+    self.duration_minutes = minutes == planned_duration_minutes ? nil : minutes
+  end
+
+  def self.parse_duration(value)
+    raw = value.to_s.strip.downcase
+    return nil if raw.empty?
+
+    case raw
+    when /\A(\d+)\s*(?:h|:)\s*(\d{1,2})?\s*(?:min|m)?\z/
+      $1.to_i * 60 + $2.to_i
+    when /\A(\d+)\s*(?:min|mn|m)\z/
+      $1.to_i
+    when /\A(\d+)\z/
+      $1.to_i > 10 ? $1.to_i : $1.to_i * 60
+    when /\A(\d+(?:[.,]\d+)?)\s*(?:h|heures?)?\z/
+      ($1.tr(",", ".").to_d * 60).round.to_i
+    else
+      :invalid
+    end
+  end
+
+  # « 2h », « 1h30 », « 45 min ».
+  def self.format_duration(minutes)
+    return nil if minutes.nil?
+
+    heures, reste = minutes.divmod(60)
+    return "#{reste} min" if heures.zero?
+
+    reste.zero? ? "#{heures}h" : format("%dh%02d", heures, reste)
   end
 
   # Confirmée mais sans montant : l'activité n'a pas de durée en heures. C'est
@@ -382,14 +451,23 @@ class ExperienceBooking < ApplicationRecord
     self.status ||= "pending"
   end
 
+  def duration_readable
+    if @invalid_duration
+      errors.add(:base, "Durée illisible : « #{@invalid_duration} » (exemples : 1h30, 1,5, 90 min).")
+    elsif duration_minutes && duration_minutes <= 0
+      errors.add(:base, "La durée effective doit être positive.")
+    end
+  end
+
   # Même règle pour qui est payé et combien : une fois sur un relevé, on ne
   # réécrit ni la personne ni le montant.
   def payout_frozen_once_reported
     return unless persisted? && carrier_statement_line.present?
-    return unless will_save_change_to_performed_by_id? || will_save_change_to_carrier_fee_cents?
+    return unless will_save_change_to_performed_by_id? || will_save_change_to_carrier_fee_cents? ||
+                  will_save_change_to_duration_minutes?
 
     errors.add(:base,
-               "cette prestation figure sur un relevé de rémunération : qui la reçoit et combien sont figés. " \
+               "cette prestation figure sur un relevé de rémunération : qui la reçoit, sa durée et combien sont figés. " \
                "Passez par une contre-passation du relevé.")
   end
 
