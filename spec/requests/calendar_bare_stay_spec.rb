@@ -23,14 +23,14 @@ RSpec.describe "Calendrier — séjour sans réservable", type: :request do
     response.body.scan("data-stay-id=\"#{stay.id}\"").size
   end
 
-  it "dessine un bloc par nuit pour un séjour vide, avec « Composition à définir »" do
+  it "dessine un bloc par nuit pour un séjour vide, sans chip" do
     stay = bare_stay
 
     get "/", params: { date: day.iso8601 }
 
     expect(response).to have_http_status(:ok)
     expect(blocks_of(stay)).to eq(2)
-    expect(response.body).to include("Composition à définir")
+    expect(response.body).not_to include("Composition à définir")
     expect(response.body).to include("href=\"#{stay_path(stay)}\"")
   end
 
@@ -58,7 +58,6 @@ RSpec.describe "Calendrier — séjour sans réservable", type: :request do
 
     expect(blocks_of(stay)).to eq(1)
     expect(response.body).to include("🍽 Midi · 12 pers.")
-    expect(response.body).not_to include("Composition à définir")
   end
 
   it "laisse au séjour qui a une activité son seul bloc d'activité" do
@@ -70,7 +69,7 @@ RSpec.describe "Calendrier — séjour sans réservable", type: :request do
     get "/", params: { date: day.iso8601 }
 
     expect(blocks_of(stay)).to eq(1)
-    expect(response.body).not_to include("Composition à définir")
+    expect(response.body).to include("🎯 Atelier pizza")
   end
 
   it "le reprend dans le bandeau « Aujourd'hui » le jour de son arrivée" do

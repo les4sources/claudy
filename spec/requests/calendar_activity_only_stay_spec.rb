@@ -43,10 +43,9 @@ RSpec.describe "Calendrier — séjour activité seule", type: :request do
 
     expect(response.body).not_to include("data-stay-id=\"#{canceled.id}\"")
     # Le séjour dont l'activité est annulée reste vivant : c'est désormais un
-    # séjour vide (Michael, 2026-10-23), posé sur ses dates sans chip d'activité.
+    # séjour vide (Michael, 2026-10-23), posé sur ses dates, sans chip.
     expect(response.body.scan("data-stay-id=\"#{dropped.id}\"").size).to eq(1)
     expect(response.body).not_to include("🎯 Atelier pizza")
-    expect(response.body).to include("Composition à définir")
   end
 
   it "laisse inchangé le bloc d'un séjour qui a déjà un espace" do

@@ -84,7 +84,7 @@ class PagesController < BaseController
           .where("arrival_date <= ? AND departure_date >= ?", @last.to_date, @first.to_date)
           .where.not(id: StayItem.select(:stay_id))
           .where.not(id: ExperienceBooking.active.select(:stay_id))
-          .preload(:customer, :meal_orders, :linen_orders, :party_reservations)
+          .preload(:customer, :meal_orders)
       )
       # Coworking (epic #126, Phase 1) — domaine INDÉPENDANT des séjours : un
       # bloc agrégé par jour (« 💻 Coworking N/3 »), jamais rattaché à un stay

@@ -160,13 +160,10 @@ module CalendarHelper
   end
 
   # Chip d'un séjour sans réservable (Michael, 2026-10-23) : ses repas du jour
-  # s'il en a, « Composition à définir » s'il n'a encore rien du tout (séjour
-  # vide). Un séjour qui n'a que du linge ou une Pizza Party n'en porte pas.
+  # s'il en a. Un séjour vide n'en porte aucune — son nom suffit, pas de
+  # « Composition à définir » (demande Michael du même jour).
   def bare_stay_chip(stay, date)
-    meals = stay.meal_orders.select(&:active?)
-    return "Composition à définir" if meals.empty? && stay.linen_orders.empty? && stay.party_reservations.none?(&:active?)
-
-    today = meals.select { |meal| meal.date == date.to_date }
+    today = stay.meal_orders.select { |meal| meal.active? && meal.date == date.to_date }
     return nil if today.empty?
 
     labels = today.map do |meal|
