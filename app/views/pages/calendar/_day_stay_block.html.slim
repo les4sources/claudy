@@ -69,6 +69,10 @@ div(class="relative flex mt-2 py-1 px-2 hover:cursor-pointer hover:shadow-xl min
         le séjour n'aurait aucun bloc. Nom, heure et participants.
       - block.activity_bookings.each do |activity|
         span(class="text-xs text-gray-600 break-words") 🎯 #{activity.experience_availability.experience&.name} · #{activity.experience_availability.starts_at} · #{activity.participants} pers.
+      / Séjour sans réservable (séjour vide, repas seuls…, Michael 2026-10-23) :
+        le bloc ne tient qu'au séjour, la chip dit ce qu'il porte ce jour-là.
+      - if block.bare && (chip = bare_stay_chip(stay, date))
+        span(class="text-xs text-gray-600 italic break-words") = chip
 
   / Overlay cliquable : ouvre la modale séjour (epic #66, Phase 5) et sert de
   / cible unique au mode fusion pour tout le séjour.

@@ -159,6 +159,23 @@ module CalendarHelper
     end
   end
 
+  # Chip d'un séjour sans réservable (Michael, 2026-10-23) : ses repas du jour
+  # s'il en a, « Composition à définir » s'il n'a encore rien du tout (séjour
+  # vide). Un séjour qui n'a que du linge ou une Pizza Party n'en porte pas.
+  def bare_stay_chip(stay, date)
+    meals = stay.meal_orders.select(&:active?)
+    return "Composition à définir" if meals.empty? && stay.linen_orders.empty? && stay.party_reservations.none?(&:active?)
+
+    today = meals.select { |meal| meal.date == date.to_date }
+    return nil if today.empty?
+
+    labels = today.map do |meal|
+      what = meal.family == "repas" ? (meal.moment_label || meal.label) : meal.label
+      "#{what} · #{meal.people} pers."
+    end
+    "🍽 #{labels.join(", ")}"
+  end
+
   # Compteur de nuits AU NIVEAU DU SÉJOUR pour le bloc unifié (« (2/3) »). Même
   # convention que `BookingDecorator#dates_counter`, mais adossée aux dates du
   # séjour (arrival/departure) plutôt qu'à un bookable isolé : un seul compteur
