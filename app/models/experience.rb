@@ -145,11 +145,13 @@ class Experience < ApplicationRecord
 
   # Rémunération d'UNE prestation — par prestation, jamais par participant
   # (décision 1). nil quand la durée manque : sans durée, pas de montant, et
-  # l'écran doit le dire plutôt que d'inventer un zéro.
-  def carrier_fee_cents_on(date = nil)
-    return nil if duration_hours.blank? || duration_hours.to_d <= 0
+  # l'écran doit le dire plutôt que d'inventer un zéro. `minutes:` = la durée
+  # effectivement prestée, quand elle diffère de la durée standard.
+  def carrier_fee_cents_on(date = nil, minutes: nil)
+    hours = minutes.present? ? minutes.to_d / 60 : duration_hours.to_d
+    return nil if hours <= 0
 
-    (duration_hours.to_d * effective_carrier_hourly_cents(on: date)).round
+    (hours * effective_carrier_hourly_cents(on: date)).round
   end
 
   private

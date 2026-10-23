@@ -7,12 +7,13 @@ module Mcp
         tool "modifier_reservation_activite",
              title: "Modifier une réservation d'activité",
              description: "Change le nombre de participants d'une réservation d'activité (le total du séjour suit), " \
-                          "qui l'a tenue (`tenue_par`, vide = le porteur de l'activité) ou ce qu'on lui doit " \
+                          "qui l'a tenue (`tenue_par`, vide = le porteur de l'activité), combien de temps elle a " \
+                          "réellement duré (`duree_effective`, la rémunération suit) ou ce qu'on lui doit " \
                           "(`remuneration`, en euros). Figé une fois la prestation sur un relevé. Aucun email.",
              schema: {
                properties: {
                  reservation: RESERVATION, participants: { type: "integer" },
-                 tenue_par: TENUE_PAR, remuneration: REMUNERATION
+                 tenue_par: TENUE_PAR, duree_effective: DUREE_EFFECTIVE, remuneration: REMUNERATION
                },
                required: %w[reservation]
              }
@@ -34,9 +35,22 @@ module Mcp
             end
           end
 
-          if arguments.key?("tenue_par") || arguments.key?("remuneration")
+          if arguments.key?("tenue_par") || arguments.key?("remuneration") || arguments.key?("duree_effective")
             equipe!
-            raise Error, "Cette prestation figure sur un relevé : qui la reçoit et combien sont figés." if resa.carrier_statement
+            raise Error, "Cette prestation figure sur un relevé : qui la reçoit, sa durée et combien sont figés." if resa.carrier_statement
+
+            if arguments.key?("duree_effective")
+              minutes = ExperienceBooking.parse_duration(arguments["duree_effective"])
+              raise Error, "Durée illisible : « #{arguments['duree_effective']} » (exemples : 1h30, 1,5, 90 min)." if minutes == :invalid
+              raise Error, "La durée effective doit être positive." if minutes&.<=(0)
+
+              minutes = nil if minutes == resa.standard_duration_minutes
+              if minutes != resa.duration_minutes
+                changements[:duration_minutes] = minutes
+                lignes << "Durée : #{resa.effective_duration || '—'} → " \
+                          "#{ExperienceBooking.format_duration(minutes || resa.standard_duration_minutes) || '—'}"
+              end
+            end
 
             if arguments.key?("tenue_par")
               humain = tenue_par!(arguments["tenue_par"], resa.experience)
@@ -55,6 +69,11 @@ module Mcp
             end
           end
           raise Error, "Rien à changer sur la réservation ##{resa.id}." if changements.empty?
+
+          if changements.key?(:duration_minutes) && !changements.key?(:carrier_fee_cents) && resa.confirmed?
+            apres = simuler { changer(resa.id, changements).carrier_fee_cents }
+            lignes << "Rémunération : #{resa.carrier_fee_cents ? euros(resa.carrier_fee_cents) : '—'} → #{apres ? euros(apres) : '—'}"
+          end
 
           stay = resa.stay
           if changements.key?(:participants)

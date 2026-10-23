@@ -24,6 +24,14 @@
         dt.text-xs.uppercase.tracking-wider.text-gray-400 Participants
         dd.col-span-2.text-sm.text-gray-800 = @booking.participants
 
+      - if @booking.effective_duration_minutes
+        .grid.grid-cols-3.items-baseline.gap-4.px-5.py-3
+          dt.text-xs.uppercase.tracking-wider.text-gray-400 Durée
+          dd.col-span-2.text-sm.text-gray-800
+            = @booking.effective_duration
+            - if @booking.duration_adjusted? && @booking.standard_duration_minutes
+              span.ml-2.text-xs.text-amber-800 = "durée standard #{ExperienceBooking.format_duration(@booking.standard_duration_minutes)}"
+
       .grid.grid-cols-3.items-baseline.gap-4.px-5.py-3
         dt.text-xs.uppercase.tracking-wider.text-gray-400 Séjour
         dd.col-span-2.text-sm
@@ -66,7 +74,7 @@
     = form_with model: @booking, url: payout_experience_booking_path(@booking), method: :patch,
                 class: "rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm space-y-3" do |f|
       h2.text-sm.font-medium.text-gray-900 Rémunération de la prestation
-      .grid.grid-cols-1.gap-3(class="sm:grid-cols-2")
+      .grid.grid-cols-1.gap-3(class="sm:grid-cols-3")
         div(class="relative" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une personne…" data-searchable-select-clearable-value="true")
           = f.label :performed_by_id, "Tenue par", class: "block text-sm font-medium text-gray-700"
           = f.select :performed_by_id,
@@ -76,12 +84,17 @@
                      data: { searchable_select_target: "select" }
           = render "shared/searchable_select_search", label: "Chercher une personne"
         div
+          = label_tag "experience_booking[effective_duration]", "Durée prestée", class: "block text-sm font-medium text-gray-700"
+          = text_field_tag "experience_booking[effective_duration]", @booking.effective_duration,
+                           placeholder: "1h30, 1,5, 90 min", autocomplete: "off",
+                           class: "mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm"
+        div
           = label_tag "experience_booking[carrier_fee]", "Rémunération (€)", class: "block text-sm font-medium text-gray-700"
           = text_field_tag "experience_booking[carrier_fee]", @booking.carrier_fee&.then { |v| format("%.2f", v).tr(".", ",") },
                            inputmode: "decimal", placeholder: "calculée à la validation",
                            class: "mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm"
       .flex.items-center.justify-between.gap-3
-        p.text-xs.text-gray-500 Vide : le porteur de l'activité, au tarif horaire × la durée de l'activité.
+        p.text-xs.text-gray-500 Vide : le porteur de l'activité, au tarif horaire × la durée prestée (par défaut, la durée standard).
         = f.submit "Enregistrer", class: "btn-primary"
 
   / Fil de commentaires — même composant que partout ailleurs.

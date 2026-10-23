@@ -41,6 +41,13 @@
                 = booking.experience_availability.available_on&.strftime("%-d/%m/%Y")
                 | &nbsp;à&nbsp;
                 = booking.experience_availability.starts_at
+              / Durée effective (Michael 2026-10-23) : dite seulement quand elle
+                s'écarte de la durée standard, c'est elle qui paie le porteur.
+              - if booking.duration_adjusted?
+                .text-xs.text-amber-800
+                  = "#{booking.effective_duration} prestées"
+                  - if booking.standard_duration_minutes
+                    span.text-gray-500 = " · durée standard #{ExperienceBooking.format_duration(booking.standard_duration_minutes)}"
               - if booking.pending?
                 span.inline-block.mt-1.px-2.py-0.5.rounded.text-xs.font-medium.bg-amber-100.text-amber-800 À valider
               - elsif booking.held?
@@ -57,8 +64,18 @@
                 = button_to "Valider", confirm_experience_booking_path(booking, from: "stay"), method: :patch, title: (booking.slot_in_the_future? ? "Confirmer l'activité (le client est prévenu)" : "Confirmer qu'elle a eu lieu"), class: "px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium hover:bg-green-200"
               = form_with url: experience_booking_path(booking), method: :patch, class: "flex items-center gap-1" do |f|
                 / w-16 : en w-14, « 20 » se tronquait derrière les flèches du champ.
-                = number_field_tag "experience_booking[participants]", booking.participants, min: 1, required: true, title: "Nombre de participants", class: "w-16 rounded border-gray-300 text-sm py-1"
-                = f.submit "OK", title: "Enregistrer le nombre de participants", class: "px-2 py-1 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700"
+                = number_field_tag "experience_booking[participants]", booking.participants, min: 1, required: true, title: "Nombre de participants", aria: { label: "Nombre de participants" }, class: "w-16 rounded border-gray-300 text-sm py-1"
+                span.text-xs.text-gray-500 pers.
+                / Durée effective, prérenseignée avec la durée standard : on ne la
+                  touche que quand l'activité a été raccourcie ou allongée. Elle
+                  fait la rémunération du porteur, donc réservée à l'équipe.
+                - unless current_user&.restricted_to_own_activities?
+                  = text_field_tag "experience_booking[effective_duration]", booking.effective_duration,
+                                   placeholder: "durée", inputmode: "text", autocomplete: "off",
+                                   title: "Durée effective (1h30, 1,5, 90 min) — vide : la durée standard#{" (#{ExperienceBooking.format_duration(booking.standard_duration_minutes)})" if booking.standard_duration_minutes}",
+                                   aria: { label: "Durée effective" },
+                                   class: "w-16 rounded border-gray-300 text-sm py-1 #{'border-amber-400 bg-amber-50' if booking.duration_adjusted?}"
+                = f.submit "OK", title: "Enregistrer les participants et la durée", class: "px-2 py-1 bg-indigo-600 text-white rounded text-xs font-medium hover:bg-indigo-700"
               = button_to "Retirer", experience_booking_path(booking), method: :delete, class: "px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium hover:bg-red-200"
 
     / Les activités retirées restent visibles, en gris, pour pouvoir revenir sur

@@ -44,7 +44,7 @@ module CarrierStatements
             @statement.carrier_statement_lines.create!(
               experience_booking: booking,
               fee_cents: booking.carrier_fee_cents.to_i,
-              label: booking.experience&.name,
+              label: label_for(booking),
               occurred_on: booking.experience_availability&.available_on
             )
           end
@@ -55,6 +55,18 @@ module CarrierStatements
       end
 
       @statement
+    end
+
+    private
+
+    # Une prestation raccourcie ou allongée le dit sur le relevé : le porteur
+    # comprend pourquoi le montant n'est pas celui de d'habitude.
+    def label_for(booking)
+      name = booking.experience&.name
+      return name unless booking.duration_adjusted?
+
+      standard = ExperienceBooking.format_duration(booking.standard_duration_minutes)
+      "#{name} (#{booking.effective_duration}#{", durée standard #{standard}" if standard})"
     end
   end
 end

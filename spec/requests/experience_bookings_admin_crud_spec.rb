@@ -142,6 +142,33 @@ RSpec.describe "ExperienceBookings — CRUD admin sur un séjour", type: :reques
       expect(stay.reload.total_amount_cents).to eq(11500)
     end
 
+    # Durée effective (Michael, 2026-10-23) : elle se saisit à côté des
+    # participants, et c'est elle qui paie le porteur.
+    it "enregistre la durée effective à côté des participants, et la rémunération suit" do
+      exp_a.update!(duration_hours: 2, carrier_hourly_rate: "30")
+      booking = ExperienceBooking.create!(experience_availability: avail_a, stay: stay, participants: 10, status: "confirmed")
+      expect(booking.carrier_fee_cents).to eq(6_000)
+      sign_in admin
+
+      get stay_path(stay)
+      expect(response.body).to include('name="experience_booking[effective_duration]"', 'value="2h"')
+
+      patch experience_booking_path(booking),
+            params: { experience_booking: { participants: 10, effective_duration: "1h30" } }, as: :turbo_stream
+
+      expect(booking.reload).to have_attributes(duration_minutes: 90, carrier_fee_cents: 4_500)
+      expect(response.body).to include("1h30 (durée standard 2h)", "porteur : 45 €")
+      expect(response.body).to include("1h30 prestées")
+    end
+
+    it "un porteur restreint ne change pas la durée (elle fait sa rémunération)" do
+      exp_a.update!(duration_hours: 2)
+      booking = ExperienceBooking.create!(experience_availability: avail_a, stay: stay, participants: 2, status: "confirmed")
+      sign_in user_a
+      patch experience_booking_path(booking), params: { experience_booking: { participants: 3, effective_duration: "1h" } }
+      expect(booking.reload).to have_attributes(participants: 3, duration_minutes: nil)
+    end
+
     it "un porteur ne peut pas éditer l'activité d'un autre porteur" do
       target = ExperienceBooking.create!(experience_availability: avail_b, stay: stay, participants: 1, status: "pending")
       sign_in user_a
