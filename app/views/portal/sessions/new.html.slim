@@ -6,9 +6,9 @@
 
 header
   - if consignor
-    h1.portal-title Votre espace artisan
+    h1.portal-title Votre espace partenaire
     p.portal-lead
-      | Gérez votre dépôt-vente aux 4 Sources. Entrez l'adresse email de votre fiche d'artisan : nous vous envoyons un code à usage unique — pas de mot de passe, pas de compte à créer.
+      | Artisan en dépôt-vente, porteur d'activité ou cuistot des événements : retrouvez ce que vous faites avec les 4 Sources. Entrez l'adresse email que vous nous avez donnée : nous vous envoyons un code à usage unique — pas de mot de passe, pas de compte à créer.
   - elsif coworking
     h1.portal-title Votre coworking
     p.portal-lead
@@ -28,14 +28,14 @@ header
     = submit_tag "Recevoir mon code", class: "portal-btn portal-btn--block"
 
   / Les trois portes du portail. Chacune mène à son propre espace, cloisonné des
-    deux autres : un artisan n'est pas un client, et l'inverse est vrai aussi.
+    deux autres : un partenaire n'est pas un client, et l'inverse est vrai aussi.
   .mt-5.text-center.space-y-2
     - unless @context == "stays"
       div = link_to "J'ai plutôt un séjour", portal_path, class: "portal-link"
     - unless coworking
       div = link_to "Acheter du coworking", portal_path(context: "coworking"), class: "portal-link"
     - unless consignor
-      div = link_to "Je suis artisan en dépôt-vente", portal_path(context: "consignor"), class: "portal-link"
+      div = link_to "Je suis partenaire (artisan, porteur d'activité, cuistot)", portal_path(context: "consignor"), class: "portal-link"
 
 .portal-signoff
   span.portal-hand à tout de suite sous les arbres

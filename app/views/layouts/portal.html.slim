@@ -20,7 +20,7 @@ html(lang=I18n.locale)
       .portal-brand
         span.portal-brand__dot
         span Les 4 Sources
-        span.portal-brand__sub Portail clients
+        span.portal-brand__sub = portal_partner_signed_in? ? "Espace partenaires" : "Portail clients"
 
       - if flash[:alert]
         .portal-flash.portal-flash--alert = flash[:alert]

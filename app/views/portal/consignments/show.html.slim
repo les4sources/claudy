@@ -3,12 +3,7 @@
 - content_for :meta_title do
   | Mon dépôt-vente
 
-.portal-header
-  div
-    h1.portal-title Mon dépôt-vente
-    p.portal-header__name = @consignor.name
-  .portal-header__actions
-    = button_to "Me déconnecter", portal_logout_path, method: :delete, class: "portal-link-muted"
+= render "portal/partners/header", current: :consignment
 
 section.portal-block
   .portal-block__head
