@@ -71,6 +71,21 @@ class PagesController < BaseController
         .preload(:stay, experience_availability: :experience)
         .to_a
         .group_by { |experience_booking| experience_booking.experience_availability.available_on }
+      # Séjours SANS rien de dessinable (Michael, 2026-10-23) : le séjour vide
+      # (PR #544, client + dates) et le séjour qui n'a que des repas, du linge
+      # ou une Pizza Party. Aucun réservable ni activité active : il n'avait
+      # donc aucun bloc. On le pose sur ses propres dates, nuits [arrivée,
+      # départ) comme un hébergement, ou sur son seul jour s'il tient en une
+      # journée.
+      @grouped_bare_stays = stay_days_grouped_by_day(
+        Stay
+          .where.not(status: Stay::CANCELED_STATUSES)
+          .where.not(arrival_date: nil).where.not(departure_date: nil)
+          .where("arrival_date <= ? AND departure_date >= ?", @last.to_date, @first.to_date)
+          .where.not(id: StayItem.select(:stay_id))
+          .where.not(id: ExperienceBooking.active.select(:stay_id))
+          .preload(:customer, :meal_orders)
+      )
       # Coworking (epic #126, Phase 1) — domaine INDÉPENDANT des séjours : un
       # bloc agrégé par jour (« 💻 Coworking N/3 »), jamais rattaché à un stay
       # et donc jamais sélectionnable par le mode fusion.
@@ -296,6 +311,20 @@ class PagesController < BaseController
       (record.from_date...record.to_date).each do |night|
         next unless night >= window_start && night <= window_end
         (grouped[night] ||= []) << record
+      end
+    end
+    grouped
+  end
+
+  # Jours où dessiner un séjour sans réservable : ses nuits [arrivée, départ),
+  # ou son unique jour quand il arrive et repart le même jour.
+  def stay_days_grouped_by_day(stays)
+    window = @first.to_date..@last.to_date
+    grouped = {}
+    stays.each do |stay|
+      days = stay.departure_date > stay.arrival_date ? (stay.arrival_date...stay.departure_date) : [stay.arrival_date]
+      days.each do |day|
+        (grouped[day] ||= []) << stay if window.cover?(day)
       end
     end
     grouped

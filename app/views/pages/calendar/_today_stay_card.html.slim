@@ -44,6 +44,8 @@ div class="p-1 text-center text-xs font-bold rounded-t-lg #{band.last}"
       span.text-xs.text-gray-600.whitespace-nowrap 🛌 #{hamac.label} × #{hamac.count}
     - block.terrace_bookings.each do |terrace|
       span.text-xs.text-gray-600.whitespace-nowrap 🪑 Terrasse · #{terrace.people} pers.
+    - if block.bare && (chip = bare_stay_chip(stay, Date.today))
+      span.text-xs.text-gray-600.italic.break-words = chip
 
   - if card.space_durations.any?
     .mb-2.block.text-gray-500 = card.space_durations.map(&:capitalize).join(" · ")

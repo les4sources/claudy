@@ -101,14 +101,15 @@ module Calendar
 
     def initialize(date:, grouped_reservations:, grouped_space_reservations:,
                    grouped_camping_bookings:, grouped_van_bookings:,
-                   grouped_hamac_bookings: nil)
+                   grouped_hamac_bookings: nil, grouped_bare_stays: nil)
       @date = date.to_date
       sources = {
         grouped_reservations: grouped_reservations,
         grouped_space_reservations: grouped_space_reservations,
         grouped_camping_bookings: grouped_camping_bookings,
         grouped_van_bookings: grouped_van_bookings,
-        grouped_hamac_bookings: grouped_hamac_bookings
+        grouped_hamac_bookings: grouped_hamac_bookings,
+        grouped_bare_stays: grouped_bare_stays
       }
       @today     = DayStayBlocks.new(@date, **sources)
       @yesterday = DayStayBlocks.new(@date - 1, **sources)
@@ -180,7 +181,9 @@ module Calendar
         camping_bookings: (into.camping_bookings + other.camping_bookings).uniq(&:id),
         van_bookings: (into.van_bookings + other.van_bookings).uniq(&:id),
         terrace_bookings: (into.terrace_bookings + other.terrace_bookings).uniq(&:id),
-        hamac_bookings: (into.hamac_bookings + other.hamac_bookings).uniq(&:id)
+        hamac_bookings: (into.hamac_bookings + other.hamac_bookings).uniq(&:id),
+        activity_bookings: (into.activity_bookings + other.activity_bookings).uniq(&:id),
+        bare: into.bare || other.bare
       )
     end
   end
