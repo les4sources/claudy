@@ -157,7 +157,7 @@ RSpec.describe "ExperienceBookings — CRUD admin sur un séjour", type: :reques
             params: { experience_booking: { participants: 10, effective_duration: "1h30" } }, as: :turbo_stream
 
       expect(booking.reload).to have_attributes(duration_minutes: 90, carrier_fee_cents: 4_500)
-      expect(response.body).to include("1h30 (prévu 2h)", "porteur : 45 €")
+      expect(response.body).to include("1h30 (durée standard 2h)", "porteur : 45 €")
       expect(response.body).to include("1h30 prestées")
     end
 

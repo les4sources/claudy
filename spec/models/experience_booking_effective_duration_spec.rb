@@ -1,7 +1,7 @@
 require "rails_helper"
 
-# Une activité a une durée prévue, mais ce n'est pas toujours elle qu'on
-# preste (Michael, 2026-10-23 : les ânes de Béné, 2 h prévues, 1 h 30 avec des
+# Une activité a une durée standard, mais ce n'est pas toujours elle qu'on
+# preste (Michael, 2026-10-23 : les ânes de Béné, 2 h de durée standard, 1 h 30 avec des
 # tout-petits, séjour #1567). Le porteur est payé pour la durée prestée.
 RSpec.describe ExperienceBooking, "durée effective" do
   let(:bene) { Human.create!(name: "Béné", email: "bene@example.com") }
@@ -20,7 +20,7 @@ RSpec.describe ExperienceBooking, "durée effective" do
     booking
   end
 
-  it "vaut la durée prévue de l'activité par défaut" do
+  it "vaut la durée standard de l'activité par défaut" do
     booking = tenue!
 
     expect(booking.duration_minutes).to be_nil
@@ -43,7 +43,7 @@ RSpec.describe ExperienceBooking, "durée effective" do
     expect(tenue!(effective_duration: "1,5").carrier_fee_cents).to eq(4_500)
   end
 
-  it "rend la main à la durée prévue quand on la retape ou qu'on vide le champ" do
+  it "rend la main à la durée standard quand on la retape ou qu'on vide le champ" do
     booking = tenue!(effective_duration: "1h30")
 
     booking.update!(effective_duration: "2h")
@@ -93,7 +93,7 @@ RSpec.describe ExperienceBooking, "durée effective" do
     statement = CarrierStatements::Generate.new(human: bene, period_from: Date.current - 30, period_to: Date.current).run!
 
     line = statement.carrier_statement_lines.first
-    expect(line.label).to eq("Bain d'ânes (1h30 au lieu de 2h)")
+    expect(line.label).to eq("Bain d'ânes (1h30, durée standard 2h)")
     expect(line.fee_cents).to eq(4_500)
     expect(booking.reload.update(effective_duration: "2h")).to be(false)
   end

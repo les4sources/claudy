@@ -333,7 +333,7 @@ class ExperienceBookingsController < BaseController
   # raccourcie change ce que touche le porteur, autant le voir tout de suite.
   def update_notice
     duree = @booking.effective_duration
-    duree = "#{duree} (prévu #{ExperienceBooking.format_duration(@booking.planned_duration_minutes)})" if @booking.duration_adjusted?
+    duree = "#{duree} (durée standard #{ExperienceBooking.format_duration(@booking.standard_duration_minutes)})" if @booking.duration_adjusted?
     morceaux = ["#{@booking.participants} participant(s)"]
     morceaux << duree if duree
     if @booking.carrier_fee_cents

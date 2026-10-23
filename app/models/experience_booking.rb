@@ -256,19 +256,19 @@ class ExperienceBooking < ApplicationRecord
 
   # --- Durée effective (Michael, 2026-10-23) ---
   #
-  # Une activité a une durée prévue, mais ce n'est pas toujours elle qu'on
+  # Une activité a une durée standard, mais ce n'est pas toujours elle qu'on
   # preste : les ânes de Béné, 2 h au catalogue, 1 h 30 avec des tout-petits
-  # (séjour #1567). `duration_minutes` vide = la durée prévue de l'activité.
+  # (séjour #1567). `duration_minutes` vide = la durée standard de l'activité.
 
-  def planned_duration_minutes = experience&.block_duration_minutes
+  def standard_duration_minutes = experience&.block_duration_minutes
 
-  def effective_duration_minutes = duration_minutes || planned_duration_minutes
+  def effective_duration_minutes = duration_minutes || standard_duration_minutes
 
-  def duration_adjusted? = duration_minutes.present? && duration_minutes != planned_duration_minutes
+  def duration_adjusted? = duration_minutes.present? && duration_minutes != standard_duration_minutes
 
   # Saisie libre : « 1h30 », « 1 h 30 », « 1:30 », « 1,5 » (heures), « 90 min ».
   # Un nombre seul est en heures jusqu'à 10, en minutes au-delà (« 90 »).
-  # Vide, ou égale à la durée prévue, rend la main à la durée prévue.
+  # Vide, ou égale à la durée standard, rend la main à la durée standard.
   def effective_duration
     self.class.format_duration(effective_duration_minutes)
   end
@@ -281,7 +281,7 @@ class ExperienceBooking < ApplicationRecord
     end
 
     @invalid_duration = nil
-    self.duration_minutes = minutes == planned_duration_minutes ? nil : minutes
+    self.duration_minutes = minutes == standard_duration_minutes ? nil : minutes
   end
 
   def self.parse_duration(value)

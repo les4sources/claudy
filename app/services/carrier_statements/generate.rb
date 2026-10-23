@@ -65,8 +65,8 @@ module CarrierStatements
       name = booking.experience&.name
       return name unless booking.duration_adjusted?
 
-      planned = ExperienceBooking.format_duration(booking.planned_duration_minutes)
-      "#{name} (#{booking.effective_duration}#{" au lieu de #{planned}" if planned})"
+      standard = ExperienceBooking.format_duration(booking.standard_duration_minutes)
+      "#{name} (#{booking.effective_duration}#{", durée standard #{standard}" if standard})"
     end
   end
 end

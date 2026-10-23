@@ -44,11 +44,11 @@ module Mcp
               raise Error, "Durée illisible : « #{arguments['duree_effective']} » (exemples : 1h30, 1,5, 90 min)." if minutes == :invalid
               raise Error, "La durée effective doit être positive." if minutes&.<=(0)
 
-              minutes = nil if minutes == resa.planned_duration_minutes
+              minutes = nil if minutes == resa.standard_duration_minutes
               if minutes != resa.duration_minutes
                 changements[:duration_minutes] = minutes
                 lignes << "Durée : #{resa.effective_duration || '—'} → " \
-                          "#{ExperienceBooking.format_duration(minutes || resa.planned_duration_minutes) || '—'}"
+                          "#{ExperienceBooking.format_duration(minutes || resa.standard_duration_minutes) || '—'}"
               end
             end
 

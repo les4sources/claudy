@@ -18,8 +18,8 @@ module Mcp
         }.freeze
         DUREE_EFFECTIVE = {
           type: "string",
-          description: "Durée réellement prestée (« 1h30 », « 1,5 », « 90 min ») quand elle diffère de la durée prévue " \
-                       "de l'activité ; vide = la durée prévue. Elle fait la rémunération du porteur."
+          description: "Durée réellement prestée (« 1h30 », « 1,5 », « 90 min ») quand elle diffère de la durée standard " \
+                       "de l'activité ; vide = la durée standard. Elle fait la rémunération du porteur."
         }.freeze
         RESERVATION = {
           type: %w[integer string],
@@ -115,7 +115,7 @@ module Mcp
           client = sejour&.customer&.name
           tenue = resa.outcome_recorded? ? " · #{resa.outcome_label}" : ""
           par = resa.performed_by ? " · tenue par #{resa.performed_by.name}" : ""
-          duree = resa.duration_adjusted? ? " · #{resa.effective_duration} prestées (prévu #{ExperienceBooking.format_duration(resa.planned_duration_minutes) || '?'})" : ""
+          duree = resa.duration_adjusted? ? " · #{resa.effective_duration} prestées (durée standard #{ExperienceBooking.format_duration(resa.standard_duration_minutes) || '?'})" : ""
           "Réservation ##{resa.id} #{creneau&.experience&.name} le #{creneau&.available_on} à #{creneau&.starts_at} · " \
             "#{resa.participants} pers.#{duree} · #{resa.status_label}#{tenue}#{par} · #{euros(resa.price_cents)} · " \
             "séjour ##{resa.stay_id}#{" (#{client})" if client}#{" · refus : #{resa.refusal_reason}" if resa.refused?}"
