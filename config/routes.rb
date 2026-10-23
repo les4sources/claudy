@@ -839,6 +839,9 @@ Rails.application.routes.draw do
         post :sync
       end
     end
+    # Services annexes (Michael, 2026-10-23) : prêt d'un set de disc-golf…,
+    # une ligne libellé + montant, préremplie depuis le catalogue /services.
+    resources :service_lines, only: [:create, :destroy], controller: "stay_service_lines"
     # Feuille de bar du groupe (Michael, 2026-10-13) : l'écran d'encodage, à
     # côté de la photo de la feuille, et les photos elles-mêmes.
     resource :bar_sheet, only: [:show, :update], controller: "stay_bar_sheets" do

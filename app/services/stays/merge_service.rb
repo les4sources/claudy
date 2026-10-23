@@ -107,6 +107,7 @@ module Stays
       move_direct!(source.meal_orders)
       move_direct!(source.experience_bookings)
       move_bar_consumptions!(source)
+      move_direct!(source.service_lines)
       move_payments!(source)
 
       # Source désormais vidée de toutes ses occupations : soft-delete (comme

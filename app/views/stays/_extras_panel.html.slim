@@ -1,4 +1,4 @@
-/ Pizza Party et Bar de la fiche séjour, dans la colonne de droite (Michael,
+/ Services annexes, Pizza Party et Bar de la fiche séjour, dans la colonne de droite (Michael,
   2026-10-13). Leur propre turbo-frame : rattacher ou détacher une party bouge
   aussi le Total séjour de la colonne de gauche, d'où la réponse en Turbo
   Stream qui remplace les deux frames (`StayPartyReservationsController`).
@@ -11,5 +11,6 @@
   - if local_assigns[:alert].present?
     p.mx-5.mt-3.rounded.bg-red-50.px-2.py-1.text-xs.font-medium.text-red-700(role="alert")
       = local_assigns[:alert]
+  = render "stays/service_lines_panel"
   = render "stays/party_panel"
   = render "stays/bar_panel"

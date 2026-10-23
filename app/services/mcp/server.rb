@@ -32,6 +32,7 @@ module Mcp
       Tools::Sejours::RenvoyerConfirmation,
       Tools::Sejours::TraiterDemandeModification,
       Tools::Sejours::NoterSejour,
+      Tools::Sejours::ServicesAnnexesSejour,
       Tools::Sejours::EnregistrerPaiementSejour,
       Tools::Sejours::ModifierPaiementSejour,
       Tools::Sejours::SupprimerSejour,

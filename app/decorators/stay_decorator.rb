@@ -414,6 +414,7 @@ class StayDecorator < ApplicationDecorator
       lines = lines.map { |line| line.merge(amount: nil) } + [agreed_price_line]
     end
 
+    lines += service_lines_for_display
     bar = bar_line
     bar ? lines + [bar] : lines
   end
@@ -510,6 +511,20 @@ class StayDecorator < ApplicationDecorator
       date_range: nil,
       amount: h.humanized_money_with_symbol(Money.new(bar_cents))
     }
+  end
+
+  # Services annexes (Michael, 2026-10-23) : une ligne chacun, avec son
+  # montant, prix imposé ou non — comme le bar, ils s'ajoutent au prix convenu.
+  def service_lines_for_display
+    object.service_lines.ordered.map do |line|
+      {
+        kind: "StayServiceLine",
+        icon: :sparkles,
+        name: line.label,
+        date_range: nil,
+        amount: h.humanized_money_with_symbol(line.amount)
+      }
+    end
   end
 
   def agreed_price_line

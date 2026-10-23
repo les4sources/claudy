@@ -36,9 +36,10 @@ module Stays
         # (jamais une recote complète — cf. StayChangeRequestsController). On
         # l'impose pour qu'un séjour à prix historique/négocié garde son prix
         # à l'approbation d'une demande qui ne change rien (delta 0).
-        # Le bar est retranché : `recompute_aggregates!` l'ajoute au prix
-        # imposé, et `new_total_cents` part d'un total qui le contient déjà.
-        price_override_cents: [@change_request.new_total_cents.to_i - stay.bar_amount_cents, 0].max,
+        # Le bar et les services annexes sont retranchés : `recompute_aggregates!`
+        # les ajoute au prix imposé, et `new_total_cents` part d'un total qui
+        # les contient déjà.
+        price_override_cents: [@change_request.new_total_cents.to_i - stay.amount_beyond_override_cents, 0].max,
         user: @user
       )
 

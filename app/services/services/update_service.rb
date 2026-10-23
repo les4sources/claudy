@@ -36,6 +36,7 @@ module Services
           :summary,
           :description,
           :price,
+          :general_account_id,
           :photo,
           :photo_cache
         )

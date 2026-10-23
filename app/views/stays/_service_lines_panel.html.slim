@@ -1,0 +1,44 @@
+/ Bloc « Services annexes » de la fiche séjour (Michael, 2026-10-23) : prêt
+  d'un set de disc-golf, et les autres services proposés aux groupes. Une
+  ligne = un libellé et un montant, préremplis depuis le catalogue /services
+  et toujours modifiables. Ces lignes comptent dans le Total séjour, prix
+  imposé compris, comme le bar.
+- lignes = @stay.service_lines.ordered.to_a
+- catalogue = Service.ordered.to_a
+.border-t.border-gray-200.px-5.py-4(data-controller="service-line-form")
+  .flex.items-baseline.justify-between.gap-2
+    .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Services annexes
+    - if lignes.any?
+      span.text-sm.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(lignes.sum(&:amount_cents)))
+
+  - if lignes.any?
+    ul.mt-2.space-y-1.text-sm
+      - lignes.each do |ligne|
+        li.flex.items-baseline.justify-between.gap-2
+          span.min-w-0.truncate.text-gray-700 = ligne.label
+          span.flex.shrink-0.items-baseline.gap-2
+            span.text-gray-900 = humanized_money_with_symbol(ligne.amount)
+            = button_to "Retirer", stay_service_line_path(@stay, ligne), method: :delete, form: { data: { turbo_confirm: "Retirer « #{ligne.label} » du séjour ?" } }, class: "text-xs text-red-600 hover:text-red-800"
+  - else
+    p.mt-2.text-sm.text-gray-500 Aucun service annexe.
+
+  details.mt-2
+    summary class="inline-block cursor-pointer select-none rounded-md border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+      | Ajouter un service
+    = form_with url: stay_service_lines_path(@stay), method: :post, class: "mt-2 space-y-2 rounded-md border border-gray-200 bg-white p-3" do |f|
+      - if catalogue.any?
+        div.relative.text-xs.text-gray-600(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un service…" data-searchable-select-clearable-value="true")
+          span.block Service du catalogue <span class="text-gray-400">(facultatif)</span>
+          select.mt-1.block.w-full.rounded.border-gray-300.text-sm.py-1(name="stay_service_line[service_id]" data-searchable-select-target="select" data-action="change->service-line-form#prefill")
+            option(value="") Ligne libre
+            - catalogue.each do |service|
+              option(value=service.id data-label=service.name data-amount=(service.price_cents.present? ? format("%.2f", service.price_cents / 100.0) : nil))
+                = service.price_cents.present? ? "#{service.name} — #{humanized_money_with_symbol(service.price)}" : service.name
+          = render "shared/searchable_select_search", label: "Chercher un service"
+      label.block.text-xs.text-gray-600
+        | Libellé
+        = text_field_tag "stay_service_line[label]", nil, required: true, placeholder: "Prêt d'un set de disc-golf", class: "mt-1 block w-full rounded border-gray-300 text-sm py-1", data: { service_line_form_target: "label" }
+      label.block.text-xs.text-gray-600
+        | Montant (€)
+        = number_field_tag "stay_service_line[amount]", nil, step: "0.01", min: "0", required: true, class: "mt-1 block w-full rounded border-gray-300 text-sm py-1", data: { service_line_form_target: "amount" }
+      = f.submit "Ajouter au séjour", class: "w-full cursor-pointer rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"

@@ -79,6 +79,9 @@ module Mcp
           stay.bar_consumptions.ordered.each do |bar|
             lignes << "- Bar : #{bar.quantity} × #{bar.label} à #{euros(bar.unit_price_cents)} : #{euros(bar.price_cents)}"
           end
+          stay.service_lines.ordered.each do |ligne|
+            lignes << "- Service annexe ##{ligne.id} #{ligne.label} : #{euros(ligne.amount_cents)}"
+          end
           return "Composition : vide." if lignes.empty?
 
           "Composition :\n#{lignes.join("\n")}"
