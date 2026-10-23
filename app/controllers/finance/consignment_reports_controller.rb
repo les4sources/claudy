@@ -11,7 +11,7 @@ module Finance
   # phase 3 : on y corrige les lignes tant que rien n'est figé, on fige, puis on
   # règle — par virement, ou en liant la facture que l'artisan a envoyée.
   class ConsignmentReportsController < Finance::AccountingBaseController
-    before_action :get_report, only: %i[show update resend verify settle link_invoice unlink_invoice]
+    before_action :get_report, only: %i[show update resend verify settle repost link_invoice unlink_invoice]
 
     breadcrumb "Dépôt-vente", :finance_consignment_reports_path, match: :exact
 
@@ -81,6 +81,20 @@ module Finance
            Accounting::PostConsignmentReport::MissingAccount,
            Accounting::PostConsignmentReport::MissingEntity,
            Accounting::PostConsignmentReport::NothingToPost,
+           ActiveRecord::RecordInvalid => e
+      redirect_to finance_consignment_report_path(@report), alert: e.message
+    end
+
+    # Le mode de règlement de l'artisan a changé depuis le règlement (un
+    # volontaire dont la part était passée en achat) : contre-passer et repasser.
+    def repost
+      Consignments::Repost.new(consignment_report: @report, whodunnit: current_user&.email).run!
+      redirect_to finance_consignment_report_path(@report),
+                  notice: "Écriture repassée selon le mode de règlement de l'artisan."
+    rescue Consignments::Repost::Refused,
+           Accounting::PostConsignmentReport::MissingAccount,
+           Accounting::PostConsignmentReport::MissingEntity,
+           Accounting::PostDocument::MissingFiscalYear,
            ActiveRecord::RecordInvalid => e
       redirect_to finance_consignment_report_path(@report), alert: e.message
     end

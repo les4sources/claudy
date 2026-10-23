@@ -173,6 +173,25 @@ RSpec.describe Mcp::Server, "finances : reversements" do
       expect(releve).to be_settled
     end
 
+    # Espace des partenaires, étape 2 : le dépôt-vente d'Eline passe en
+    # volontariat après le règlement de son relevé.
+    it "repasse en volontariat l'écriture d'un relevé passé en achat" do
+      volontariat = build_general_account(code: "619105", name: "Volontariat Pôle Prod-Transfo-Ventes", klass: 6, nature: "expense")
+      Consignments::Verify.new(consignment_report: releve).run!
+      Consignments::Settle.new(consignment_report: releve.reload).run!
+      eline.update!(settlement_mode: "volunteering")
+
+      expect(texte(outil("depot_vente", { "releve" => releve.reference }))).to include("la repasser (releve_depot_vente repasser)")
+      arguments = { "geste" => "repasser", "releve" => releve.reference }
+      apercu = texte(outil("releve_depot_vente", arguments))
+      expect(apercu).to include("Contre-passée : Fondation Les 4 Sources · 600000", "Nouvelle : Fondation Les 4 Sources · 619105", "51,20 €")
+      expect(releve.reload.journal_entry.journal_lines.map(&:general_account)).to include(marchandises)
+
+      expect(confirme("releve_depot_vente", arguments)).to include("Écriture repassée", "619105")
+      expect(releve.reload.journal_entry.journal_lines.map(&:general_account)).to include(volontariat)
+      expect(texte(outil("releve_depot_vente", arguments))).to include("suit déjà")
+    end
+
     it "lie la facture d'un artisan qui facture" do
       eline.update!(settlement_mode: "invoice")
       releve.update!(status: "verified", net_cents: 5_120)

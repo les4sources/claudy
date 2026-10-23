@@ -131,7 +131,7 @@
         .flex.items-baseline.justify-between.px-5.py-2.5
           dt.text-xs.uppercase.tracking-wide.text-gray-400 Règlement
           dd.text-sm.text-gray-800= @report.consignor.settlement_mode_label
-        - if @report.consignor.transfer? && @report.consignor.iban.present?
+        - if @report.consignor.paid_by_transfer? && @report.consignor.iban.present?
           .flex.items-baseline.justify-between.px-5.py-2.5
             dt.text-xs.uppercase.tracking-wide.text-gray-400 IBAN
             dd.font-mono.text-xs.text-gray-700= @report.consignor.iban_masked
@@ -187,8 +187,14 @@
           p.text-sm.text-gray-600
             | Vérifier fige les totaux et le taux de commission. Après, le relevé ne bouge plus : c'est sur lui qu'on paie.
           = button_to "Vérifier ce relevé", verify_finance_consignment_report_path(@report), method: :post, class: "w-full inline-flex justify-center items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
-        - elsif @report.verified? && @report.consignor.transfer?
-          - if @report.posted?
+        - elsif @report.verified? && @report.consignor.paid_by_transfer?
+          - repost = Consignments::Repost.new(consignment_report: @report)
+          - if @report.posted? && repost.needed?
+            - entity, code = repost.target
+            p.text-sm.text-amber-700
+              | L'écriture passée ne suit plus le mode de règlement de l'artisan. « Repasser l'écriture » la contre-passe et passe la charge en #{code} sur #{entity&.name || "l'entité attendue"}. Les deux écritures restent au grand livre.
+            = button_to "Repasser l'écriture", repost_finance_consignment_report_path(@report), method: :post, class: "w-full inline-flex justify-center items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+          - elsif @report.posted?
             p.text-sm.text-gray-600
               | L'écriture est passée. Le relevé attend son virement :
               = link_to "voir « À payer »", finance_payables_path, class: "text-blue-500 hover:text-blue-700"

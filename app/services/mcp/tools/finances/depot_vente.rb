@@ -49,7 +49,7 @@ module Mcp
           virements = r.bank_transfers.ordered.map { |e| "  ligne ##{e.id} du #{e.entry_date} · #{euros(e.amount_cents)} · #{e.communication}" }
           [ligne_releve_depot(r),
            "Artisan : #{artisan.name}#{" · #{artisan.email}" if artisan.email.present?} · #{artisan.settlement_mode_label}" \
-           "#{" · IBAN #{artisan.iban_masked}" if artisan.transfer? && artisan.iban.present?} · commission #{r.applied_commission_percent} %",
+           "#{" · IBAN #{artisan.iban_masked}" if artisan.paid_by_transfer? && artisan.iban.present?} · commission #{r.applied_commission_percent} %",
            ("Notes : #{r.notes}" if r.notes.present?),
            "Lignes déclarées :", *(lignes.presence || ["  aucune"]),
            "Encaissements du mois : virements reçus #{euros(r.received_cents)} · espèces déclarées #{euros(r.cash_declared_cents)} · " \
@@ -64,8 +64,12 @@ module Mcp
 
         def a_faire(r)
           if r.editable_by_admin? then "corriger les lignes si besoin, puis vérifier (releve_depot_vente verifier)."
-          elsif r.verified? && r.consignor.transfer?
-            r.posted? ? "le virement, dans « À payer » (a_payer)." : "régler par virement (releve_depot_vente regler)."
+          elsif r.verified? && r.consignor.paid_by_transfer?
+            if !r.posted? then "régler par virement (releve_depot_vente regler)."
+            elsif ::Consignments::Repost.new(consignment_report: r).needed?
+              "l'écriture ne suit plus le mode de règlement de l'artisan : la repasser (releve_depot_vente repasser), puis le virement."
+            else "le virement, dans « À payer » (a_payer)."
+            end
           elsif r.verified? then r.purchase_invoice ? "payer la facture liée : son paiement soldera le relevé." : "lier la facture de l'artisan (releve_depot_vente lier_facture)."
           else "rien, il est réglé."
           end

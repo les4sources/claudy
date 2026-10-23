@@ -386,6 +386,7 @@ Rails.application.routes.draw do
         post :resend
         post :verify
         post :settle
+        post :repost
         post :link_invoice
         post :unlink_invoice
       end

@@ -27,7 +27,7 @@ module Consignments
         raise BadStatus,
               "Seul un relevé vérifié se règle — celui-ci est #{@report.status_label.downcase}."
       end
-      unless @report.consignor.transfer?
+      unless @report.consignor.paid_by_transfer?
         raise WrongMode,
               "#{@report.consignor.name} facture ses ventes : lie la facture d'achat au relevé " \
               "plutôt que de générer une écriture."
@@ -35,10 +35,9 @@ module Consignments
 
       PaperTrail.request(whodunnit: @whodunnit || "consignments") do
         ApplicationRecord.transaction do
-          Accounting::PostConsignmentReport.new(consignment_report: @report,
-                                                whodunnit: @whodunnit).run!
-          @report.update!(posted_at: Time.current,
-                          legal_entity: @report.legal_entity || LegalEntity.actives.ordered.first)
+          entry = Accounting::PostConsignmentReport.new(consignment_report: @report,
+                                                        whodunnit: @whodunnit).run!
+          @report.update!(posted_at: Time.current, legal_entity: entry.legal_entity)
         end
       end
 

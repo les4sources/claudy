@@ -37,12 +37,14 @@
                      step: 1,
                      class: "w-32"
 
-    = f.select :settlement_mode,
-               options_for_select(Consignor::SETTLEMENT_MODE_LABELS.map { |value, label| [label, value] }, f.object.settlement_mode),
-               { label: "Mode de règlement *" },
-               data: { action: "change->consignor-human#toggleIban" }
+    .relative(data-controller="searchable-select")
+      = f.select :settlement_mode,
+                 options_for_select(Consignor::SETTLEMENT_MODE_LABELS.map { |value, label| [label, value] }, f.object.settlement_mode),
+                 { label: "Mode de règlement *" },
+                 data: { action: "change->consignor-human#toggleIban", "searchable-select-target": "select" }
+      = render "shared/searchable_select_search", label: "Mode de règlement"
     p.text-xs.text-gray-500
-      | « L'artisan facture » : il nous envoie sa facture, traitée comme un achat. « Virement » : on lui vire son net, il faut son IBAN.
+      | « L'artisan facture » : il nous envoie sa facture, traitée comme un achat. « Virement » : on lui vire son net, passé en achat de marchandises. « Volontariat » : on lui vire son net comme défraiement de volontaire, en 619105 sur la Fondation. Pour les deux derniers, il faut son IBAN.
 
     div(data-consignor-human-target="ibanField")
       = f.text_field :iban,

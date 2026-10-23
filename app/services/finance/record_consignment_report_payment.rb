@@ -32,7 +32,7 @@ module Finance
 
     def record
       raise NotPayable, "Aucun relevé de dépôt-vente à payer." if @report.blank?
-      unless @report.consignor&.transfer?
+      unless @report.consignor&.paid_by_transfer?
         raise NotPayable,
               "#{@report.consignor&.name} facture ses ventes : c'est sa facture d'achat qui se paie, pas le relevé."
       end
