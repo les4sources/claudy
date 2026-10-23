@@ -1,0 +1,18 @@
+/ L'en-tête de l'espace des partenaires : le nom, la déconnexion et un onglet
+  par rôle que la personne tient (`Portal::Partner#roles`). `current` est le
+  rôle de la page affichée.
+- partner = current_portal_partner
+
+.portal-header
+  div
+    h1.portal-title Mon espace partenaire
+    p.portal-header__name = partner.name
+  .portal-header__actions
+    = button_to "Me déconnecter", portal_logout_path, method: :delete, class: "portal-link-muted"
+
+nav.portal-tabs[aria-label="Mes rôles"]
+  - partner.roles.each do |role|
+    - tab = Portal::Partner::ROLES.fetch(role)
+    = link_to tab[:label], public_send(tab[:route]),
+              class: ["portal-tab", ("portal-tab--current" if role == current)],
+              aria: { current: (role == current ? "page" : nil) }

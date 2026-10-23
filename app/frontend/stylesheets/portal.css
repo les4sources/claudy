@@ -642,3 +642,28 @@ button.cowork-day--free:active { transform: translateY(1px); }
   letter-spacing: 0.04em;
   color: var(--p-muted);
 }
+
+/* --- Espace des partenaires : un onglet par rôle ---------------------------- */
+.portal-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: -1rem 0 2rem;
+}
+.portal-tab {
+  display: inline-block;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--p-border);
+  border-radius: 999px;
+  background: var(--p-surface);
+  color: var(--p-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.portal-tab:hover { border-color: var(--p-primary-soft); }
+.portal-tab--current {
+  background: var(--p-primary);
+  border-color: var(--p-primary);
+  color: var(--p-primary-contrast);
+}

@@ -13,16 +13,18 @@ module Portal
   #     fourre-tout, et le `Customer` (individual) est créé à la connexion.
   #     Aucune fuite : le comportement est identique pour toute adresse valide.
   #
-  #   * « consignor » — espace artisan en dépôt-vente (epic #359, phase 1).
-  #     Anti-énumération STRICTE comme « stays » : un code n'est émis que pour un
-  #     artisan actif dont l'administration a ouvert l'espace. Rien n'est jamais
-  #     créé ici — un artisan existe parce qu'un contrat existe.
+  #   * « consignor » — l'espace des partenaires (epic #359, phase 1 ; élargi
+  #     par Michael le 2026-10-22). Le nom du contexte reste celui de l'espace
+  #     artisan d'origine : il est dans les liens des mails déjà partis.
+  #     Anti-énumération STRICTE comme « stays » : un code n'est émis que pour une
+  #     adresse qui ouvre au moins un rôle (`Portal::Partner`). Rien n'est jamais
+  #     créé ici — un partenaire existe parce qu'une fiche existe.
   class SessionsController < Portal::BaseController
     CONTEXTS = %w[stays coworking consignor].freeze
 
     def new
       @context = sanitized_context(params[:context])
-      redirect_to portal_consignments_path and return if portal_consignor_signed_in?
+      redirect_to portal_consignments_path and return if portal_partner_signed_in?
       redirect_to portal_stays_path and return if portal_signed_in?
 
       @email = params[:email].to_s
@@ -86,14 +88,14 @@ module Portal
       CONTEXTS.include?(value.to_s) ? value.to_s : "stays"
     end
 
-    # La porte de l'artisan : même mécanique OTP, autre cookie, autre
-    # destination. Un code valide dont l'email n'est plus celui d'un artisan
-    # ouvert échoue comme un code faux — on ne dit jamais pourquoi.
+    # La porte du partenaire : même mécanique OTP, autre cookie, autre
+    # destination. Un code valide dont l'email n'ouvre plus aucun rôle échoue
+    # comme un code faux — on ne dit jamais pourquoi.
     def sign_in_consignor(email, code, context)
-      consignor = PortalOtp.verify(email, code) ? Consignor.for_portal_email(email) : nil
+      partner = PortalOtp.verify(email, code) ? Portal::Partner.for_email(email) : nil
 
-      if consignor
-        sign_in_portal_consignor(consignor)
+      if partner
+        sign_in_portal_partner(partner)
         session.delete(:portal_otp_context)
         return redirect_to(portal_consignments_path)
       end
@@ -105,12 +107,12 @@ module Portal
     end
 
     # Peut-on émettre un code ? En « stays », uniquement pour un client réel.
-    # En « consignor », uniquement pour un artisan dont l'espace est ouvert.
+    # En « consignor », uniquement pour une adresse qui ouvre un rôle de partenaire.
     # En « coworking », pour toute adresse valide non fourre-tout (le compte sera
     # créé à la connexion).
     def otp_eligible?(email, context)
       return deliverable_customer(email).present? if context == "stays"
-      return Consignor.for_portal_email(email).present? if context == "consignor"
+      return Portal::Partner.for_email(email).present? if context == "consignor"
 
       Customer.exploitable_email?(email) && !catch_all_email?(email)
     end

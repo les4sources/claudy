@@ -16,10 +16,14 @@ module Portal
     layout "portal"
 
     SESSION_COOKIE = :portal_customer_id
+    PARTNER_COOKIE = :portal_partner_email
+    # L'ancien cookie de l'espace artisan (l'id de la fiche) : encore lu, le
+    # temps que les sessions ouvertes avant l'espace des partenaires expirent.
     CONSIGNOR_COOKIE = :portal_consignor_id
     SESSION_DURATION = 24.hours
 
     helper_method :current_portal_customer, :portal_signed_in?,
+                  :current_portal_partner, :portal_partner_signed_in?,
                   :current_portal_consignor, :portal_consignor_signed_in?
 
     private
@@ -33,34 +37,47 @@ module Portal
 
     def portal_signed_in? = current_portal_customer.present?
 
-    def current_portal_consignor
-      return @current_portal_consignor if defined?(@current_portal_consignor)
+    def current_portal_partner
+      return @current_portal_partner if defined?(@current_portal_partner)
 
-      id = cookies.signed[CONSIGNOR_COOKIE]
-      @current_portal_consignor = id.present? ? Consignor.actives.with_portal.find_by(id: id) : nil
+      email = cookies.signed[PARTNER_COOKIE].presence || legacy_consignor_email
+      @current_portal_partner = email.present? ? Portal::Partner.for_email(email) : nil
     end
 
+    def portal_partner_signed_in? = current_portal_partner.present?
+
+    def current_portal_consignor = current_portal_partner&.consignor
     def portal_consignor_signed_in? = current_portal_consignor.present?
+
+    def legacy_consignor_email
+      id = cookies.signed[CONSIGNOR_COOKIE]
+      id.present? ? Consignor.actives.with_portal.find_by(id: id)&.email : nil
+    end
 
     def sign_in_portal(customer)
       write_portal_cookie(SESSION_COOKIE, customer.id)
-      cookies.delete(CONSIGNOR_COOKIE)
-      @current_portal_consignor = nil
+      forget_partner
       @current_portal_customer = customer
     end
 
-    def sign_in_portal_consignor(consignor)
-      write_portal_cookie(CONSIGNOR_COOKIE, consignor.id)
+    def sign_in_portal_partner(partner)
+      write_portal_cookie(PARTNER_COOKIE, partner.email)
+      cookies.delete(CONSIGNOR_COOKIE)
       cookies.delete(SESSION_COOKIE)
       @current_portal_customer = nil
-      @current_portal_consignor = consignor
+      @current_portal_partner = partner
     end
 
     def sign_out_portal
       cookies.delete(SESSION_COOKIE)
-      cookies.delete(CONSIGNOR_COOKIE)
+      forget_partner
       @current_portal_customer = nil
-      @current_portal_consignor = nil
+    end
+
+    def forget_partner
+      cookies.delete(PARTNER_COOKIE)
+      cookies.delete(CONSIGNOR_COOKIE)
+      @current_portal_partner = nil
     end
 
     def require_portal_customer

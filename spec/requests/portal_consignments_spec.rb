@@ -1,7 +1,8 @@
 require "rails_helper"
 
-# Epic #359, phase 1 — la porte de l'espace artisan, et ses cloisons.
-RSpec.describe "Portail — espace artisan", type: :request do
+# Epic #359, phase 1 — la porte de l'espace artisan, et ses cloisons. Devenue
+# la porte de l'espace des partenaires (Michael, 2026-10-22).
+RSpec.describe "Portail — espace partenaire", type: :request do
   include ActiveJob::TestHelper
 
   let!(:eline) do
@@ -35,13 +36,13 @@ RSpec.describe "Portail — espace artisan", type: :request do
     it "propose la troisième porte" do
       get portal_path
 
-      expect(response.body).to include("Je suis artisan en dépôt-vente")
+      expect(response.body).to include("Je suis partenaire (artisan, porteur d&#39;activité, cuistot)")
     end
 
-    it "adresse l'artisan quand le contexte est le sien" do
+    it "adresse le partenaire quand le contexte est le sien" do
       get portal_path(context: "consignor")
 
-      expect(response.body).to include("Votre espace artisan")
+      expect(response.body).to include("Votre espace partenaire")
       expect(response.body).to include("plutôt un séjour")
     end
   end
@@ -78,7 +79,22 @@ RSpec.describe "Portail — espace artisan", type: :request do
 
       expect(response).to redirect_to(portal_consignments_path)
       follow_redirect!
-      expect(response.body).to include("Mon dépôt-vente", "Eline")
+      expect(response.body).to include("Mon espace partenaire", "Eline", "Espace partenaires")
+      expect(response.body).to include(%(class="portal-tab portal-tab--current"))
+      expect(response.body).to include("Dépôt-vente")
+    end
+
+    # Les sessions ouvertes avant l'espace des partenaires portaient l'id de la
+    # fiche d'artisan : elles restent valables jusqu'à leur expiration.
+    it "garde ouverte une session artisan d'avant l'espace des partenaires" do
+      jar = ActionDispatch::Request.new(Rails.application.env_config.deep_dup).cookie_jar
+      jar.signed[:portal_consignor_id] = eline.id
+      cookies[:portal_consignor_id] = jar[:portal_consignor_id]
+
+      get portal_consignments_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Eline")
     end
 
     it "refuse un code valide dont l'espace a été fermé entre-temps" do
@@ -134,6 +150,15 @@ RSpec.describe "Portail — espace artisan", type: :request do
 
       expect(response.body).to include("Eline")
       expect(response.body).not_to include("Bruno")
+    end
+
+    # La session ne retient qu'une adresse : chaque requête relit la fiche.
+    it "coupe l'accès dès qu'on ferme l'espace de l'artisan" do
+      sign_in_consignor("eline@example.com")
+      eline.update!(portal_enabled: false)
+
+      get portal_consignments_path
+      expect(response).to redirect_to(portal_path(context: "consignor"))
     end
 
     it "coupe l'accès dès la déconnexion" do
