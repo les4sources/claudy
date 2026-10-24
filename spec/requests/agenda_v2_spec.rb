@@ -54,6 +54,16 @@ RSpec.describe "Agenda en rubans", type: :request do
     expect(ribbons.first["data-action"]).to eq("stay-details#open")
   end
 
+  it "saute d'un clic jusqu'à trois mois avant ou après le mois affiché" do
+    get "/", params: { date: Date.new(2026, 11, 1).iso8601 }
+
+    jump = Nokogiri::HTML(response.body).css(".ui-ag-jump a")
+    expect(jump.map(&:text)).to eq(["Août", "Sept.", "Oct.", "Nov.", "Déc.", "Jan. 27", "Fév. 27"])
+    expect(jump.first["href"]).to include("date=2026-08-01")
+    expect(jump.last["href"]).to include("date=2027-02-01")
+    expect(jump[3]["aria-current"]).to eq("page")
+  end
+
   it "coupe une bande au changement de semaine et range deux séjours qui se suivent sur la même ligne" do
     first = stay_in(name: "Jean Peeters", arrival: Date.new(2026, 10, 24), departure: Date.new(2026, 10, 27))
     second = stay_in(name: "Camille Leroy", arrival: Date.new(2026, 10, 27), departure: Date.new(2026, 10, 29))
