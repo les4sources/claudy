@@ -101,7 +101,8 @@ module Calendar
 
     def initialize(date:, grouped_reservations:, grouped_space_reservations:,
                    grouped_camping_bookings:, grouped_van_bookings:,
-                   grouped_hamac_bookings: nil, grouped_bare_stays: nil)
+                   grouped_hamac_bookings: nil, grouped_bare_stays: nil,
+                   grouped_activity_only_bookings: nil)
       @date = date.to_date
       sources = {
         grouped_reservations: grouped_reservations,
@@ -109,7 +110,10 @@ module Calendar
         grouped_camping_bookings: grouped_camping_bookings,
         grouped_van_bookings: grouped_van_bookings,
         grouped_hamac_bookings: grouped_hamac_bookings,
-        grouped_bare_stays: grouped_bare_stays
+        grouped_bare_stays: grouped_bare_stays,
+        # Séjours « activité seule » : l'agenda en rubans les passe (une balade
+        # est une ligne de la journée), le bandeau « Aujourd'hui » non.
+        grouped_activity_only_bookings: grouped_activity_only_bookings
       }
       @today     = DayStayBlocks.new(@date, **sources)
       @yesterday = DayStayBlocks.new(@date - 1, **sources)

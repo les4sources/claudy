@@ -1,0 +1,23 @@
+/ Téléphone : le mois du jour choisi, la semaine en pastilles (des points pour
+  ce qui s'y passe, jusqu'à trois), ‹ › d'une semaine à l'autre.
+- selected = @agenda_date
+- monday = selected.beginning_of_week
+- today = Date.current
+.ui-ag-strip
+  .ui-ag-strip-h
+    h2.ui-ag-title = l(selected, format: "%B %Y").capitalize
+    .ui-ag-strip-nav
+      = link_to root_path(jour: (selected - 7).iso8601), class: "ui-ibtn", aria: { label: "Semaine précédente" } do
+        = ui_icon(:left, size: 20)
+      = link_to root_path(jour: (selected + 7).iso8601), class: "ui-ibtn", aria: { label: "Semaine suivante" } do
+        = ui_icon(:right, size: 20)
+  ol.ui-ag-week-m(aria-label="La semaine")
+    - (monday..(monday + 6)).each do |date|
+      - count = agenda.count_on(date)
+      li
+        = link_to root_path(jour: date.iso8601), class: ["ui-ag-wd", ("is-sel" if date == selected), ("is-today" if date == today)].compact.join(" "), aria: { current: (date == selected ? "date" : nil), label: l(date, format: "%A %-d %B").capitalize } do
+          span = l(date, format: "%a")[0].upcase
+          b = date.day
+          i.ui-ag-dots(aria-hidden="true")
+            - [count, 3].min.times do
+              i

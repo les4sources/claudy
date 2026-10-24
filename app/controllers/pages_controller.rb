@@ -22,7 +22,9 @@ class PagesController < BaseController
       )
       @gathering_categories = GatheringCategory.ordered
     else
+      agenda_window if current_user&.new_interface?
       load_occupation
+      return render_agenda if current_user&.new_interface?
     end
   end
 
@@ -358,6 +360,52 @@ class PagesController < BaseController
         .where.not(status: ["declined", "canceled"])
         .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
     )
+  end
+
+  # --- Agenda en rubans (nouvelle interface, Michael 2026-10-24) --------------
+
+  # Le jour ouvert dans le panneau (et en tête de la liste du téléphone) :
+  # `jour`, sinon aujourd'hui quand il tombe dans le mois affiché, sinon le 1er.
+  # La fenêtre chargée s'étend pour couvrir la veille de ce jour et la semaine
+  # qui le suit : la liste du téléphone en lit sept.
+  def agenda_window
+    requested = Date.parse(params[:jour]) if params[:jour].present?
+    @date = requested if requested && params[:date].blank?
+    month = @date.beginning_of_month
+    shown = month.beginning_of_week..month.end_of_month.end_of_week
+    @agenda_date =
+      if requested && shown.cover?(requested) then requested
+      elsif Date.current.beginning_of_month == month then Date.current
+      else month
+      end
+    @first = [month.beginning_of_day - 7.days, (@agenda_date - 1).beginning_of_day].min
+    @last = [month.end_of_month.end_of_day + 7.days, (@agenda_date + 7).end_of_day].max
+  rescue Date::Error
+    @agenda_date = @date
+  end
+
+  def render_agenda
+    sources = {
+      grouped_reservations: @grouped_reservations,
+      grouped_space_reservations: @grouped_space_reservations,
+      grouped_camping_bookings: @grouped_camping_bookings,
+      grouped_van_bookings: @grouped_van_bookings,
+      grouped_hamac_bookings: @grouped_hamac_bookings,
+      grouped_activity_only_bookings: @grouped_activity_only_bookings,
+      grouped_bare_stays: @grouped_bare_stays,
+      grouped_coworking_reservations: @grouped_coworking_reservations
+    }
+    # Les repas SANS séjour ont leur propre bande ; ceux d'un séjour vivent
+    # dans la sienne.
+    meals = MealOrder.where(stay_id: nil, date: @first.to_date..@last.to_date).where.not(status: "cancelled").to_a
+    @agenda = Agenda::Month.new(month: @date, sources: sources, events: @events, meals: meals)
+    day_for = lambda do |date|
+      Agenda::Day.new(date: date, sources: sources, events: @events, user: current_user,
+                      full_access: section_readable?(:full))
+    end
+    @agenda_day = day_for.call(@agenda_date)
+    @agenda_week = (0..6).map { |offset| day_for.call(@agenda_date + offset) }
+    render "pages/v2/agenda"
   end
 
   def set_dates

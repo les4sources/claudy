@@ -1,0 +1,90 @@
+/ Le jour choisi, à droite de la grille : qui arrive, qui part, les salles, la
+  cuisine, ce qui reste libre le soir. Aucun montant. Rendu dans le cadre
+  `agenda_day` : un clic sur un jour de la grille ne recharge que lui.
+- date = day.date
+- arrivals = day.entries.select { |entry| %i[arrival day].include?(entry.kind) }
+- activities = day.entries.select { |entry| entry.kind == :activity }
+- departures = day.entries.select { |entry| entry.kind == :departure }
+- events = day.entries.select { |entry| entry.kind == :event }
+section.ui-card.ui-ag-panel(aria-labelledby="ag-day-title")
+  .ui-card-h
+    h2.ui-h2#ag-day-title = l(date, format: "%A %-d").capitalize
+    - if date == Date.current
+      span.ui-ag-tag Aujourd’hui
+    - elsif date == Date.current + 1
+      span.ui-ag-tag Demain
+  .ui-card-b
+    - if day.empty? && day.notes.empty?
+      p.ui-empty Rien de prévu ce jour-là.
+
+    - if arrivals.any?
+      h3.ui-over.ui-ag-sub Arrivées
+      = render "pages/v2/agenda_panel_rows", entries: arrivals, day: day
+    - if departures.any?
+      h3.ui-over.ui-ag-sub Départs
+      = render "pages/v2/agenda_panel_rows", entries: departures, day: day
+    - if activities.any?
+      h3.ui-over.ui-ag-sub Activités
+      = render "pages/v2/agenda_panel_rows", entries: activities, day: day
+    - if events.any?
+      h3.ui-over.ui-ag-sub Événements
+      = render "pages/v2/agenda_panel_rows", entries: events, day: day
+
+    - if day.spaces.any?
+      h3.ui-over.ui-ag-sub Salles
+      ul.ui-ag-kv
+        - day.spaces.each do |row|
+          li
+            span = [row.space, row.title].compact.join(" · ")
+            - if row.when
+              b = row.when
+
+    - if day.meals_today.any?
+      h3.ui-over.ui-ag-sub Cuisine
+      ul.ui-ag-kv
+        - if day.lunch_covers.positive?
+          li
+            span Midi
+            b = day.lunch_covers
+        - if day.dinner_covers.positive?
+          li
+            span = day.dinner_covers_to_validate.positive? ? "Soir · dont #{day.dinner_covers_to_validate} à valider" : "Soir"
+            b = day.dinner_covers
+        - if day.lunch_covers.zero? && day.dinner_covers.zero?
+          li
+            span = "#{day.meals_today.size} #{day.meals_today.size > 1 ? 'services' : 'service'} (goûter, buffet…)"
+
+    - if day.watchers.any? || day.notes.any?
+      h3.ui-over.ui-ag-sub Pour l’équipe
+      ul.ui-ag-kv
+        - if day.watchers.any?
+          li
+            span Veille
+            b = day.watchers.map(&:name).to_sentence
+        - day.notes.each do |note|
+          li.ui-ag-note-row
+            - if section_writable?(:full)
+              = link_to edit_note_path(note), data: { turbo_frame: "modal" } do
+                = truncate(note.body.to_s.squish, length: 90)
+            - else
+              span = truncate(note.body.to_s.squish, length: 90)
+
+    .ui-ag-free
+      span Libre ce soir
+      b
+        - if day.all_rooms_free?
+          | toutes les chambres
+        - else
+          = day.free_rooms.map(&:name).to_sentence.presence || "aucune chambre"
+
+    .ui-ag-panel-act
+      = link_to day_details_path(date: date.iso8601), class: "ui-btn", data: { turbo_frame: "modal" } do
+        | Ouvrir la journée
+      - if section_writable?(:full)
+        = link_to new_note_path(date: date.iso8601), class: "ui-btn ui-btn-s", data: { turbo_frame: "modal" } do
+          = ui_icon(:pencil, size: 15)
+          | Note
+        - if date >= Date.current
+          = link_to new_stay_path(date: date.iso8601), class: "ui-btn ui-btn-s", data: { turbo_frame: "_top" } do
+            = ui_icon(:plus, size: 15)
+            | Séjour ce jour-là

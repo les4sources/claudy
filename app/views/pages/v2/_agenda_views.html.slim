@@ -1,0 +1,5 @@
+/ Accueil (les séjours, en rubans) | Sourciers (rassemblements et cycles, la
+  vue Organisation de toujours).
+nav.ui-seg(aria-label="Quel agenda")
+  = link_to "Accueil", root_path(date: date.iso8601), class: "ui-seg-i", aria: { current: "page" }
+  = link_to "Sourciers", root_path(view: "organisation", date: date.iso8601), class: "ui-seg-i"

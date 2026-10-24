@@ -1,0 +1,24 @@
+/ Une bande. Statut = forme (plein, hachuré bleu, pointillé) + mot dans
+  l'intitulé lu ; une bande coupée par la semaine perd son arrondi du côté où
+  elle continue. Un séjour ouvre sa modale (et se sélectionne en mode fusion,
+  `data-stay-id`) ; le reste mène à sa fiche quand le rôle la lit.
+- stay = ribbon.stay
+- path = agenda_ribbon_path(ribbon)
+- label = [ribbon.title, ribbon.detail, Agenda::Month::STATUS_LABELS[ribbon.status], agenda_stay_dates(stay)].compact.join(", ")
+- classes = ["ui-rib", "ui-rib-#{ribbon.status}", "ui-rib-k-#{ribbon.kind}", ("is-cl" if ribbon.cont_left), ("is-cr" if ribbon.cont_right), ("is-short" if ribbon.span <= 2)].compact.join(" ")
+- style = "grid-column: #{ribbon.start + 1} / span #{ribbon.span}; grid-row: #{ribbon.lane + 1};"
+- data = { kind: ribbon.kind }
+- if stay
+  - data.merge!(stay_id: stay.id, stay_label: stay_short_label(stay), stay_dates: stay_short_dates(stay))
+  - data[:action] = "stay-details#open" if path
+- content = capture do
+  - if ribbon.icon
+    = ui_icon(ribbon.icon, size: 15)
+  span.ui-rib-t
+    b = ribbon.title
+    - if ribbon.detail
+      small = ribbon.detail
+- if path
+  = link_to content, path, class: classes, style: style, title: label, aria: { label: label }, data: data
+- else
+  = content_tag :span, content, class: classes, style: style, title: label, data: data
