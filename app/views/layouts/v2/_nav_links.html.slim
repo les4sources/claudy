@@ -1,6 +1,6 @@
 - entries.each do |entry|
-  = link_to entry[:path], "aria-current": (interface_current?(entry[:key]) ? "page" : nil) do
+  = link_to entry[:path], "aria-current": (interface_current?(entry[:key]) ? "page" : nil), data: { tip: ui_nav_tip(entry) } do
     = ui_icon(entry[:icon])
-    span = entry[:label]
+    span.ui-nav-t = entry[:label]
     - if entry[:count]
       span.ui-cnt(aria-label="#{entry[:count]} à traiter") = entry[:count]

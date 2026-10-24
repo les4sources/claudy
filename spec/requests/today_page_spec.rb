@@ -50,6 +50,17 @@ RSpec.describe "Nouvelle interface et écran Aujourd'hui", type: :request do
       expect(user.reload.new_interface).to be(false)
     end
 
+    it "arrive déjà repliée quand le navigateur l'a choisi, avec une infobulle par entrée" do
+      user.update!(new_interface: true)
+      cookies[:ui_side] = "collapsed"
+
+      get "/aujourdhui"
+
+      expect(response.body).to match(/<body[^>]*class="[^"]*ui-side-collapsed/)
+      expect(response.body).to include('data-tip="Aujourd’hui"')
+      expect(response.body).to include('data-tip="Déplier la barre"')
+    end
+
     it "marque l'écran courant dans la barre latérale" do
       user.update!(new_interface: true)
 

@@ -152,7 +152,7 @@
             .ui-rows
               - roles.each do |human_role|
                 .ui-row
-                  = ui_avatar(human_role.human&.name)
+                  = ui_avatar(human_role.human&.name, human: human_role.human)
                   span.ui-row-m
                     span.ui-row-t = human_role.human&.name
                     span.ui-row-s = [human_role.role&.name, ("a le téléphone" if human_role.phone_holder?)].compact.join(" · ")
@@ -161,7 +161,7 @@
                       = ui_icon(:phone, size: 16)
               - if tomorrow
                 .ui-row
-                  = ui_avatar(current_user.linked_human&.name, tone: "y")
+                  = ui_avatar(current_user.linked_human&.name, tone: "y", human: current_user.linked_human)
                   span.ui-row-m
                     span.ui-row-t Toi, demain
                     span.ui-row-s = [tomorrow.role&.name, l(board.date + 1, format: "%A %-d")].compact.join(" · ")

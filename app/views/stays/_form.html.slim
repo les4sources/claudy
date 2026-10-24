@@ -49,7 +49,9 @@
      droite un rail COLLANT qui garde le prix sous les yeux pendant qu'on assemble
      — le devis vivait auparavant tout en bas, donc systématiquement hors écran au
      moment précis où il sert. C'est le pattern de la page de réservation Airbnb.
-  .grid.gap-6.items-start(class="lg:grid-cols-[minmax(0,1fr)_360px]")
+  /  Rail de droite resserré à 300 px (Michael 2026-10-24) : la composition et
+     ses grilles ont besoin de la largeur, le devis tient dans 300 px.
+  .grid.gap-6.items-start(class="lg:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_340px]")
     .space-y-6.min-w-0
       / --- Client -------------------------------------------------------------
       section.bg-white.rounded-2xl.ring-1.ring-gray-200.p-5.space-y-4

@@ -19,7 +19,7 @@ html(lang="fr")
     chacun (`users.new_interface`). Toute la mise en forme vit dans
     `stylesheets/ui_v2.css`, scopée sous `.ui-v2` : l'ancienne interface ne
     bouge pas d'un pixel.
-  body.bg-white.overflow-x-clip(id="body-#{controller_name}_#{action_name}" class=[("ui-v2" if new_interface?), ("flex h-[100dvh] flex-col overflow-hidden" if @map_view && !new_interface?), ("ui-v2-map" if @map_view && new_interface?), ("map-read-only" if respond_to?(:map_read_only_page?) && map_read_only_page?)].compact.join(" ").presence)
+  body.bg-white.overflow-x-clip(id="body-#{controller_name}_#{action_name}" class=[("ui-v2" if new_interface?), ("ui-side-collapsed" if new_interface? && ui_side_collapsed?), ("flex h-[100dvh] flex-col overflow-hidden" if @map_view && !new_interface?), ("ui-v2-map" if @map_view && new_interface?), ("map-read-only" if respond_to?(:map_read_only_page?) && map_read_only_page?)].compact.join(" ").presence)
     = render "layouts/components/tooltips"
     = render "humans/tooltips"
 
@@ -31,7 +31,7 @@ html(lang="fr")
         = render "layouts/v2/sidebar"
         .ui-main
           = render "layouts/v2/mobile_top"
-          .ui-subnavs
+          .ui-subnavs(data-controller="ui-subnav")
             = render "layouts/components/subnavs"
           - if @map_view
             main.ui-map-main
