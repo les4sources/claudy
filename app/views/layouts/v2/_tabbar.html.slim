@@ -1,0 +1,27 @@
+/ Onglets du téléphone : les quatre destinations du quotidien au pouce, tout le
+  reste dans « Plus ». L'onglet actif prend la forme de l'arche du logo.
+nav.ui-tabbar(aria-label="Navigation principale" data-controller="ui-more")
+  - interface_tabs.each do |entry|
+    = link_to entry[:path], "aria-current": (interface_current?(entry[:key]) ? "page" : nil) do
+      span.ui-ti = ui_icon(entry[:icon])
+      = entry[:label]
+      - if entry[:count]
+        span.ui-cnt(aria-label="#{entry[:count]} à traiter") = entry[:count]
+  - more = interface_more_entries
+  button(type="button" data-action="ui-more#open" aria-haspopup="dialog" aria-current=(more.any? { |e| interface_current?(e[:key]) } ? "page" : nil))
+    span.ui-ti = ui_icon(:grid)
+    | Plus
+  dialog.ui-more(data-ui-more-target="dialog" aria-label="Plus" data-action="click->ui-more#backdrop")
+    .ui-more-sheet
+      span.ui-grab(aria-hidden="true")
+      .ui-more-head
+        b Tout Claudy
+        button.ui-ibtn(type="button" data-action="ui-more#close" aria-label="Fermer") = ui_icon(:x)
+      .ui-tiles
+        - more.each do |entry|
+          = link_to entry[:path], class: "ui-tile", "aria-current": (interface_current?(entry[:key]) ? "page" : nil) do
+            = ui_icon(entry[:icon], size: 22)
+            span = entry[:label]
+            - if entry[:count]
+              span.ui-cnt(aria-label="#{entry[:count]} à traiter") = entry[:count]
+      = render "layouts/v2/account"

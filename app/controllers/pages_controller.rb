@@ -1,5 +1,5 @@
 class PagesController < BaseController
-  access_section :calendar, only: %i[calendar day month_details other_bookings other_space_bookings]
+  access_section :calendar, only: %i[calendar today day month_details other_bookings other_space_bookings]
   access_section :everyone, only: :dashboard
   # Les dix dernières notifications suffisent à la colonne du tableau de bord ;
   # au-delà, « Tout voir ».
@@ -22,93 +22,30 @@ class PagesController < BaseController
       )
       @gathering_categories = GatheringCategory.ordered
     else
-      @events = EventDecorator.decorate_collection(
-        Event.all
-          .includes(:event_category)
-          .between_times(@first, @last)
-      )
-      # group space reservations by day
-      # Le calendrier bascule sur les SÉJOURS (epic #66, Phase 4) : on précharge
-      # `space_booking.stay` (via `stay_item`, has_one through) pour colorer et
-      # regrouper les occupations par `stay_id` sans requête N+1. Les
-      # `stay_items` et leurs réservables viennent avec : le titre du bloc est
-      # `StayDecorator#display_name`, qui les relit sur un séjour rattaché au
-      # client FOURRE-TOUT pour retrouver le nom de la réservation d'origine.
-      @space_reservations = SpaceReservation.all
-        .includes(:space_booking)
-        .preload(:space, space_booking: [:event, :space_reservations, { stay: [:customer, { stay_items: :bookable }] }])
-        .where.not(space_booking: { status: ["declined", "canceled"] })
-        .between_times(@first, @last, field: :date)
-      @grouped_space_reservations = @space_reservations.to_a.group_by { |sr| sr.date }
-      # group reservations by day (préchargement du séjour porteur, cf. supra)
-      @reservations = Reservation.all
-        .includes(:booking)
-        .preload(:room, booking: [:lodging, :reservations, { stay: [:customer, { stay_items: :bookable }] }])
-        .where.not(booking: { status: ["declined", "canceled"] })
-        .between_times(@first, @last, field: :date)
-      @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
-      # Camping / van (epic #66, Phase 3–4) — capacité globale, aucune réservation
-      # jour par jour : on étale la fenêtre [from, to) en nuits, groupées par jour,
-      # pour un bloc agrégé (« Camping » / « Van ») par nuit occupée, coloré par
-      # séjour. Préchargement du séjour (anti-N+1).
-      @grouped_camping_bookings = nights_grouped_by_day(
-        CampingBooking
-          .includes(stay: [:customer, { stay_items: :bookable }])
-          .where.not(status: ["declined", "canceled"])
-          .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
-      )
-      # Séjours « activité seule » (Michael, 2026-10-13) : un séjour sans
-      # hébergement, espace, camping, van ni hamac (un atelier pizza pour un
-      # groupe venu à la journée) n'avait aucun réservable à dessiner et
-      # n'apparaissait donc jamais au calendrier. On l'y pose au jour de son
-      # activité. Un séjour qui a déjà un réservable garde son bloc habituel :
-      # ses activités n'y ajoutent rien.
-      @grouped_activity_only_bookings = ExperienceBooking.active.with_visible_stay
-        .joins(:experience_availability)
-        .where(experience_availabilities: { available_on: @first.to_date..@last.to_date })
-        .where.not(stays: { status: "canceled" })
-        .where.not(stay_id: StayItem.select(:stay_id))
-        .preload(:stay, experience_availability: :experience)
-        .to_a
-        .group_by { |experience_booking| experience_booking.experience_availability.available_on }
-      # Séjours SANS rien de dessinable (Michael, 2026-10-23) : le séjour vide
-      # (PR #544, client + dates) et le séjour qui n'a que des repas, du linge
-      # ou une Pizza Party. Aucun réservable ni activité active : il n'avait
-      # donc aucun bloc. On le pose sur ses propres dates, nuits [arrivée,
-      # départ) comme un hébergement, ou sur son seul jour s'il tient en une
-      # journée.
-      @grouped_bare_stays = stay_days_grouped_by_day(
-        Stay
-          .where.not(status: Stay::CANCELED_STATUSES)
-          .where.not(arrival_date: nil).where.not(departure_date: nil)
-          .where("arrival_date <= ? AND departure_date >= ?", @last.to_date, @first.to_date)
-          .where.not(id: StayItem.select(:stay_id))
-          .where.not(id: ExperienceBooking.active.select(:stay_id))
-          .preload(:customer, :meal_orders)
-      )
-      # Coworking (epic #126, Phase 1) — domaine INDÉPENDANT des séjours : un
-      # bloc agrégé par jour (« 💻 Coworking N/3 »), jamais rattaché à un stay
-      # et donc jamais sélectionnable par le mode fusion.
-      @grouped_coworking_reservations = CoworkingReservation
-        .includes(:customer)
-        .between(@first.to_date, @last.to_date)
-        .to_a
-        .group_by(&:date)
-      @grouped_van_bookings = nights_grouped_by_day(
-        VanBooking
-          .includes(stay: [:customer, { stay_items: :bookable }])
-          .where.not(status: ["declined", "canceled"])
-          .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
-      )
-      # Hamacs (issue #138) — même étalement par nuit que camping/van : ils
-      # comptent dans le bloc du séjour (chip 🛌) et dans la nuitée (💤).
-      @grouped_hamac_bookings = nights_grouped_by_day(
-        HamacBooking
-          .includes(stay: [:customer, { stay_items: :bookable }])
-          .where.not(status: ["declined", "canceled"])
-          .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
-      )
+      load_occupation
     end
+  end
+
+  # « Aujourd'hui » (redesign, Michael 2026-10-24) : la journée du domaine en
+  # une page — qui arrive, qui part, ce que la cuisine prépare, ce qui attend une
+  # réponse. L'occupation est chargée sur HIER et aujourd'hui : un séjour qui
+  # part ce matin a passé sa dernière nuit hier (`Calendar::TodayStayCards`).
+  def today
+    @date = Date.current
+    @first = (@date - 1).beginning_of_day
+    @last = @date.end_of_day
+    load_occupation
+    cards = Calendar::TodayStayCards.new(
+      date: @date,
+      grouped_reservations: @grouped_reservations,
+      grouped_space_reservations: @grouped_space_reservations,
+      grouped_camping_bookings: @grouped_camping_bookings,
+      grouped_van_bookings: @grouped_van_bookings,
+      grouped_hamac_bookings: @grouped_hamac_bookings,
+      grouped_bare_stays: @grouped_bare_stays
+    )
+    @board = Today::Board.new(date: @date, user: current_user, cards: cards, events: @events,
+                              full_access: section_readable?(:full))
   end
 
   # Fil d'activité récente — page dédiée (2026-07-20, sortie du bas du
@@ -328,6 +265,99 @@ class PagesController < BaseController
       end
     end
     grouped
+  end
+
+  # L'occupation du domaine sur la fenêtre [@first, @last] : séjours, espaces,
+  # camping, van, hamacs, coworking, événements. Partagée par l'agenda et par
+  # l'écran « Aujourd'hui » (redesign, 2026-10-24), qui la lit sur hier et
+  # aujourd'hui pour retrouver les départs du jour.
+  def load_occupation
+    @events = EventDecorator.decorate_collection(
+      Event.all
+        .includes(:event_category)
+        .between_times(@first, @last)
+    )
+    # group space reservations by day
+    # Le calendrier bascule sur les SÉJOURS (epic #66, Phase 4) : on précharge
+    # `space_booking.stay` (via `stay_item`, has_one through) pour colorer et
+    # regrouper les occupations par `stay_id` sans requête N+1. Les
+    # `stay_items` et leurs réservables viennent avec : le titre du bloc est
+    # `StayDecorator#display_name`, qui les relit sur un séjour rattaché au
+    # client FOURRE-TOUT pour retrouver le nom de la réservation d'origine.
+    @space_reservations = SpaceReservation.all
+      .includes(:space_booking)
+      .preload(:space, space_booking: [:event, :space_reservations, { stay: [:customer, { stay_items: :bookable }] }])
+      .where.not(space_booking: { status: ["declined", "canceled"] })
+      .between_times(@first, @last, field: :date)
+    @grouped_space_reservations = @space_reservations.to_a.group_by { |sr| sr.date }
+    # group reservations by day (préchargement du séjour porteur, cf. supra)
+    @reservations = Reservation.all
+      .includes(:booking)
+      .preload(:room, booking: [:lodging, :reservations, { stay: [:customer, { stay_items: :bookable }] }])
+      .where.not(booking: { status: ["declined", "canceled"] })
+      .between_times(@first, @last, field: :date)
+    @grouped_reservations = @reservations.to_a.group_by { |r| r.date }
+    # Camping / van (epic #66, Phase 3–4) — capacité globale, aucune réservation
+    # jour par jour : on étale la fenêtre [from, to) en nuits, groupées par jour,
+    # pour un bloc agrégé (« Camping » / « Van ») par nuit occupée, coloré par
+    # séjour. Préchargement du séjour (anti-N+1).
+    @grouped_camping_bookings = nights_grouped_by_day(
+      CampingBooking
+        .includes(stay: [:customer, { stay_items: :bookable }])
+        .where.not(status: ["declined", "canceled"])
+        .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
+    )
+    # Séjours « activité seule » (Michael, 2026-10-13) : un séjour sans
+    # hébergement, espace, camping, van ni hamac (un atelier pizza pour un
+    # groupe venu à la journée) n'avait aucun réservable à dessiner et
+    # n'apparaissait donc jamais au calendrier. On l'y pose au jour de son
+    # activité. Un séjour qui a déjà un réservable garde son bloc habituel :
+    # ses activités n'y ajoutent rien.
+    @grouped_activity_only_bookings = ExperienceBooking.active.with_visible_stay
+      .joins(:experience_availability)
+      .where(experience_availabilities: { available_on: @first.to_date..@last.to_date })
+      .where.not(stays: { status: "canceled" })
+      .where.not(stay_id: StayItem.select(:stay_id))
+      .preload(:stay, experience_availability: :experience)
+      .to_a
+      .group_by { |experience_booking| experience_booking.experience_availability.available_on }
+    # Séjours SANS rien de dessinable (Michael, 2026-10-23) : le séjour vide
+    # (PR #544, client + dates) et le séjour qui n'a que des repas, du linge
+    # ou une Pizza Party. Aucun réservable ni activité active : il n'avait
+    # donc aucun bloc. On le pose sur ses propres dates, nuits [arrivée,
+    # départ) comme un hébergement, ou sur son seul jour s'il tient en une
+    # journée.
+    @grouped_bare_stays = stay_days_grouped_by_day(
+      Stay
+        .where.not(status: Stay::CANCELED_STATUSES)
+        .where.not(arrival_date: nil).where.not(departure_date: nil)
+        .where("arrival_date <= ? AND departure_date >= ?", @last.to_date, @first.to_date)
+        .where.not(id: StayItem.select(:stay_id))
+        .where.not(id: ExperienceBooking.active.select(:stay_id))
+        .preload(:customer, :meal_orders)
+    )
+    # Coworking (epic #126, Phase 1) — domaine INDÉPENDANT des séjours : un
+    # bloc agrégé par jour (« 💻 Coworking N/3 »), jamais rattaché à un stay
+    # et donc jamais sélectionnable par le mode fusion.
+    @grouped_coworking_reservations = CoworkingReservation
+      .includes(:customer)
+      .between(@first.to_date, @last.to_date)
+      .to_a
+      .group_by(&:date)
+    @grouped_van_bookings = nights_grouped_by_day(
+      VanBooking
+        .includes(stay: [:customer, { stay_items: :bookable }])
+        .where.not(status: ["declined", "canceled"])
+        .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
+    )
+    # Hamacs (issue #138) — même étalement par nuit que camping/van : ils
+    # comptent dans le bloc du séjour (chip 🛌) et dans la nuitée (💤).
+    @grouped_hamac_bookings = nights_grouped_by_day(
+      HamacBooking
+        .includes(stay: [:customer, { stay_items: :bookable }])
+        .where.not(status: ["declined", "canceled"])
+        .where("from_date < ? AND to_date > ?", @last.to_date, @first.to_date)
+    )
   end
 
   def set_dates

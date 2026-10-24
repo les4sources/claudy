@@ -15,34 +15,64 @@ html(lang="fr")
     colonne flex sur la hauteur de l'écran, sans padding ni pied de page.
   / `map-read-only` : la carte et ses pages ouvertes en lecture seule (rôle
     Kid), cf. `AccessControl#map_read_only_page?` et `map.css`.
-  body.bg-white.overflow-x-clip(id="body-#{controller_name}_#{action_name}" class=[("flex h-[100dvh] flex-col overflow-hidden" if @map_view), ("map-read-only" if respond_to?(:map_read_only_page?) && map_read_only_page?)].compact.join(" ").presence)
+  / `ui-v2` : la nouvelle interface (redesign, Michael 2026-10-24), choisie par
+    chacun (`users.new_interface`). Toute la mise en forme vit dans
+    `stylesheets/ui_v2.css`, scopée sous `.ui-v2` : l'ancienne interface ne
+    bouge pas d'un pixel.
+  body.bg-white.overflow-x-clip(id="body-#{controller_name}_#{action_name}" class=[("ui-v2" if new_interface?), ("flex h-[100dvh] flex-col overflow-hidden" if @map_view && !new_interface?), ("ui-v2-map" if @map_view && new_interface?), ("map-read-only" if respond_to?(:map_read_only_page?) && map_read_only_page?)].compact.join(" ").presence)
     = render "layouts/components/tooltips"
     = render "humans/tooltips"
 
     / = turbo_frame_tag "modal", target: "_top"
     = turbo_frame_tag "modal"
 
-    = render "layouts/components/navbar"
+    - if new_interface?
+      .ui-app
+        = render "layouts/v2/sidebar"
+        .ui-main
+          = render "layouts/v2/mobile_top"
+          .ui-subnavs
+            = render "layouts/components/subnavs"
+          - if @map_view
+            main.ui-map-main
+              = render 'layouts/components/messages'
+              = yield
+          - else
+            main.ui-page
+              - if content_for?(:page_header)
+                .ui-page-header
+                  = yield :page_header
 
-    - if @map_view
-      main.relative.min-h-0.flex-1
-        = render 'layouts/components/messages'
-        = yield
+              - if @accounting_view
+                = render "finance/shared/page_guide"
+
+              = render 'layouts/components/messages'
+              = yield
+
+              = render 'layouts/components/footer'
+        = render "layouts/v2/tabbar"
     - else
-      .p-8
-        / sticky page header
-        - if content_for?(:page_header)
-          .mb-8
-            = yield :page_header
+      = render "layouts/components/navbar"
 
-        / L'aide de l'écran, sur toute la Comptabilité (2026-10-17) : sous le
-          titre, avant le contenu, pour que la personne qui démarre sache à quoi
-          sert la page avant d'y agir.
-        - if @accounting_view
-          = render "finance/shared/page_guide"
+      - if @map_view
+        main.relative.min-h-0.flex-1
+          = render 'layouts/components/messages'
+          = yield
+      - else
+        .p-8
+          / sticky page header
+          - if content_for?(:page_header)
+            .mb-8
+              = yield :page_header
 
-        / main content
-        = render 'layouts/components/messages'
-        = yield
+          / L'aide de l'écran, sur toute la Comptabilité (2026-10-17) : sous le
+            titre, avant le contenu, pour que la personne qui démarre sache à quoi
+            sert la page avant d'y agir.
+          - if @accounting_view
+            = render "finance/shared/page_guide"
 
-        = render 'layouts/components/footer'
+          / main content
+          = render 'layouts/components/messages'
+          = yield
+
+          = render 'layouts/components/footer'

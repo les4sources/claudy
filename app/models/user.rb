@@ -6,6 +6,7 @@
 #  access_roles              :string           default([]), not null, is an Array
 #  email                     :string           default(""), not null
 #  encrypted_password        :string           default(""), not null
+#  new_interface             :boolean          default(FALSE), not null
 #  notify_by_email           :boolean          default(TRUE), not null
 #  remember_created_at       :datetime
 #  reset_password_sent_at    :datetime

@@ -1,0 +1,6 @@
+- entries.each do |entry|
+  = link_to entry[:path], "aria-current": (interface_current?(entry[:key]) ? "page" : nil) do
+    = ui_icon(entry[:icon])
+    span = entry[:label]
+    - if entry[:count]
+      span.ui-cnt(aria-label="#{entry[:count]} à traiter") = entry[:count]

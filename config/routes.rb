@@ -902,6 +902,10 @@ Rails.application.routes.draw do
   get "pages/day", to: "pages#day", as: :day_details
   get "recent-activity", to: "pages#recent_activity", as: :recent_activity
   get "pages/dashboard", to: "pages#dashboard", as: :dashboard
+  # Nouvelle interface (redesign, Michael 2026-10-24) : l'écran « Aujourd'hui »
+  # et l'interrupteur qui fait passer un compte d'une interface à l'autre.
+  get "aujourdhui", to: "pages#today", as: :today
+  patch "interface", to: "interface_preferences#update", as: :interface_preference
   get "pages/other_bookings", to: "pages#other_bookings"
   get "pages/other_space_bookings", to: "pages#other_space_bookings"
   get "pages/month_details", to: "pages#month_details", as: :month_details

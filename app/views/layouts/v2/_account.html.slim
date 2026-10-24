@@ -1,0 +1,15 @@
+/ Le compte connecté, le retour à l'ancienne interface et la déconnexion.
+  `<details>` natif : ouvrable au clavier, sans JavaScript.
+details.ui-me
+  summary
+    = ui_avatar(current_user.display_name)
+    span.ui-me-t
+      b = current_user.display_name
+      span = current_user.access_roles.map { |role| Access.label(role) }.join(" · ").presence || "Compte"
+  .ui-me-menu
+    = button_to interface_preference_path, method: :patch, params: { new_interface: false }, class: "ui-me-item" do
+      = ui_icon(:swap, size: 18)
+      span Revenir à l’ancienne interface
+    = button_to destroy_user_session_path, method: :delete, form: { data: { access_keep: true } }, class: "ui-me-item" do
+      = ui_icon(:logout, size: 18)
+      span Me déconnecter
