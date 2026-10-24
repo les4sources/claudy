@@ -73,8 +73,8 @@
                 .ui-row
                   span.ui-time
                     = entry.time
-                    small = { arrival: "Arrivée", departure: "Départ", day: "Journée", event: "Événement" }[entry.kind]
-                  span.ui-row-ico.ui-only-d = ui_icon({ arrival: :in, departure: :out, day: :room, event: :star }[entry.kind], size: 16)
+                    small = { arrival: "Arrivée", departure: "Départ", day: "Journée", event: "Événement", activity: "Activité" }[entry.kind]
+                  span.ui-row-ico.ui-only-d = ui_icon({ arrival: :in, departure: :out, day: :room, event: :star, activity: :compass }[entry.kind], size: 16)
                   span.ui-row-m
                     - if entry.stay
                       = link_to entry.title, stay_path(entry.stay), class: "ui-row-t", data: { action: "stay-details#open" }

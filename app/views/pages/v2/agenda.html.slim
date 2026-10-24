@@ -1,0 +1,77 @@
+/ AGENDA EN RUBANS, nouvelle interface (Michael 2026-10-24, maquette validée) :
+  le mois en semaines, chaque séjour en une bande qui court de l'après-midi de
+  son arrivée au matin de son départ ; à droite, le jour choisi. Sur téléphone,
+  la semaine en pastilles puis la liste des sept jours qui viennent. Données :
+  `Agenda::Month` (bandes) et `Agenda::Day` (une journée). La vue Sourciers et
+  l'ancienne interface gardent `pages/calendar`.
+- agenda = @agenda
+- month = agenda.month
+- previous_month = month.prev_month
+- next_month = month.next_month
+div(data-controller="stay-details stay-merge agenda-filter" data-stay-merge-setup-url-value=merge_setup_stays_path data-stay-merge-preview-url-value=merge_preview_stays_path data-stay-merge-reset-value=params[:stay_merge_done].present?)
+  header.ui-phead
+    .ui-phead-t
+      .ui-title-row
+        h1.ui-h1 Agenda
+        = render "guide/screen_links/header", title: "Agenda"
+    .ui-actions
+      - if section_writable?(:full)
+        = link_to new_stay_path, class: "ui-btn ui-btn-p ui-hide-m" do
+          = ui_icon(:plus, size: 16)
+          | Nouveau séjour
+
+  / ---- Ordinateur et tablette ------------------------------------------------
+  .ui-ag-desk
+    .ui-ag-bar
+      .ui-ag-month
+        = link_to root_path(date: previous_month.iso8601), class: "ui-ibtn ui-ibtn-o", aria: { label: "Mois précédent, #{l(previous_month, format: '%B %Y')}" } do
+          = ui_icon(:left, size: 18)
+        h2.ui-ag-title = l(month, format: "%B %Y").capitalize
+        = link_to root_path(date: next_month.iso8601), class: "ui-ibtn ui-ibtn-o", aria: { label: "Mois suivant, #{l(next_month, format: '%B %Y')}" } do
+          = ui_icon(:right, size: 18)
+        = link_to "Aujourd’hui", root_path, class: "ui-btn ui-btn-s"
+      = render "pages/v2/agenda_views", date: month
+
+    .ui-ag-bar
+      .ui-ag-filters(role="group" aria-label="Montrer")
+        - [["all", "Tout", nil], ["lodging", "Hébergements", :bed], ["room", "Salles", :room], ["activity", "Activités", :compass], ["meal", "Repas", :utensils]].each do |kind, label, icon|
+          button.ui-chip(type="button" data-kind=kind data-agenda-filter-target="button" data-action="agenda-filter#pick" aria-pressed=(kind == "all").to_s)
+            - if icon
+              = ui_icon(icon, size: 16)
+            = label
+      ul.ui-ag-legend(aria-label="Légende")
+        li
+          i.ui-rib-swatch.ui-rib-ok(aria-hidden="true")
+          | Confirmé
+        li
+          i.ui-rib-swatch.ui-rib-pre(aria-hidden="true")
+          | Pré-confirmé
+        li
+          i.ui-rib-swatch.ui-rib-wait(aria-hidden="true")
+          | En attente
+
+    .ui-ag-layout
+      .ui-ag-main
+        .ui-ag-grid(data-agenda-filter-target="grid" data-agenda-filter="all")
+          - agenda.weeks.each do |week|
+            = render "pages/v2/agenda_week", week: week, month: month
+        p.ui-ag-note
+          | Une bande commence l’après-midi de l’arrivée et finit le matin du départ : deux séjours qui se suivent partagent la même journée.
+        - if section_writable?(:full)
+          .ui-ag-merge
+            = render "pages/calendar/merge_toolbar"
+
+      aside.ui-ag-side(aria-label="Le jour choisi")
+        = turbo_frame_tag "agenda_day" do
+          = render "pages/v2/agenda_day", day: @agenda_day
+
+  / ---- Téléphone ---------------------------------------------------------------
+  .ui-ag-mob
+    = render "pages/v2/agenda_views", date: month
+    = render "pages/v2/agenda_strip", agenda: agenda
+    - @agenda_week.each_with_index do |day, index|
+      = render "pages/v2/agenda_list_day", day: day, first: index.zero?
+
+  = render "pages/calendar/stay_modal"
+  = render "stays/merge_dialog"
+  = render "stays/merge_bottom_bar"

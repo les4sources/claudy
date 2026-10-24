@@ -1,0 +1,21 @@
+/ Une semaine de l'agenda : sept colonnes (le fond), l'en-tête des jours, puis
+  les bandes sur une grille de quatorze demi-journées. Un clic sur un jour
+  l'ouvre dans le panneau de droite sans recharger la grille.
+- today = Date.current
+section.ui-ag-week(aria-label="Semaine du #{l(week.days.first, format: '%-d %B')}" style="--lanes: #{week.lanes}")
+  .ui-ag-cols(aria-hidden="true")
+    - week.days.each do |date|
+      i(class=[("is-today" if date == today), ("is-out" if date.month != month.month), ("is-sel" if date == @agenda_date)].compact.join(" "))
+  .ui-ag-days
+    - week.days.each do |date|
+      = link_to root_path(date: month.iso8601, jour: date.iso8601),
+                class: ["ui-ag-day", ("is-today" if date == today), ("is-out" if date.month != month.month), ("is-sel" if date == @agenda_date)].compact.join(" "),
+                aria: { current: (date == today ? "date" : nil), label: l(date, format: "%A %-d %B").capitalize },
+                data: { turbo_frame: "agenda_day", turbo_action: "advance" } do
+        b = date.day
+        span = l(date, format: "%a").capitalize.delete(".")
+        - if date.month != month.month && date.day == 1
+          span = l(date, format: "%b").capitalize.delete(".")
+  .ui-ag-lanes
+    - week.ribbons.each do |ribbon|
+      = render "pages/v2/agenda_ribbon", ribbon: ribbon

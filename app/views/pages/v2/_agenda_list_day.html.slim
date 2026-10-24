@@ -1,0 +1,29 @@
+/ Téléphone : une journée en lignes, dans l'ordre de l'horloge (départs du
+  matin, arrivées, salles, activités, événements). Mêmes lignes que l'écran
+  « Aujourd'hui ».
+- date = day.date
+- entries = day.entries
+section.ui-ag-lday(aria-labelledby="ag-l-#{date.iso8601}")
+  h2.ui-over.ui-ag-lday-h(id="ag-l-#{date.iso8601}") = agenda_day_heading(date)
+  - if entries.empty?
+    p.ui-ag-lday-empty Rien ce jour-là.
+  - else
+    .ui-card
+      .ui-card-b
+        .ui-rows
+          - entries.each do |entry|
+            - readable = entry.stay && section_readable?(:full)
+            = content_tag(readable ? :a : :div, class: "ui-row#{' ui-row-link' if readable}", href: (stay_path(entry.stay) if readable), data: (readable ? { action: "stay-details#open" } : {})) do
+              span.ui-time
+                = entry.time
+                small = { arrival: "Arrivée", departure: "Départ", day: "Journée", event: "Événement", activity: "Activité" }[entry.kind]
+              span.ui-row-m
+                span.ui-row-t = entry.title
+                - if entry.detail.present?
+                  span.ui-row-s = entry.detail
+                - if entry.status
+                  span.ui-ag-st = ui_status(*entry.status)
+              - if readable
+                = ui_icon(:right, size: 18)
+              - elsif entry.kind == :event
+                span.ui-ag-star = ui_icon(:star, size: 18)

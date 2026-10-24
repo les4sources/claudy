@@ -27,6 +27,8 @@ module InterfaceHelper
     x: '<path d="M18 6 6 18M6 6l12 12"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     right: '<path d="m9 18 6-6-6-6"/>',
+    left: '<path d="m15 18-6-6 6-6"/>',
+    tent: '<path d="M3.5 21 14 3M20.5 21 10 3M15.5 21 12 15l-3.5 6M2 21h20"/>',
     plus: '<path d="M5 12h14M12 5v14"/>',
     in: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>',
     out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',

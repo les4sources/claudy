@@ -1,0 +1,12 @@
+/ Lignes du panneau : nom et heure à gauche, effectif à droite. Un séjour
+  s'ouvre dans sa modale (le cadre du panneau ne doit pas l'avaler : `_top`).
+ul.ui-ag-kv
+  - entries.each do |entry|
+    li
+      - name = [entry.title, entry.time].compact.join(" · ")
+      - if entry.stay && section_readable?(:full)
+        = link_to name, stay_path(entry.stay), data: { action: "stay-details#open", turbo_frame: "_top" }
+      - else
+        span = name
+      - if entry.people.to_i.positive?
+        b = entry.people

@@ -16,7 +16,7 @@ module Today
   class Board
     # Une ligne de la journée : un séjour qui arrive, part ou occupe une salle,
     # ou un événement du lieu. `stay` est nil pour un événement.
-    Entry = Struct.new(:time, :kind, :title, :detail, :status, :stay, keyword_init: true)
+    Entry = Struct.new(:time, :kind, :title, :detail, :status, :stay, :people, keyword_init: true)
 
     STATUS_PILLS = {
       "pending" => [:wait, "En attente"],
@@ -238,17 +238,23 @@ module Today
     def people(card)
       occupants = card.stay.decorate.occupants
       total = occupants[:adults].to_i + occupants[:children].to_i
-      total.positive? ? total : card.persons.to_i
+      total.positive? ? total : [card.persons.to_i, card.block.activity_bookings.sum { |booking| booking.participants.to_i }].max
     end
 
     def stay_entry(card)
       kind = { checkin: :arrival, checkout: :departure, dayuse: :day }.fetch(card.state, :day)
       time = kind == :departure ? card.departure_time : card.arrival_time
+      # Un séjour venu pour une activité seulement (agenda en rubans) : la
+      # ligne dit « Activité » et prend l'heure du créneau.
+      if activity_only?(card)
+        kind = :activity
+        time = card.block.activity_bookings.filter_map { |booking| booking.experience_availability&.starts_at.presence }.min || time
+      end
       count = people(card)
       detail = [place_label(card), nights_label(card.stay, kind), (count.positive? ? "#{count} pers." : nil)].compact.join(" · ")
       Entry.new(time: normalize_time(time) || default_time(kind), kind: kind,
                 title: card.stay.decorate.display_name.presence || "Séjour ##{card.stay.id}",
-                detail: detail, status: status_pill(card.stay), stay: card.stay)
+                detail: detail, status: status_pill(card.stay), stay: card.stay, people: count)
     end
 
     def event_entry(event)
@@ -270,7 +276,13 @@ module Today
       names << "Camping-cars" if block.van_bookings.any?
       names << "Hamacs" if block.hamac_bookings.any?
       names << "Terrasse" if block.terrace_bookings.any?
+      names += block.activity_bookings.map { |booking| booking.experience_availability&.experience&.name }
       names.compact_blank.uniq.join(" + ").presence
+    end
+
+    def activity_only?(card)
+      block = card.block
+      block.activity_bookings.any? && !block.overnight? && block.space_groups.empty? && block.terrace_bookings.empty?
     end
 
     def nights_label(stay, kind)
