@@ -115,6 +115,9 @@ body.ui-v2-map .ui-main { height: 100dvh; }
   position: sticky; top: 0; height: 100dvh; overflow-y: auto; scrollbar-width: thin;
   width: var(--ui-side-w); flex: none; background: var(--ui-teal); color: #fff;
   display: flex; flex-direction: column; gap: 18px; padding: 18px 12px 12px;
+  /* `sticky` crée son propre contexte d'empilement : sans z-index, les
+     infobulles (z 60, à l'intérieur) passaient sous les rubans de l'agenda. */
+  z-index: 30;
 }
 .ui-side :focus-visible { outline-color: var(--ui-yellow); }
 .ui-brand { display: flex; align-items: center; gap: 11px; padding: 4px 10px 2px; color: #fff; text-decoration: none; }
@@ -657,6 +660,16 @@ a.ui-rib-ok:is(.ui-rib-k-activity, .ui-rib-k-meal):hover { color: var(--ui-ink);
 .ui-ag-side { position: sticky; top: 20px; }
 .ui-ag-panel .ui-card-h { padding-top: 18px; }
 .ui-ag-tag { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: var(--ui-surface); color: var(--ui-ink2); font-size: 12.5px; font-weight: 700; }
+.ui-ag-panel-t { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
+/* Le veilleur devant, les renforts derrière (à gauche), bordés d'orange. */
+.ui-ag-watch { display: inline-flex; align-items: flex-end; flex: none; text-decoration: none; }
+.ui-ag-watch > * { position: relative; }
+.ui-ag-watch > * + * { margin-left: -8px; }
+.ui-ag-watch > .ui-av { box-shadow: 0 0 0 2px #fff; }
+.ui-ag-backup { display: inline-flex; }
+.ui-ag-backup .ui-av, .ui-ag-backup.ui-av { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px #e8804a; }
+.ui-av-none { background: #fff; border: 1.5px dashed var(--ui-control); color: var(--ui-ink3); }
+.ui-ag-watch:hover > .ui-av { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ui-yellow); }
 .ui-ag-sub { margin: 16px 0 4px; font-size: 11.5px; }
 .ui-ag-panel .ui-card-b > .ui-ag-sub:first-child { margin-top: 4px; }
 .ui-ag-kv li { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 14px; color: var(--ui-ink2); }

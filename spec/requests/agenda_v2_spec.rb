@@ -87,6 +87,22 @@ RSpec.describe "Agenda en rubans", type: :request do
     expect(text).not_to include("€")
   end
 
+  it "montre le veilleur du jour en avatar, les renforts empilés derrière lui" do
+    veille = Role.find_or_create_by!(id: OnCall::Resolver::WATCHMAN_ROLE_ID) { |r| r.name = "Veilleur·euse" }
+    date = Date.new(2026, 10, 24)
+    HumanRole.create!(human: Human.create!(name: "Olivier"), role: veille, date: date, status: "selected")
+    HumanRole.create!(human: Human.create!(name: "Steph"), role: veille, date: date, status: "backup")
+    HumanRole.create!(human: Human.create!(name: "Lily"), role: veille, date: date, status: "backup")
+
+    get "/", params: { date: month.iso8601, jour: "2026-10-24" }
+
+    watch = Nokogiri::HTML(response.body).at_css("turbo-frame#agenda_day .ui-ag-watch")
+    expect(watch["aria-label"]).to eq("Veille : Olivier · en renfort : Steph et Lily")
+    expect(watch.css(".ui-ag-backup").size).to eq(2)
+    # Le veilleur en dernier : il passe devant les renforts.
+    expect(watch.element_children.last["class"]).not_to include("ui-ag-backup")
+  end
+
   it "montre les événements et les repas sans séjour, filtrables par sorte" do
     category = EventCategory.create!(name: "Convivialité")
     Event.create!(name: "Pizza Party", starts_at: Time.zone.local(2026, 10, 24, 19), ends_at: Time.zone.local(2026, 10, 24, 23),

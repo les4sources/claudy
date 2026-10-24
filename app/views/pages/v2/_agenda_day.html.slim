@@ -8,11 +8,30 @@
 - events = day.entries.select { |entry| entry.kind == :event }
 section.ui-card.ui-ag-panel(aria-labelledby="ag-day-title")
   .ui-card-h
-    h2.ui-h2#ag-day-title = l(date, format: "%A %-d").capitalize
-    - if date == Date.current
-      span.ui-ag-tag Aujourd’hui
-    - elsif date == Date.current + 1
-      span.ui-ag-tag Demain
+    .ui-ag-panel-t
+      h2.ui-h2#ag-day-title = l(date, format: "%A %-d").capitalize
+      - if date == Date.current
+        span.ui-ag-tag Aujourd’hui
+      - elsif date == Date.current + 1
+        span.ui-ag-tag Demain
+    / Qui veille (Michael 2026-10-24) : son avatar en haut à droite, les
+      personnes disponibles en renfort empilées derrière lui, bordées
+      d'orange. Le tout ouvre la fiche du jour, où l'on attribue les rôles.
+    - watchers = day.watchers
+    - backups = day.backup_watchers
+    - label = ["Veille : #{watchers.map(&:name).to_sentence.presence || 'personne'}", ("en renfort : #{backups.map(&:name).to_sentence}" if backups.any?)].compact.join(" · ")
+    = link_to day_details_path(date: date.iso8601), class: "ui-ag-watch", title: label, aria: { label: label }, data: { turbo_frame: "modal" } do
+      / Les renforts d'abord : chacun passe sous le suivant, le veilleur
+        (le dernier) reste devant.
+      - if backups.size > 3
+        span.ui-av.ui-av-s.ui-av-more.ui-ag-backup(aria-hidden="true") = "+#{backups.size - 3}"
+      - backups.first(3).reverse_each do |human|
+        span.ui-ag-backup = ui_avatar(human.name, human: human, small: true)
+      - if watchers.any?
+        - watchers.each do |human|
+          = ui_avatar(human.name, human: human)
+      - else
+        span.ui-av.ui-av-none(aria-hidden="true") ?
   .ui-card-b
     - if day.empty? && day.notes.empty?
       p.ui-empty Rien de prévu ce jour-là.
@@ -54,13 +73,9 @@ section.ui-card.ui-ag-panel(aria-labelledby="ag-day-title")
           li
             span = "#{day.meals_today.size} #{day.meals_today.size > 1 ? 'services' : 'service'} (goûter, buffet…)"
 
-    - if day.watchers.any? || day.notes.any?
+    - if day.notes.any?
       h3.ui-over.ui-ag-sub Pour l’équipe
       ul.ui-ag-kv
-        - if day.watchers.any?
-          li
-            span Veille
-            b = day.watchers.map(&:name).to_sentence
         - day.notes.each do |note|
           li.ui-ag-note-row
             - if section_writable?(:full)

@@ -9,6 +9,9 @@
         = button_to "Essayer la nouvelle interface",
                     interface_preference_path, method: :patch, params: { new_interface: true },
                     class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
-      = button_to "Me déconnecter",
-                  destroy_user_session_path, method: :delete, form: { data: { access_keep: true } },
-                  class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
+      / En nouvelle interface, la déconnexion vit dans le menu du compte
+        (Michael 2026-10-24) : pas de doublon en pied de page.
+      - unless new_interface?
+        = button_to "Me déconnecter",
+                    destroy_user_session_path, method: :delete, form: { data: { access_keep: true } },
+                    class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700 focus:text-blue-700"
