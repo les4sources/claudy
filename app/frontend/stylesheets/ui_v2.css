@@ -97,6 +97,12 @@ body.ui-v2 :focus-visible { outline: 2px solid var(--ui-teal); outline-offset: 2
 }
 .ui-main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-x: clip; }
 .ui-page { width: 100%; max-width: 1280px; margin: 0 auto; padding: 32px 44px 64px; }
+/* Beaucoup d'écrans s'ouvrent sur un `px-4 sm:px-6 lg:px-8` qui faisait leur
+   marge dans l'ancienne interface ; ici `.ui-page` la donne déjà. Sans ce
+   retrait, la marge comptait deux fois et volait 64 px au contenu (formulaire
+   séjour, Michael 2026-10-24). */
+.ui-v2 .ui-page > .lg\:px-8 { padding-left: 0; padding-right: 0; }
+@media (max-width: 1280px) { .ui-page { padding-left: 32px; padding-right: 32px; } }
 .ui-page-header { margin-bottom: 28px; }
 
 /* La carte occupe tout ce qui reste à droite de la barre latérale. */
@@ -160,25 +166,51 @@ body.ui-v2-map .ui-main { height: 100dvh; }
   align-items: flex-end; justify-content: center; padding-bottom: 6px; font-size: 12px; font-weight: 700;
   color: var(--ui-teal); flex: none; letter-spacing: .02em;
 }
+.ui-av-photo { padding: 0; object-fit: cover; background: var(--ui-surface); }
 .ui-av-s { width: 26px; height: 28px; font-size: 10px; padding-bottom: 4px; }
 .ui-av-y { background: var(--ui-yellow); }
 .ui-av-g { background: #bfe8d6; }
 .ui-av-b { background: #cddcff; }
 .ui-av-o { background: #ffd3c0; }
-.ui-av-s:not(.ui-av-y):not(.ui-av-g):not(.ui-av-b):not(.ui-av-o) { background: #ddbfa1; }
+.ui-av-sand { background: #ddbfa1; }
 
 /* Sous-navigations de section : un fil discret sous le titre, l'entrée active
    soulignée de jaune (au lieu des pastilles teal de l'ancienne barre). */
 .ui-subnavs nav { background: var(--ui-paper) !important; border-color: var(--ui-line) !important; }
 .ui-subnavs nav > div { max-width: 1280px; padding-left: 28px; padding-right: 28px; }
-.ui-subnavs ul { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; gap: 2px !important; }
-.ui-subnavs ul a {
+.ui-subnavs nav > div > div { min-width: 0; }
+/* Une seule ligne, jamais de barre de défilement : ce qui ne tient pas passe
+   dans « Plus ▾ » (`ui_subnav_controller.js`, Michael 2026-10-24). */
+.ui-subnav-list { flex: 1 1 0; min-width: 0; flex-wrap: nowrap !important; gap: 2px !important; }
+.ui-subnav-list > li { flex: none; }
+.ui-subnav-list > li[hidden] { display: none; }
+.ui-subnav-list > li > a, .ui-subnav-list > li > button {
   display: inline-flex; align-items: center; min-height: 40px; white-space: nowrap; border-radius: 0 !important;
   background: none !important; color: var(--ui-ink2) !important; font-weight: 600 !important; font-size: 14px;
   border-bottom: 3px solid transparent;
 }
-.ui-subnavs ul a:hover { color: var(--ui-ink) !important; border-bottom-color: var(--ui-line); }
-.ui-subnavs ul a.bg-teal-100 { color: var(--ui-ink) !important; font-weight: 700 !important; border-bottom-color: var(--ui-yellow); }
+.ui-subnav-list > li > a:hover, .ui-subnav-list > li > button:hover { color: var(--ui-ink) !important; border-bottom-color: var(--ui-line); }
+.ui-subnav-list > li > :is(a, button).bg-teal-100 { color: var(--ui-ink) !important; font-weight: 700 !important; border-bottom-color: var(--ui-yellow); }
+/* Les menus déroulants de la Comptabilité gardent leur forme de liste. */
+.ui-subnav-list ul a { border-radius: 8px; color: var(--ui-ink) !important; }
+.ui-subnav-list ul a.bg-teal-100 { background: var(--ui-yellow-tint) !important; font-weight: 700 !important; }
+
+.ui-subnav-more { position: relative; margin-left: auto; }
+.ui-subnav-more > button { gap: 6px; padding: 0 12px; cursor: pointer; }
+.ui-subnav-more > button[aria-expanded="true"] { color: var(--ui-ink) !important; border-bottom-color: var(--ui-line); }
+.ui-subnav-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 45; min-width: 220px; max-height: 70vh; overflow-y: auto;
+  padding: 6px; background: #fff; border: 1.5px solid var(--ui-line); border-radius: 14px;
+  box-shadow: 0 16px 40px -12px rgba(24, 47, 50, .35);
+}
+.ui-subnav-menu[hidden] { display: none; }
+.ui-subnav-menu a {
+  display: flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 9px;
+  color: var(--ui-ink); font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap;
+}
+.ui-subnav-menu a:hover { background: var(--ui-surface); color: var(--ui-ink); }
+.ui-subnav-menu a[aria-current="page"] { background: var(--ui-yellow-tint); font-weight: 700; }
+.ui-subnav-menu p { margin: 8px 12px 2px; font-size: 11.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ui-ink3); }
 
 /* Téléphone : barre du haut et onglets, cachés au-delà */
 .ui-mtop, .ui-tabbar { display: none; }
@@ -256,6 +288,13 @@ a.ui-row:hover .ui-row-t, a.ui-row-t:hover { text-decoration: underline; text-de
 }
 .ui-time { width: 62px; flex: none; font-weight: 700; font-size: 14px; color: var(--ui-ink); font-variant-numeric: tabular-nums; }
 .ui-time small { display: block; font-weight: 500; font-size: 12px; color: var(--ui-ink3); }
+.ui-row-act { display: flex; gap: 8px; flex: none; }
+.ui-row-act form { display: contents; }
+.ui-btn-s { min-height: 36px; padding: 0 14px; font-size: 13.5px; }
+.ui-rows-sub { margin-top: 4px; border-top: 1.5px solid var(--ui-line-soft); }
+.ui-card-me .ui-row { flex-wrap: wrap; }
+.ui-card-me .ui-row-act { margin-left: auto; }
+.ui-card-me { border-color: #e2cf7a; box-shadow: 0 0 0 4px var(--ui-yellow-tint); }
 .ui-empty { display: flex; align-items: center; gap: 10px; padding: 10px 0 4px; font-size: 14px; color: var(--ui-ink2); }
 
 .ui-split { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; margin-top: 24px; }
@@ -319,6 +358,56 @@ a.ui-row:hover .ui-row-t, a.ui-row-t:hover { text-decoration: underline; text-de
 .ui-v2 .ui-page :is(.focus\:ring-indigo-500, .focus\:ring-blue-500):focus { --tw-ring-color: var(--ui-teal); }
 
 
+/* --- Barre repliée en icônes (Michael 2026-10-24) -------------------------------
+   Choix de chacun, sur tous les écrans de bureau et de tablette. Les libellés
+   restent lus par les lecteurs d'écran (masqués visuellement, pas retirés). */
+.ui-side-toggle {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 40px; padding: 0 10px 0 12px;
+  border: 0; border-radius: 10px; background: none; color: var(--ui-side-muted);
+  font: 500 14px/1.2 var(--ui-f-ui); text-align: left; cursor: pointer;
+}
+.ui-side-toggle:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+.ui-side-toggle .ui-ico-fold { display: inline-flex; }
+.ui-side-toggle .ui-ico-unfold { display: none; }
+
+.ui-tip {
+  position: fixed; z-index: 60; transform: translateY(-50%); pointer-events: none;
+  padding: 7px 11px; border-radius: 9px; background: var(--ui-teal-deep); color: #fff;
+  font: 600 13px/1.2 var(--ui-f-ui); white-space: nowrap; box-shadow: 0 8px 24px -8px rgba(24, 47, 50, .55);
+}
+.ui-tip::before {
+  content: ""; position: absolute; left: -5px; top: 50%; width: 10px; height: 10px;
+  background: inherit; transform: translateY(-50%) rotate(45deg); border-radius: 2px;
+}
+.ui-tip[hidden] { display: none; }
+
+@media (min-width: 761px) {
+  body.ui-side-collapsed { --ui-side-w: 76px; }
+  .ui-side-collapsed .ui-side { padding: 16px 10px 12px; gap: 14px; }
+  .ui-side-collapsed .ui-brand { justify-content: center; padding: 4px 0; }
+  .ui-side-collapsed .ui-brand-t, .ui-side-collapsed .ui-nav-l { display: none; }
+  .ui-side-collapsed .ui-nav { gap: 8px; }
+  .ui-side-collapsed .ui-nav-g + .ui-nav-g { border-top: 1px solid rgba(255, 255, 255, .14); padding-top: 8px; }
+  .ui-side-collapsed .ui-nav-t {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .ui-side-collapsed .ui-nav a, .ui-side-collapsed .ui-side-toggle {
+    flex-direction: row; justify-content: center; gap: 0; min-height: 42px; padding: 0;
+  }
+  .ui-side-collapsed .ui-nav a .ui-cnt {
+    position: absolute; top: 3px; left: 50%; margin: 0 0 0 6px; min-width: 18px; height: 18px;
+    padding: 0 5px; font-size: 11px; border: 2px solid var(--ui-teal);
+  }
+  .ui-side-collapsed .ui-nav a[aria-current="page"] .ui-cnt { border-color: #fff; }
+  .ui-side-collapsed .ui-side-toggle .ui-ico-fold { display: none; }
+  .ui-side-collapsed .ui-side-toggle .ui-ico-unfold { display: inline-flex; }
+  .ui-side-collapsed .ui-me-t { display: none; }
+  .ui-side-collapsed .ui-me > summary { justify-content: center; padding: 10px 0 2px; }
+  /* Le menu du compte sort de la barre : en fixe, la barre qui défile ne le
+     coupe plus. Même chose pour le rail de tablette, plus bas. */
+  .ui-side-collapsed .ui-me-menu { position: fixed; left: calc(var(--ui-side-w) + 8px); right: auto; bottom: 12px; width: 260px; }
+}
+
 /* --- Bureau étroit et tablette : la barre devient un rail ---------------------- */
 @media (max-width: 1100px) and (min-width: 761px) {
   :root { --ui-side-w: 92px; }
@@ -328,7 +417,9 @@ a.ui-row:hover .ui-row-t, a.ui-row-t:hover { text-decoration: underline; text-de
   .ui-nav a { flex-direction: column; justify-content: center; gap: 4px; min-height: 56px; padding: 6px 2px; font-size: 11px; text-align: center; line-height: 1.15; hyphens: auto; overflow-wrap: anywhere; }
   .ui-nav a .ui-cnt { position: absolute; top: 4px; left: 50%; margin: 0 0 0 8px; min-width: 18px; height: 18px; font-size: 11px; padding: 0 5px; }
   .ui-me > summary { justify-content: center; padding: 10px 0 2px; }
-  .ui-me-menu { left: 0; right: auto; width: 240px; }
+  .ui-me-menu { position: fixed; left: calc(var(--ui-side-w) + 8px); right: auto; bottom: 12px; width: 260px; }
+  .ui-side-toggle { justify-content: center; padding: 0; }
+  .ui-side-toggle .ui-nav-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .ui-page { padding: 28px 28px 60px; }
   .ui-split { grid-template-columns: minmax(0, 1fr); }
 }
@@ -375,7 +466,8 @@ a.ui-row:hover .ui-row-t, a.ui-row-t:hover { text-decoration: underline; text-de
   .ui-card-h { padding: 14px 16px 8px; }
   .ui-card-b { padding: 2px 16px 14px; }
   .ui-row { flex-wrap: wrap; }
-  .ui-row-m { flex: 1 1 150px; }
+  .ui-row-m { flex: 1 1 0; }
+  .ui-card-me .ui-row-act { flex-basis: 100%; margin-left: 52px; }
   .ui-only-m { margin-top: 6px; }
 }
 @media (min-width: 761px) {

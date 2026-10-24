@@ -4,8 +4,11 @@
   muette ; les compteurs jaunes disent ce qui attend une réponse. La liste vient
   d'`InterfaceHelper#interface_nav_groups`, partagée avec les onglets du
   téléphone.
-nav.ui-side(aria-label="Navigation principale")
-  = link_to today_or_home_path, class: "ui-brand" do
+/ Repliable en icônes seules (Michael 2026-10-24) pour qui a besoin de largeur :
+  le bouton en pied de barre, une infobulle au survol ou au focus de chaque
+  entrée (`ui-side` Stimulus).
+nav.ui-side(aria-label="Navigation principale" data-controller="ui-side" data-action="mouseover->ui-side#showTip focusin->ui-side#showTip mouseout->ui-side#hideTip focusout->ui-side#hideTip")
+  = link_to today_or_home_path, class: "ui-brand", data: { tip: "Claudy" } do
     = vite_image_tag "images/les-4-sources-logo-seul-blanc.png", alt: "", class: "ui-brand-mark"
     span.ui-brand-t
       b Claudy
@@ -17,4 +20,10 @@ nav.ui-side(aria-label="Navigation principale")
         = render "layouts/v2/nav_links", entries: entries
   .ui-nav.ui-side-foot
     = render "layouts/v2/nav_links", entries: interface_nav_footer
+    - collapsed = ui_side_collapsed?
+    button.ui-side-toggle(type="button" data-action="ui-side#toggle" data-ui-side-target="toggle" aria-expanded=(collapsed ? "false" : "true") data-tip=(collapsed ? "Déplier la barre" : "Replier la barre"))
+      span.ui-ico-fold = ui_icon(:fold)
+      span.ui-ico-unfold = ui_icon(:unfold)
+      span.ui-nav-t Replier la barre
     = render "layouts/v2/account"
+  .ui-tip(role="tooltip" data-ui-side-target="tip" hidden)

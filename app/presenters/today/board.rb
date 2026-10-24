@@ -121,6 +121,69 @@ module Today
       @todos ||= [pending_stays_todo, change_requests_todo, activities_todo, kitchen_todo].compact
     end
 
+    # ---- Pour toi ------------------------------------------------------------
+    # Ce qui concerne la personne connectée, repris du tableau de bord d'un
+    # membre (Michael 2026-10-24) : la cuisine qui attend SA réponse, ses
+    # notifications non lues, les points qu'elle porte aux prochains
+    # rassemblements, ses actions de rassemblement et de projet. Le travail
+    # du collectif reste réservé aux Sourciers, comme sur le tableau de bord.
+
+    def human = @user&.linked_human
+
+    # Les demandes que la cuisine (ce membre) n'a pas encore tranchées.
+    def my_kitchen_to_answer
+      return [] if human.nil?
+
+      @my_kitchen_to_answer ||= MealOrder.where(responsible_human_id: human.id).pending_validation.upcoming
+                                         .chronological.includes(stay: :customer).limit(3).to_a
+    end
+
+    # Son prochain service accepté, après aujourd'hui (aujourd'hui est déjà dans
+    # « Cuisine du jour »).
+    def my_next_service
+      return nil if human.nil?
+
+      @my_next_service ||= MealOrder.where(responsible_human_id: human.id, validation: "accepted")
+                                    .where.not(status: "cancelled").where(date: (@date + 1)..)
+                                    .chronological.includes(stay: :customer).first
+    end
+
+    def my_unread_notifications
+      return [] if @user.nil?
+
+      @my_unread_notifications ||= @user.notifications.unread.newest_first.limit(3).to_a
+    end
+
+    def my_unread_count = @user ? (@my_unread_count ||= @user.notifications.unread.count) : 0
+
+    def my_agenda_items
+      return [] if human.nil? || !full_access?
+
+      @my_agenda_items ||= human.carried_agenda_items.pending.joins(:gathering).merge(Gathering.upcoming)
+                                .includes(:gathering).limit(3).to_a
+    end
+
+    def my_gathering_actions_count
+      return 0 if human.nil? || !full_access?
+
+      @my_gathering_actions_count ||= human.gathering_actions.active.count
+    end
+
+    # Ses actions de projet ouvertes, la plus urgente d'abord (échéance, puis
+    # sans échéance). `closed` et `canceled` sont sorties du jeu.
+    def my_open_tasks
+      return [] if human.nil? || !full_access?
+
+      @my_open_tasks ||= human.tasks.where("tasks.status IS NULL OR tasks.status NOT IN (?)", [Task::STATUS_CLOSED, Task::STATUS_CANCELED])
+                              .includes(:project)
+                              .order(Arel.sql("due_date IS NULL, due_date"), :created_at).limit(3).to_a
+    end
+
+    def for_me_empty?
+      my_kitchen_to_answer.empty? && my_next_service.nil? && my_unread_notifications.empty? &&
+        my_agenda_items.empty? && my_gathering_actions_count.zero? && my_open_tasks.empty?
+    end
+
     # ---- Rôles du jour -------------------------------------------------------
 
     def roles_today
@@ -128,11 +191,12 @@ module Today
                                 .order(:role_id).to_a
     end
 
-    def my_role_tomorrow
-      human = @user&.linked_human
-      return nil if human.nil?
+    # Ses prochains rôles du jour, sur deux semaines (demain d'abord).
+    def my_upcoming_roles
+      return [] if human.nil?
 
-      HumanRole.selected.where(date: @date + 1, human_id: human.id).includes(:role).first
+      @my_upcoming_roles ||= HumanRole.selected.where(human_id: human.id, date: (@date + 1)..(@date + 14))
+                                      .includes(:role).order(:date, :role_id).limit(3).to_a
     end
 
     # ---- Mon cycle -----------------------------------------------------------
@@ -142,10 +206,17 @@ module Today
     end
 
     def cycle_actions
-      human = @user&.linked_human
       return [] if human.nil? || cycle.nil?
 
       @cycle_actions ||= human.cycle_actions.for_cycle(cycle).live.active.ordered.limit(5).to_a
+    end
+
+    # Ce que d'autres membres lui ont confié dans le même cycle.
+    def delegated_actions
+      return [] if human.nil? || cycle.nil?
+
+      @delegated_actions ||= CycleAction.for_cycle(cycle).live.active.where(delegate_to_human_id: human.id)
+                                        .includes(:human).ordered.limit(3).to_a
     end
 
     def cycle_week

@@ -2,7 +2,7 @@
   `<details>` natif : ouvrable au clavier, sans JavaScript.
 details.ui-me
   summary
-    = ui_avatar(current_user.display_name)
+    = ui_avatar(current_user.display_name, human: current_user.linked_human)
     span.ui-me-t
       b = current_user.display_name
       span = current_user.access_roles.map { |role| Access.label(role) }.join(" · ").presence || "Compte"

@@ -35,7 +35,10 @@ module InterfaceHelper
     moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
     phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/>',
     logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
-    swap: '<path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/>'
+    swap: '<path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/>',
+    bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+    fold: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M16 15l-3-3 3-3"/>',
+    unfold: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M14 9l3 3-3 3"/>'
   }.freeze
 
   # Statut d'un séjour, d'une demande… : une FORME et un mot, la couleur ne fait
@@ -64,6 +67,20 @@ module InterfaceHelper
     section_readable?(:calendar) ? today_path : (access_home_path || dashboard_path)
   end
 
+  # Barre latérale repliée en icônes (Michael 2026-10-24) : un choix de
+  # navigateur, gardé dans un cookie pour que la page arrive déjà repliée,
+  # sans saut au chargement. Voir `ui_side_controller.js`.
+  SIDE_COOKIE = "ui_side"
+
+  def ui_side_collapsed?
+    cookies[SIDE_COOKIE] == "collapsed"
+  end
+
+  # L'infobulle d'une entrée : son nom, et ce qui l'attend.
+  def ui_nav_tip(entry)
+    [entry[:label], ("#{entry[:count]} à traiter" if entry[:count])].compact.join(" · ")
+  end
+
   def ui_icon(name, size: 20, css: nil)
     content_tag(:svg, ICONS.fetch(name.to_sym).html_safe,
                 class: ["ui-ico", css].compact.join(" "), width: size, height: size, viewBox: "0 0 24 24",
@@ -77,11 +94,18 @@ module InterfaceHelper
     end
   end
 
-  # Avatar en ARCHE, la forme du logo des 4 Sources.
-  def ui_avatar(name, tone: nil, small: false)
+  # Avatar en ARCHE, la forme du logo des 4 Sources : la photo de la fiche
+  # humain quand il y en a une (`Human#photo`, comme le Guide et les
+  # commentaires), sinon les initiales sur une teinte du DS.
+  def ui_avatar(name, tone: nil, small: false, human: nil)
+    classes = "ui-av#{' ui-av-s' if small}"
+    if human.respond_to?(:photo?) && human.photo?
+      return image_tag(human.photo_url(:thumb), alt: "", class: "#{classes} ui-av-photo", "aria-hidden": "true")
+    end
+
     initials = name.to_s.split(/[\s-]+/).first(2).map { |part| part[0] }.join.upcase.presence || "?"
-    tone ||= %w[o g b y s][name.to_s.sum % 5]
-    content_tag(:span, initials, class: "ui-av ui-av-#{tone}#{' ui-av-s' if small}", "aria-hidden": "true")
+    tone ||= %w[o g b y sand][name.to_s.sum % 5]
+    content_tag(:span, initials, class: "#{classes} ui-av-#{tone}", "aria-hidden": "true")
   end
 
   # Groupes de la barre latérale : [libellé, [entrées]]. Une entrée :

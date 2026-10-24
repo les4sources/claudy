@@ -50,6 +50,17 @@ RSpec.describe "Nouvelle interface et écran Aujourd'hui", type: :request do
       expect(user.reload.new_interface).to be(false)
     end
 
+    it "arrive déjà repliée quand le navigateur l'a choisi, avec une infobulle par entrée" do
+      user.update!(new_interface: true)
+      cookies[:ui_side] = "collapsed"
+
+      get "/aujourdhui"
+
+      expect(response.body).to match(/<body[^>]*class="[^"]*ui-side-collapsed/)
+      expect(response.body).to include('data-tip="Aujourd’hui"')
+      expect(response.body).to include('data-tip="Déplier la barre"')
+    end
+
     it "marque l'écran courant dans la barre latérale" do
       user.update!(new_interface: true)
 
@@ -104,6 +115,28 @@ RSpec.describe "Nouvelle interface et écran Aujourd'hui", type: :request do
       get "/aujourdhui"
 
       expect(response.body).to include("Journée calme")
+    end
+
+    it "condense le tableau de bord dans « Pour toi » : cuisine à trancher, notifications, prochains rôles" do
+      chorale = stay_with_room(name: "Chorale du Bocq", arrival: today + 4, departure: today + 5)
+      MealOrder.create!(stay: chorale, kind: "gouter", moment: "gouter", date: today + 4, people: 18,
+                        status: "requested", responsible_human: human, skip_notifications: true)
+      Notification.create!(recipient: user, kind: "comment", title: "Olivier a commenté le séjour", url: "/stays")
+      HumanRole.create!(human: human, role: Role.create!(name: "Veille de nuit"), date: today + 1, status: "selected")
+      olivier = Human.create!(name: "Olivier", email: "olivier@les4sources.be")
+      cycle = Cycle.create!(name: "Cycle d'automne", start_date: today - 7, end_date: today + 30)
+      CycleAction.create!(human: olivier, cycle: cycle, label: "Relire le contrat", category: :deleguee, delegate_to_human: human)
+
+      get "/aujourdhui"
+
+      body = response.body
+      expect(body).to include("Pour toi")
+      expect(body).to include("la cuisine attend ta réponse")
+      expect(body).to include("Ok !")
+      expect(body).to include("Olivier a commenté le séjour")
+      expect(body).to include("Toi, demain")
+      expect(body).to include("confiée par Olivier")
+      expect(body).not_to match(/\d\s?€/)
     end
 
     it "s'ouvre au rôle Kid (agenda en lecture) sans la file « À traiter »" do
