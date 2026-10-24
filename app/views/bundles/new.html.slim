@@ -1,13 +1,18 @@
-- content_for :page_header do
-  = render 'layouts/components/page_header',
-           title: "Nouveau groupe d'actions"
+/ Nouvelle interface : le formulaire court, sur la page du projet.
+- if new_interface?
+  = turbo_frame_tag "new_bundle" do
+    = render "bundles/v2/form", bundle: @bundle, cancel_frame: "new_bundle"
+- else
+  - content_for :page_header do
+    = render 'layouts/components/page_header',
+             title: "Nouveau groupe d'actions"
 
-= turbo_frame_tag "project_bundles" do
-  = form_with model: @bundle,
-              url: bundles_path do |f|
-    .space-y-8.divide-y.divide-gray-200.sm:space-y-5
-      .space-y-6.sm:space-y-5
-        = render "form", f: f
+  = turbo_frame_tag "project_bundles" do
+    = form_with model: @bundle,
+                url: bundles_path do |f|
+      .space-y-8.divide-y.divide-gray-200.sm:space-y-5
+        .space-y-6.sm:space-y-5
+          = render "form", f: f
 
-    = f.actions do
-      = f.submit "Enregistrer"
+      = f.actions do
+        = f.submit "Enregistrer"

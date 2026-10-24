@@ -38,7 +38,10 @@ module InterfaceHelper
     swap: '<path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/>',
     bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
     fold: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M16 15l-3-3 3-3"/>',
-    unfold: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M14 9l3 3-3 3"/>'
+    unfold: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M14 9l3 3-3 3"/>',
+    pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    chat: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'
   }.freeze
 
   # Statut d'un séjour, d'une demande… : une FORME et un mot, la couleur ne fait
@@ -106,6 +109,25 @@ module InterfaceHelper
     initials = name.to_s.split(/[\s-]+/).first(2).map { |part| part[0] }.join.upcase.presence || "?"
     tone ||= %w[o g b y sand][name.to_s.sum % 5]
     content_tag(:span, initials, class: "#{classes} ui-av-#{tone}", "aria-hidden": "true")
+  end
+
+  # Une pile d'avatars qui se chevauchent (projets, actions) : les `max`
+  # premiers, puis « +N ». Les noms sont lus par les lecteurs d'écran.
+  def ui_avatar_stack(humans, max: 4, small: false)
+    humans = humans.to_a
+    return "".html_safe if humans.empty?
+
+    shown = humans.first(max)
+    content_tag(:span, class: "ui-avs#{' ui-avs-s' if small}") do
+      safe_join(shown.map { |human| ui_avatar(human.name, human: human, small: small) }) +
+        (humans.size > max ? content_tag(:span, "+#{humans.size - max}", class: "ui-av ui-av-more#{' ui-av-s' if small}", "aria-hidden": "true") : "".html_safe) +
+        content_tag(:span, humans.map(&:name).to_sentence, class: "ui-sr")
+    end
+  end
+
+  # « 12 nov. » cette année, « 12 nov. 2027 » sinon.
+  def ui_short_date(date)
+    l(date, format: date.year == Date.current.year ? "%-d %b" : "%-d %b %Y")
   end
 
   # Groupes de la barre latérale : [libellé, [entrées]]. Une entrée :

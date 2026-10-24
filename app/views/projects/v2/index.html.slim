@@ -1,0 +1,75 @@
+/ PROJETS, nouvelle interface (Michael 2026-10-24, « s'inspirer de Basecamp ») :
+  chaque projet est une carte qu'on reconnaît d'un coup d'œil, rangée sous son
+  pôle, et à côté les actions confiées à la personne qui regarde. Données :
+  `Projects::Home`. L'ancienne interface garde `projects/index`.
+- home = @home
+- before, highlighted, after = home.phrase
+- groups = home.groups
+header.ui-phead
+  .ui-phead-t
+    p.ui-over Le collectif
+    .ui-title-row
+      h1.ui-h1 Projets
+      = render "guide/screen_links/header", title: "Projets"
+    p.ui-phrase
+      = before
+      mark.ui-hl = highlighted
+      = after
+  .ui-actions
+    = link_to new_project_path, class: "ui-btn ui-btn-p" do
+      = ui_icon(:plus, size: 16)
+      | Nouveau projet
+
+nav.ui-seg(aria-label="Quels projets")
+  = link_to projects_path, class: "ui-seg-i", aria: { current: (home.done_view? ? nil : "page") } do
+    | En cours
+    span.ui-seg-n = home.ongoing_count
+  = link_to projects_path(vue: "done"), class: "ui-seg-i", aria: { current: (home.done_view? ? "page" : nil) } do
+    | Terminés
+    span.ui-seg-n = home.done_count
+
+.ui-split.ui-split-mine
+  .ui-stack
+    - if groups.empty?
+      section.ui-card
+        .ui-card-b
+          p.ui-empty
+            = ui_icon(:folder, size: 18)
+            = home.done_view? ? "Aucun projet terminé pour l’instant." : "Aucun projet en cours."
+    - groups.each do |team, cards|
+      section.ui-pgroup(aria-labelledby="pole-#{team&.id || 'sans'}")
+        header.ui-pgroup-h
+          h2.ui-h2(id="pole-#{team&.id || 'sans'}")
+            - if team
+              = link_to team.name, team_path(team, anchor: "projets")
+            - else
+              | Sans pôle
+          span.ui-muted.ui-small = "#{cards.size} #{cards.size > 1 ? 'projets' : 'projet'}"
+        - unless team
+          p.ui-muted.ui-small Ouvre chaque projet et choisis son pôle : c’est depuis sa page qu’on le suit.
+        .ui-pgrid
+          - cards.each do |card|
+            = render "projects/v2/card", card: card
+
+  aside.ui-stack(aria-label="Tes actions")
+    section.ui-card.ui-card-me
+      .ui-card-h
+        h2.ui-h3
+          = ui_icon(:check, size: 18)
+          | Tes actions
+      .ui-card-b
+        - if home.my_tasks.empty?
+          p.ui-empty Rien ne t’est confié dans les projets pour l’instant.
+        - else
+          .ui-rows
+            - home.my_tasks.each do |task|
+              - late = task.due_date && task.due_date < home.today
+              = link_to task_path(task), class: "ui-row" do
+                span.ui-row-m
+                  span.ui-row-t = task.name
+                  span.ui-row-s = task.project&.name
+                - if task.due_date
+                  - if late
+                    = ui_status(:no, ui_short_date(task.due_date))
+                  - else
+                    span.ui-due = ui_short_date(task.due_date)

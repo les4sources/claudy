@@ -1,18 +1,22 @@
-= turbo_frame_tag task
-  .mb-2.space-y-5
-    .relative.flex.items-start
-      .flex.h-6.items-center
-        = form_with model: task, url: task_path(task), method: :patch do |f|
-          = f.check_box :status,
-                        { class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer",
-                          onchange: "this.form.requestSubmit()",
-                          aria: { label: "Marquer « #{task.name} » comme terminée" } },
-                        Task::STATUS_CLOSED,
-                        Task::STATUS_OPEN
-      .ml-3.text-sm.leading-6
-        - if task.closed?
-          .font-medium.text-gray-400.line-through
-            = task.name
-        - else
-          .font-medium.text-gray-900
-            = task.name
+/ Nouvelle interface : la ligne à cocher façon Basecamp (`tasks/v2/_task`).
+- if new_interface?
+  = render "tasks/v2/task", task: task
+- else
+  = turbo_frame_tag task
+    .mb-2.space-y-5
+      .relative.flex.items-start
+        .flex.h-6.items-center
+          = form_with model: task, url: task_path(task), method: :patch do |f|
+            = f.check_box :status,
+                          { class: "h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer",
+                            onchange: "this.form.requestSubmit()",
+                            aria: { label: "Marquer « #{task.name} » comme terminée" } },
+                          Task::STATUS_CLOSED,
+                          Task::STATUS_OPEN
+        .ml-3.text-sm.leading-6
+          - if task.closed?
+            .font-medium.text-gray-400.line-through
+              = task.name
+          - else
+            .font-medium.text-gray-900
+              = task.name

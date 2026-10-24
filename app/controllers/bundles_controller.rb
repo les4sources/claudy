@@ -18,7 +18,7 @@ class BundlesController < BaseController
       else
         @bundle = service.bundle
         set_error_flash(service.bundle, service.error_message)
-        render :new
+        render :new, status: :unprocessable_entity
       end
     end
   
@@ -35,7 +35,7 @@ class BundlesController < BaseController
       else
         @bundle = service.bundle
         set_error_flash(service.bundle, service.error_message)
-        render :edit
+        render :edit, status: :unprocessable_entity
       end
     end
   

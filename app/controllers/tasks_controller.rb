@@ -10,6 +10,7 @@ class TasksController < BaseController
   
     def show
       @task = TaskDecorator.new(@task)
+      render "tasks/v2/show" if current_user&.new_interface?
     end
   
     def new
@@ -31,7 +32,7 @@ class TasksController < BaseController
       else
         @task = service.task
         set_error_flash(service.task, service.error_message)
-        render :new
+        render :new, status: :unprocessable_entity
       end
     end
   
@@ -74,7 +75,7 @@ class TasksController < BaseController
       if @task.soft_delete!(validate: false)
         respond_to do |format|
           format.html { 
-            redirect_to tasks_path,
+            redirect_to (@task.project ? project_path(@task.project) : tasks_path),
                         notice: "L'action '#{@task.name}' a été supprimée."
           }
           format.turbo_stream

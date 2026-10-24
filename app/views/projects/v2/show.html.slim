@@ -1,0 +1,118 @@
+/ UN PROJET, nouvelle interface (Michael 2026-10-24, « s'inspirer de
+  Basecamp ») : de quoi il s'agit sous le titre, ses groupes d'actions comme
+  des listes à cocher (faites repliées en bas), sa discussion, et à côté où il
+  en est et qui s'y active. Données : `Projects::Sheet`. L'ancienne interface
+  garde `projects/show`.
+- sheet = @sheet
+- project = @project
+header.ui-phead
+  .ui-phead-t
+    p.ui-over
+      = link_to "Projets", projects_path, class: "ui-over-a"
+      - if project.team
+        span(aria-hidden="true") = " · "
+        = link_to project.team.name, team_path(project.team, anchor: "projets"), class: "ui-over-a"
+    .ui-title-row
+      h1.ui-h1.ui-h1-keep = project.name
+      = render "guide/screen_links/header", title: project.name
+    .ui-proj-meta
+      - case project.status
+      - when "done"
+        = ui_status(:ok, "Terminé")
+      - when "paused"
+        = ui_status(:off, "En pause")
+      - else
+        = ui_status(:pre, "En cours")
+      - if project.object.due_date
+        - if sheet.project_late?
+          = ui_status(:no, "En retard · échéance #{ui_short_date(project.object.due_date)}")
+        - else
+          span.ui-due
+            = ui_icon(:calendar, size: 14)
+            = "Échéance #{ui_short_date(project.object.due_date)}"
+      - if project.human
+        span.ui-proj-carrier
+          = ui_avatar(project.human.name, human: project.human, small: true)
+          = "Porté par #{project.human.name}"
+      - unless project.team
+        = link_to "Choisir son pôle", edit_project_path(project), class: "ui-st ui-st-todo"
+  .ui-actions
+    = link_to edit_project_path(project), class: "ui-btn" do
+      = ui_icon(:pencil, size: 16)
+      | Modifier
+    = link_to new_bundle_path(project_id: project.id), class: "ui-btn ui-btn-p", data: { turbo_frame: "new_bundle" } do
+      = ui_icon(:plus, size: 16)
+      | Nouveau groupe d’actions
+
+- if project.description.present?
+  .ui-proj-desc.ui-prose == project.description
+
+.ui-split
+  .ui-stack
+    = turbo_frame_tag "new_bundle"
+    - if sheet.lists.empty?
+      section.ui-card
+        .ui-card-b
+          p.ui-empty
+            = ui_icon(:check, size: 18)
+            | Pas encore d’action. Commence par un groupe d’actions (« Préparer », « Le jour J »…), puis ajoute ce qu’il y a à faire.
+    - sheet.lists.each do |list|
+      = render "projects/v2/list", list: list, sheet: sheet
+
+    / La discussion : le même fil que partout (rassemblements, séjours…).
+    #discussion.ui-thread
+      = render Comments::ThreadComponent.new(commentable: project.object, current_user: current_user, title: "Discussion sur le projet")
+
+  aside.ui-stack(aria-label="Où en est le projet")
+    section.ui-card
+      .ui-card-h
+        h2.ui-h3 Où on en est
+      .ui-card-b
+        - if sheet.total_count.zero?
+          p.ui-empty Rien à mesurer tant qu’il n’y a pas d’action.
+        - else
+          p.ui-proj-score
+            span.ui-mo-v = sheet.done_count
+            span.ui-muted = " / #{sheet.total_count} #{sheet.total_count > 1 ? 'actions faites' : 'action faite'}"
+          span.ui-bar.ui-bar-l(role="progressbar" aria-valuenow=sheet.percent aria-valuemin="0" aria-valuemax="100" aria-label="Avancement du projet")
+            i(style="width: #{sheet.percent}%")
+          - overdue = sheet.overdue_tasks
+          - if overdue.any?
+            p.ui-late.ui-small = "#{overdue.size} #{overdue.size > 1 ? 'actions ont passé leur échéance' : 'action a passé son échéance'}"
+          - upcoming = sheet.upcoming
+          - if upcoming.any?
+            p.ui-over.ui-proj-sub Prochaines échéances
+            .ui-rows
+              - upcoming.each do |task|
+                = link_to task_path(task), class: "ui-row" do
+                  span.ui-row-m
+                    span.ui-row-t = task.name
+                  - if sheet.late?(task)
+                    = ui_status(:no, ui_short_date(task.due_date))
+                  - else
+                    span.ui-due = ui_short_date(task.due_date)
+
+    section.ui-card
+      .ui-card-h
+        h2.ui-h3
+          = ui_icon(:users, size: 18)
+          | Les personnes
+      .ui-card-b
+        - if sheet.people.empty?
+          p.ui-empty Personne pour l’instant.
+        - else
+          .ui-rows
+            - sheet.people.each do |person|
+              = link_to human_path(person.human), class: "ui-row" do
+                = ui_avatar(person.human.name, human: person.human)
+                span.ui-row-m
+                  span.ui-row-t = person.human.name
+                  span.ui-row-s
+                    - parts = []
+                    - parts << "porte le projet" if person.carrier
+                    - parts << "#{person.open_count} #{person.open_count > 1 ? 'actions' : 'action'} à faire" if person.open_count.positive?
+                    = parts.join(" · ").presence || "rien à faire pour l’instant"
+
+    = button_to project_path(project), method: :delete, class: "ui-link-danger", form: { data: { turbo_confirm: "Supprimer le projet « #{project.name} » ?" } } do
+      = ui_icon(:trash, size: 15)
+      | Supprimer le projet

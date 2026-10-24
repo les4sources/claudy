@@ -32,9 +32,11 @@ class Comment < ApplicationRecord
   #
   # Étendue phase après phase : `Gathering` et `Stay` en phase 1, les deux
   # objets comptables en phase 3, l'événement, la décision et la réservation
-  # d'activité en phase 4.
+  # d'activité en phase 4. Le projet et l'action (la discussion « façon
+  # Basecamp », Michael 2026-10-24) ensuite.
   COMMENTABLE_TYPES = %w[
     Gathering Stay ExpenseReport PurchaseInvoice Event Decision ExperienceBooking CashEntry
+    Project Task
   ].freeze
 
   # Le fil d'activité récente montre aussi les commentaires (epic #242, phase 4).
