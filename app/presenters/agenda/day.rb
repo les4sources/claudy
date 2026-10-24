@@ -77,6 +77,13 @@ module Agenda
       @watchers ||= HumanRole.selected.where(date: @date, role_id: 1).includes(:human).filter_map(&:human)
     end
 
+    # Les personnes disponibles ce jour-là pour veiller, en renfort (statut
+    # `backup` du même rôle), sans celles déjà retenues.
+    def backup_watchers
+      @backup_watchers ||= HumanRole.backup.where(date: @date, role_id: 1).includes(:human)
+                                    .filter_map(&:human).uniq.reject { |human| watchers.include?(human) }
+    end
+
     def empty?
       entries.empty? && spaces.empty? && meals_today.empty?
     end
