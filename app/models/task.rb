@@ -24,6 +24,8 @@
 #  fk_rails_...  (project_id => projects.id)
 #
 class Task < ApplicationRecord
+  include Commentable
+
   belongs_to :bundle
   belongs_to :project, optional: true
   belongs_to :team, optional: true
@@ -39,9 +41,16 @@ class Task < ApplicationRecord
   STATUS_CLOSED = 'closed'
   STATUS_CANCELED = 'canceled'
 
+  # Unique dans son groupe seulement (2026-10-24) : « Commander le bois » peut
+  # revenir d'un projet à l'autre.
   validates :name,
             presence: true,
-            uniqueness: true
+            uniqueness: { scope: :bundle_id }
+
+  # Un commentaire sur une action prévient les personnes à qui elle est
+  # confiée, et qui porte le projet.
+  def comment_recipients = (humans.to_a + [project&.human]).compact.uniq.filter_map(&:user)
+  def comment_label = "l’action « #{name} »"
 
   def closed?
     self.status == STATUS_CLOSED

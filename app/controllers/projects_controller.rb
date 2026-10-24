@@ -5,7 +5,15 @@ class ProjectsController < BaseController
   
     # Rangés par pôle (Michael, 2026-10-19) ; les projets d'avant, sans pôle,
     # viennent en dernier pour qu'on les rattache.
+    #
+    # Nouvelle interface (Michael 2026-10-24, « s'inspirer de Basecamp ») : des
+    # cartes par pôle et, à côté, les actions de la personne (`Projects::Home`).
     def index
+      if current_user&.new_interface?
+        @home = Projects::Home.new(human: current_user.linked_human, view: params[:vue])
+        return render "projects/v2/index"
+      end
+
       projects = Project.includes(:human, :team).order(name: :asc).to_a
       @projects_by_team = projects
         .group_by(&:team)
@@ -15,6 +23,11 @@ class ProjectsController < BaseController
   
     def show
       @project = ProjectDecorator.new(@project)
+      if current_user&.new_interface?
+        @sheet = Projects::Sheet.new(project: @project.object)
+        return render "projects/v2/show"
+      end
+
       set_tasks_view
     end
   

@@ -1,0 +1,11 @@
+/ Nommer un groupe d'actions (nouvelle interface) : un champ, deux boutons.
+  `cancel_frame` : le cadre que « Annuler » recharge depuis la page du projet.
+= form_with model: bundle, url: (bundle.persisted? ? bundle_path(bundle) : bundles_path), class: "ui-card ui-quick ui-bundle-form", data: { turbo_frame: (bundle.persisted? ? nil : "_top") } do |f|
+  = f.hidden_field :project_id, value: bundle.project_id || params[:project_id]
+  = f.hidden_field :team_id, value: bundle.team_id || params[:team_id]
+  label.ui-quick-l(for="bundle_name_#{bundle.id || 'new'}") = bundle.persisted? ? "Nom du groupe" : "Nouveau groupe d’actions"
+  = text_field_tag "bundle[name]", bundle.name, id: "bundle_name_#{bundle.id || 'new'}", class: "ui-input", placeholder: "Par exemple « Préparer le chantier »", required: true, autofocus: true, autocomplete: "off"
+  .ui-quick-act
+    = f.submit (bundle.persisted? ? "Renommer" : "Créer le groupe"), class: "ui-btn ui-btn-p ui-btn-s"
+    - if bundle.project
+      = link_to "Annuler", project_path(bundle.project), class: "ui-btn ui-btn-s", data: { turbo_frame: cancel_frame }

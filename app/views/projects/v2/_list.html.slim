@@ -1,0 +1,29 @@
+/ Un groupe d'actions façon liste Basecamp : son nom et son avancement, les
+  actions à faire à cocher, « Ajouter une action » sur place, et les actions
+  faites repliées en bas. Le cadre `bundle` reçoit le formulaire de
+  renommage ; `bundle_<id>_tasks` reçoit l'action ajoutée (Turbo Stream).
+- bundle = list.bundle
+= turbo_frame_tag bundle do
+  section.ui-card.ui-list(aria-labelledby="list-#{bundle.id}")
+    header.ui-list-h
+      h2.ui-h2(id="list-#{bundle.id}") = bundle.name
+      - if list.total_count.positive?
+        span.ui-list-n(aria-label="#{list.done_count} sur #{list.total_count} faites")
+          span.ui-ring(style="--p: #{list.percent}" aria-hidden="true")
+          = "#{list.done_count}/#{list.total_count}"
+      = link_to edit_bundle_path(bundle), class: "ui-ibtn ui-list-edit", title: "Renommer le groupe", aria: { label: "Renommer « #{bundle.name} »" } do
+        = ui_icon(:pencil, size: 16)
+    .ui-todos
+      = turbo_frame_tag "bundle_#{bundle.id}_tasks" do
+        - list.open_tasks.each do |task|
+          = render "tasks/task", task: task
+    = turbo_frame_tag "bundle_#{bundle.id}_new_task" do
+      = render "bundles/new_task", bundle: bundle
+    - if list.done_tasks.any?
+      details.ui-done
+        summary
+          = ui_icon(:check, size: 15)
+          = "#{list.done_count} #{list.done_count > 1 ? 'actions faites' : 'action faite'}"
+        .ui-todos
+          - list.done_tasks.each do |task|
+            = render "tasks/task", task: task

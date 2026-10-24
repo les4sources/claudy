@@ -1,0 +1,27 @@
+/ Ajout rapide d'une action, sur place dans son groupe (nouvelle interface) :
+  le nom, à qui elle est confiée, pour quand. Le reste (plusieurs personnes,
+  notes) se règle depuis la fiche de l'action.
+= form_with model: task, url: tasks_path, class: "ui-quick" do |f|
+  = f.hidden_field :bundle_id, value: task.bundle_id
+  = f.hidden_field :project_id, value: task.project_id || task.bundle&.project_id
+  label.ui-sr(for="task_name_#{task.bundle_id}") Nom de l’action
+  / Champs nus, sans le constructeur maison qui ajoute ses propres libellés.
+  = text_field_tag "task[name]", task.name, id: "task_name_#{task.bundle_id}", class: "ui-input", placeholder: "Qu’y a-t-il à faire ?", required: true, autofocus: true, autocomplete: "off"
+  .ui-quick-row
+    .ui-quick-who(data-controller="searchable-select" data-searchable-select-placeholder-value="Confier à…" data-searchable-select-clearable-value="true")
+      label.ui-quick-l(for="task_human_#{task.bundle_id}") Confiée à
+      = select_tag "task[human_ids][]",
+                   options_from_collection_for_select(Human.order(:name), :id, :name, task.human_ids.first),
+                   include_blank: "— Personne —",
+                   id: "task_human_#{task.bundle_id}",
+                   data: { "searchable-select-target": "select" }
+      = render "shared/searchable_select_search", label: "Confiée à"
+    .ui-quick-due
+      label.ui-quick-l(for="task_due_#{task.bundle_id}") Échéance
+      = date_field_tag "task[due_date]", task.due_date, id: "task_due_#{task.bundle_id}", class: "ui-input"
+  - if task.errors.any?
+    p.ui-late.ui-small = task.errors.full_messages.to_sentence
+  .ui-quick-act
+    = f.submit "Ajouter l’action", class: "ui-btn ui-btn-p ui-btn-s"
+    - if task.bundle&.project
+      = link_to "Annuler", project_path(task.bundle.project), class: "ui-btn ui-btn-s", data: { turbo_frame: "bundle_#{task.bundle_id}_new_task" }

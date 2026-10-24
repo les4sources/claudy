@@ -6,9 +6,7 @@ module Teams
   # Comme pour ses comptes, un pôle qui en regroupe d'autres voit aussi leurs
   # projets : la hiérarchie s'arrête à deux niveaux.
   #
-  # Une action est faite quand elle est « Terminée » ; une action « Annulée »
-  # ne compte ni dans le fait ni dans le total. Une action sans statut (celles
-  # qu'on ajoute depuis la page du projet) est à faire.
+  # Les actions se comptent comme partout : `Projects::TaskStats`.
   class ProjectBoard
     UPCOMING_LIMIT = 8
 
@@ -66,33 +64,7 @@ module Teams
       end
     end
 
-    # Une requête pour tous les projets : [faites, total, en retard] par projet.
-    def task_stats(project_ids)
-      return {} if project_ids.empty?
-
-      live_tasks(project_ids)
-        .group(:project_id)
-        .pluck(
-          :project_id,
-          Arel.sql("COUNT(*) FILTER (WHERE tasks.status = '#{Task::STATUS_CLOSED}')"),
-          Arel.sql("COUNT(*) FILTER (WHERE tasks.status IS DISTINCT FROM '#{Task::STATUS_CANCELED}')"),
-          Arel.sql(Task.sanitize_sql_array([
-            "COUNT(*) FILTER (WHERE (tasks.status IS NULL OR tasks.status NOT IN (?, ?)) AND tasks.due_date < ?)",
-            Task::STATUS_CLOSED, Task::STATUS_CANCELED, today
-          ]))
-        )
-        .to_h { |id, done, total, overdue| [id, [done, total, overdue]] }
-    end
-
-    # Les actions rangées dans un groupe encore vivant du projet : c'est ce
-    # que la page du projet affiche.
-    def live_tasks(project_ids)
-      Task.where(project_id: project_ids, bundle_id: Bundle.where(project_id: project_ids).select(:id))
-    end
-
-    def open_tasks(project_ids)
-      live_tasks(project_ids)
-        .where("tasks.status IS NULL OR tasks.status NOT IN (?)", [Task::STATUS_CLOSED, Task::STATUS_CANCELED])
-    end
+    def task_stats(project_ids) = Projects::TaskStats.counts(project_ids, today: today)
+    def open_tasks(project_ids) = Projects::TaskStats.open_tasks(project_ids)
   end
 end

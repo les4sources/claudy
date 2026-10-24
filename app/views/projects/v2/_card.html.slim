@@ -1,0 +1,34 @@
+/ Une carte de projet : toute la carte mène au projet (lien étiré sur le
+  titre). Statut = forme + mot ; les avatars disent qui porte et qui s'active.
+- project = card.project
+article.ui-pcard(class=("is-paused" if card.paused?))
+  h3.ui-pcard-t
+    = link_to project.name, project_path(project), class: "ui-pcard-a"
+  - if card.paused? || card.late? || project.done?
+    .ui-pcard-st
+      - if project.done?
+        = ui_status(:ok, "Terminé")
+      - elsif card.paused?
+        = ui_status(:off, "En pause")
+      - if card.late?
+        = ui_status(:no, "En retard")
+  - excerpt = project.description&.to_plain_text.to_s.squish
+  - if excerpt.present?
+    p.ui-pcard-d = truncate(excerpt, length: 120, separator: " ")
+  .ui-pcard-prog
+    - if card.total_count.zero?
+      span.ui-muted.ui-small Pas encore d’action
+    - else
+      span.ui-bar(role="progressbar" aria-valuenow=card.percent aria-valuemin="0" aria-valuemax="100" aria-label="Avancement")
+        i(style="width: #{card.percent}%")
+      span.ui-small
+        b = card.done_count
+        = " / #{card.total_count} #{card.total_count > 1 ? 'actions faites' : 'action faite'}"
+        - if card.overdue_count.positive?
+          span.ui-late = " · #{card.overdue_count} en retard"
+  footer.ui-pcard-f
+    = ui_avatar_stack(card.people, small: true)
+    - if project.due_date
+      span.ui-due(class=("is-late" if card.late?))
+        = ui_icon(:calendar, size: 14)
+        = ui_short_date(project.due_date)

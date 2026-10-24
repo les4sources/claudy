@@ -24,6 +24,8 @@
 #  fk_rails_...  (team_id => teams.id)
 #
 class Project < ApplicationRecord
+  include Commentable
+
   # Où en est le projet. Volontairement court : un projet avance, attend ou est
   # fini ; le détail vit dans ses actions.
   STATUSES = %w[active paused done].freeze
@@ -51,6 +53,10 @@ class Project < ApplicationRecord
             uniqueness: true
   validates :team, presence: { message: "doit être choisi : chaque projet appartient à un pôle" }
   validates :status, inclusion: { in: STATUSES }
+
+  # La discussion du projet prévient qui le porte.
+  def comment_recipients = [human&.user].compact
+  def comment_label = "le projet « #{name} »"
 
   def status_label = STATUS_LABELS.fetch(status, status)
   def done? = status == "done"

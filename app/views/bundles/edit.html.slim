@@ -1,12 +1,17 @@
-- content_for :page_header do
-  = render 'layouts/components/page_header',
-           title: "Mettre à jour le groupe d'actions"
+/ Nouvelle interface : le formulaire court, sur la page du projet.
+- if new_interface?
+  = turbo_frame_tag @bundle do
+    = render "bundles/v2/form", bundle: @bundle, cancel_frame: dom_id(@bundle)
+- else
+  - content_for :page_header do
+    = render 'layouts/components/page_header',
+             title: "Mettre à jour le groupe d'actions"
 
-= turbo_frame_tag @bundle do
-  = form_with model: @bundle,
-              url: bundle_path(@bundle),
-              class: "mt-5 sm:flex sm:items-center" do |f|
-    = render "form", f: f
+  = turbo_frame_tag @bundle do
+    = form_with model: @bundle,
+                url: bundle_path(@bundle),
+                class: "mt-5 sm:flex sm:items-center" do |f|
+      = render "form", f: f
 
-    = f.submit "Mettre à jour",
-               { style: "inline" }
+      = f.submit "Mettre à jour",
+                 { style: "inline" }

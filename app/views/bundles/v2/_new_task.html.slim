@@ -1,0 +1,5 @@
+/ « Ajouter une action » : le formulaire court (`tasks/new`) s'ouvre sur place,
+  dans le cadre `bundle_<id>_new_task`.
+= link_to new_task_path(project_id: bundle.project_id, bundle_id: bundle.id), class: "ui-addtodo" do
+  = ui_icon(:plus, size: 16)
+  | Ajouter une action

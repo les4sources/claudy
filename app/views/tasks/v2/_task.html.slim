@@ -1,0 +1,34 @@
+/ Une action à cocher (nouvelle interface, façon Basecamp). Cocher envoie le
+  formulaire tout de suite ; la réponse Turbo Stream redessine la ligne
+  (`TasksController#update`). Le nom mène à la fiche de l'action, hors cadre.
+- open = !%w[closed canceled].include?(task.status)
+- late = open && task.due_date.present? && task.due_date < Date.current
+= turbo_frame_tag task do
+  .ui-todo(class=("is-done" unless open))
+    = form_with model: task, url: task_path(task), method: :patch, class: "ui-todo-c" do |f|
+      label.ui-check
+        = f.check_box :status,
+                      { class: "ui-check-i",
+                        onchange: "this.form.requestSubmit()",
+                        aria: { label: open ? "Marquer « #{task.name} » comme faite" : "Rouvrir « #{task.name} »" } },
+                      Task::STATUS_CLOSED,
+                      Task::STATUS_OPEN
+        span.ui-check-b(aria-hidden="true") = ui_icon(:check, size: 14)
+    .ui-todo-m
+      = link_to task.name, task_path(task), class: "ui-todo-t", data: { turbo_frame: "_top" }
+      - humans = task.humans.to_a
+      - if humans.any? || task.due_date || task.status == Task::STATUS_IN_PROGRESS
+        span.ui-todo-s
+          - if task.status == Task::STATUS_IN_PROGRESS
+            = ui_status(:pre, "En cours")
+          - if humans.any?
+            span.ui-todo-who
+              = ui_avatar_stack(humans, max: 3, small: true)
+              span.ui-hide-m = humans.map(&:name).to_sentence
+          - if task.due_date
+            - if late
+              = ui_status(:no, ui_short_date(task.due_date))
+            - else
+              span.ui-due
+                = ui_icon(:calendar, size: 13)
+                = ui_short_date(task.due_date)

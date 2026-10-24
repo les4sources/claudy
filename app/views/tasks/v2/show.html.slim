@@ -1,0 +1,108 @@
+/ UNE ACTION, nouvelle interface (Michael 2026-10-24, « s'inspirer de
+  Basecamp ») : la case à cocher devant le titre, à qui elle est confiée, pour
+  quand, ses notes et sa discussion ; à côté, le reste de son groupe. Les
+  formulaires visent le format HTML : la page se recharge sur la fiche (ou sur
+  le projet après suppression) au lieu d'attendre une ligne de liste.
+- task = @task
+- open = !%w[closed canceled].include?(task.status)
+- late = open && task.object.due_date.present? && task.object.due_date < Date.current
+- project = task.project
+- bundle = task.bundle
+header.ui-phead
+  .ui-phead-t
+    p.ui-over
+      - if project
+        = link_to project.name, project_path(project), class: "ui-over-a"
+      - else
+        = link_to "Actions", tasks_path, class: "ui-over-a"
+      - if bundle
+        span(aria-hidden="true") = " · "
+        span = bundle.name
+    .ui-task-title
+      = form_with model: task.object, url: task_path(task, format: :html), method: :patch, class: "ui-todo-c" do |f|
+        label.ui-check.ui-check-l
+          = f.check_box :status,
+                        { class: "ui-check-i",
+                          onchange: "this.form.requestSubmit()",
+                          aria: { label: open ? "Marquer comme faite" : "Rouvrir l’action" } },
+                        Task::STATUS_CLOSED,
+                        Task::STATUS_OPEN
+          span.ui-check-b(aria-hidden="true") = ui_icon(:check, size: 18)
+      h1.ui-h1.ui-h1-keep(class=("is-done" unless open)) = task.name
+      = render "guide/screen_links/header", title: task.name
+  .ui-actions
+    = link_to edit_task_path(task), class: "ui-btn" do
+      = ui_icon(:pencil, size: 16)
+      | Modifier
+
+.ui-split
+  .ui-stack
+    section.ui-card
+      .ui-card-b
+        dl.ui-dl
+          dt Confiée à
+          dd
+            - humans = task.humans.to_a
+            - if humans.empty?
+              span.ui-muted Personne pour l’instant
+            - else
+              .ui-who-list
+                - humans.each do |human|
+                  = link_to human_path(human), class: "ui-who" do
+                    = ui_avatar(human.name, human: human, small: true)
+                    = human.name
+          dt Échéance
+          dd
+            - if task.object.due_date.nil?
+              span.ui-muted Pas d’échéance
+            - elsif late
+              = ui_status(:no, "#{l(task.object.due_date, format: '%A %-d %B')}, passée")
+            - else
+              = l(task.object.due_date, format: "%A %-d %B %Y").capitalize
+          dt Où elle en est
+          dd
+            - case task.status
+            - when "closed"
+              = ui_status(:ok, "Faite")
+            - when "canceled"
+              = ui_status(:off, "Annulée")
+            - when "in_progress"
+              = ui_status(:pre, "En cours")
+            - else
+              = ui_status(:wait, "À faire")
+          dt Notes
+          dd
+            - if task.object.description.present?
+              .ui-prose == task.description
+            - else
+              span.ui-muted Rien de noté.
+
+    / La discussion : le même fil que partout (rassemblements, séjours…).
+    #discussion.ui-thread
+      = render Comments::ThreadComponent.new(commentable: task.object, current_user: current_user, title: "Discussion sur l’action")
+
+  aside.ui-stack(aria-label="Le reste du groupe")
+    - if bundle
+      - siblings = bundle.tasks.where.not(id: task.id).where("tasks.status IS NULL OR tasks.status NOT IN (?)", [Task::STATUS_CLOSED, Task::STATUS_CANCELED]).order(Arel.sql("tasks.due_date IS NULL, tasks.due_date, tasks.id")).limit(8)
+      section.ui-card
+        .ui-card-h
+          h2.ui-h3 = "Aussi dans « #{bundle.name} »"
+        .ui-card-b
+          - if siblings.empty?
+            p.ui-empty Plus rien d’autre à faire dans ce groupe.
+          - else
+            .ui-rows
+              - siblings.each do |other|
+                = link_to task_path(other), class: "ui-row" do
+                  span.ui-row-m
+                    span.ui-row-t = other.name
+                  - if other.due_date && other.due_date < Date.current
+                    = ui_status(:no, ui_short_date(other.due_date))
+                  - elsif other.due_date
+                    span.ui-due = ui_short_date(other.due_date)
+          - if project
+            = link_to "Voir tout le projet", project_path(project), class: "ui-card-link ui-card-foot"
+
+    = button_to task_path(task, format: :html), method: :delete, class: "ui-link-danger", form: { data: { turbo_confirm: "Supprimer l’action « #{task.name} » ?" } } do
+      = ui_icon(:trash, size: 15)
+      | Supprimer l’action
