@@ -5,14 +5,23 @@
   d'`InterfaceHelper#interface_nav_groups`, partagée avec les onglets du
   téléphone.
 / Repliable en icônes seules (Michael 2026-10-24) pour qui a besoin de largeur :
-  le bouton en pied de barre, une infobulle au survol ou au focus de chaque
+  le bouton à côté du nom, une infobulle au survol ou au focus de chaque
   entrée (`ui-side` Stimulus).
 nav.ui-side(aria-label="Navigation principale" data-controller="ui-side" data-action="mouseover->ui-side#showTip focusin->ui-side#showTip mouseout->ui-side#hideTip focusout->ui-side#hideTip")
-  = link_to today_or_home_path, class: "ui-brand", data: { tip: "Claudy" } do
-    = vite_image_tag "images/les-4-sources-logo-seul-blanc.png", alt: "", class: "ui-brand-mark"
-    span.ui-brand-t
-      b Claudy
-      small Les 4 Sources
+  / Le bouton qui replie la barre est un CONTRÔLE, pas une rubrique (Michael
+    2026-10-24 : en pied de barre, il ressemblait trait pour trait aux liens
+    vers les sections) : petit bouton-icône encadré, à côté du nom, avec son
+    infobulle même barre dépliée.
+  - collapsed = ui_side_collapsed?
+  .ui-side-head
+    = link_to today_or_home_path, class: "ui-brand", data: { tip: "Claudy" } do
+      = vite_image_tag "images/les-4-sources-logo-seul-blanc.png", alt: "", class: "ui-brand-mark"
+      span.ui-brand-t
+        b Claudy
+        small Les 4 Sources
+    button.ui-side-toggle(type="button" data-action="ui-side#toggle" data-ui-side-target="toggle" aria-expanded=(collapsed ? "false" : "true") aria-label=(collapsed ? "Déplier la barre" : "Replier la barre") data-tip=(collapsed ? "Déplier la barre" : "Replier la barre") data-tip-always="")
+      span.ui-ico-fold = ui_icon(:fold, size: 18)
+      span.ui-ico-unfold = ui_icon(:unfold, size: 18)
   .ui-nav
     - interface_nav_groups.each do |label, entries|
       .ui-nav-g
@@ -20,10 +29,5 @@ nav.ui-side(aria-label="Navigation principale" data-controller="ui-side" data-ac
         = render "layouts/v2/nav_links", entries: entries
   .ui-nav.ui-side-foot
     = render "layouts/v2/nav_links", entries: interface_nav_footer
-    - collapsed = ui_side_collapsed?
-    button.ui-side-toggle(type="button" data-action="ui-side#toggle" data-ui-side-target="toggle" aria-expanded=(collapsed ? "false" : "true") data-tip=(collapsed ? "Déplier la barre" : "Replier la barre"))
-      span.ui-ico-fold = ui_icon(:fold)
-      span.ui-ico-unfold = ui_icon(:unfold)
-      span.ui-nav-t Replier la barre
     = render "layouts/v2/account"
   .ui-tip(role="tooltip" data-ui-side-target="tip" hidden)

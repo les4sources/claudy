@@ -20,9 +20,11 @@ export default class extends Controller {
     const maxAge = collapsed ? 60 * 60 * 24 * 365 : 0
     document.cookie = `${COOKIE}=collapsed; path=/; max-age=${maxAge}; samesite=lax`
     this.toggleTarget.setAttribute("aria-expanded", collapsed ? "false" : "true")
-    this.toggleTarget.dataset.tip = collapsed ? "Déplier la barre" : "Replier la barre"
+    const label = collapsed ? "Déplier la barre" : "Replier la barre"
+    this.toggleTarget.dataset.tip = label
+    this.toggleTarget.setAttribute("aria-label", label)
     this.hideTip()
-    if (collapsed) this.showTipFor(this.toggleTarget)
+    this.showTipFor(this.toggleTarget)
   }
 
   showTip(event) {
@@ -32,7 +34,9 @@ export default class extends Controller {
   }
 
   showTipFor(item) {
-    if (!document.body.classList.contains("ui-side-collapsed")) return
+    // Barre dépliée, les entrées ont leur libellé : seul le bouton-icône qui la
+    // replie (`data-tip-always`) garde son infobulle.
+    if (!document.body.classList.contains("ui-side-collapsed") && !item.hasAttribute("data-tip-always")) return
     const rect = item.getBoundingClientRect()
     this.tipTarget.textContent = item.dataset.tip
     this.tipTarget.hidden = false
