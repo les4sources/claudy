@@ -70,7 +70,26 @@ module Agenda
       items.count { |item| item.halves.include?(2 * index) || item.halves.include?((2 * index) + 1) }
     end
 
+    # Les notes du jour (sous les bandes de chaque jour, comme l'ancien
+    # calendrier) et qui veille (à côté de la date). Une requête pour le mois.
+    def notes_on(date)
+      notes_by_date.fetch(date, [])
+    end
+
+    def watchers_on(date)
+      watchers_by_date.fetch(date, [])
+    end
+
     private
+
+    def notes_by_date
+      @notes_by_date ||= Note.where(date: @first_day..@last_day).order(:created_at).group_by(&:date)
+    end
+
+    def watchers_by_date
+      @watchers_by_date ||= HumanRole.selected.where(date: @first_day..@last_day, role_id: 1).includes(:human)
+                                     .group_by(&:date).transform_values { |roles| roles.filter_map(&:human).uniq }
+    end
 
     def items
       @items ||= begin

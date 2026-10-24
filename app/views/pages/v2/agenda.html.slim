@@ -54,7 +54,7 @@ div(data-controller="stay-details stay-merge agenda-filter" data-stay-merge-setu
       .ui-ag-main
         .ui-ag-grid(data-agenda-filter-target="grid" data-agenda-filter="all")
           - agenda.weeks.each do |week|
-            = render "pages/v2/agenda_week", week: week, month: month
+            = render "pages/v2/agenda_week", week: week, month: month, agenda: agenda
         p.ui-ag-note
           | Une bande commence l’après-midi de l’arrivée et finit le matin du départ : deux séjours qui se suivent partagent la même journée.
         - if section_writable?(:full)

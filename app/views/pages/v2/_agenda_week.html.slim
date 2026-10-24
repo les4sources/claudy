@@ -16,6 +16,27 @@ section.ui-ag-week(aria-label="Semaine du #{l(week.days.first, format: '%-d %B')
         span = l(date, format: "%a").capitalize.delete(".")
         - if date.month != month.month && date.day == 1
           span = l(date, format: "%b").capitalize.delete(".")
+        / Qui veille ce soir-là, comme dans l'ancien calendrier (Michael
+          2026-10-24) ; le détail et les renforts sont dans le panneau.
+        - watchers = agenda.watchers_on(date)
+        - if watchers.any?
+          span.ui-ag-day-w(title="Veille : #{watchers.map(&:name).to_sentence}")
+            - watchers.first(2).each do |human|
+              = ui_avatar(human.name, human: human, small: true)
   .ui-ag-lanes
     - week.ribbons.each do |ribbon|
       = render "pages/v2/agenda_ribbon", ribbon: ribbon
+    / Les notes du jour sous ses bandes, sur une dernière ligne.
+    - notes_row = week.ribbons.any? ? week.lanes + 1 : 1
+    - week.days.each_with_index do |date, index|
+      - notes = agenda.notes_on(date)
+      - next if notes.empty?
+      .ui-ag-notes(style="grid-column: #{(2 * index) + 1} / span 2; grid-row: #{notes_row};")
+        - notes.each do |note|
+          - body = note.body.to_s.squish
+          - if section_readable?(:full)
+            = link_to edit_note_path(note), class: "ui-ag-dnote ui-postit ui-postit-#{note.color || 'yellow'}", title: [note.type_label, body].compact.join(" · "), data: { turbo_frame: "modal" } do
+              span = body
+          - else
+            span(class="ui-ag-dnote ui-postit ui-postit-#{note.color || 'yellow'}" title=[note.type_label, body].compact.join(" · "))
+              span = body

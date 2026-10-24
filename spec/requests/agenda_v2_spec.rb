@@ -103,6 +103,22 @@ RSpec.describe "Agenda en rubans", type: :request do
     expect(watch.element_children.last["class"]).not_to include("ui-ag-backup")
   end
 
+  it "pose sous chaque jour ses notes et, à côté de la date, qui veille" do
+    veille = Role.find_or_create_by!(id: OnCall::Resolver::WATCHMAN_ROLE_ID) { |r| r.name = "Veilleur·euse" }
+    HumanRole.create!(human: Human.create!(name: "Steph"), role: veille, date: Date.new(2026, 10, 21), status: "selected")
+    Note.create!(date: Date.new(2026, 10, 21), color: "pink", body: "Matin : bain d’ânes pour un groupe de plaines")
+
+    get "/", params: { date: month.iso8601 }
+
+    doc = Nokogiri::HTML(response.body)
+    note = doc.at_css(".ui-ag-desk .ui-ag-notes")
+    # Mercredi 21 : troisième jour de la semaine, demi-journées 5 et 6.
+    expect(note["style"]).to include("grid-column: 5 / span 2")
+    expect(note.at_css(".ui-postit-pink").text.squish).to eq("Matin : bain d’ânes pour un groupe de plaines")
+    day = doc.css(".ui-ag-desk .ui-ag-day").find { |link| link["aria-label"] == "Mercredi 21 octobre" }
+    expect(day.at_css(".ui-ag-day-w")["title"]).to eq("Veille : Steph")
+  end
+
   it "montre les événements et les repas sans séjour, filtrables par sorte" do
     category = EventCategory.create!(name: "Convivialité")
     Event.create!(name: "Pizza Party", starts_at: Time.zone.local(2026, 10, 24, 19), ends_at: Time.zone.local(2026, 10, 24, 23),

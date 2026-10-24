@@ -5,7 +5,7 @@
 - stay = ribbon.stay
 - path = agenda_ribbon_path(ribbon)
 - label = [ribbon.title, ribbon.detail, Agenda::Month::STATUS_LABELS[ribbon.status], agenda_stay_dates(stay)].compact.join(", ")
-- classes = ["ui-rib", "ui-rib-#{ribbon.status}", "ui-rib-k-#{ribbon.kind}", ("is-cl" if ribbon.cont_left), ("is-cr" if ribbon.cont_right), ("is-short" if ribbon.span <= 2)].compact.join(" ")
+- classes = ["ui-rib", "ui-rib-#{ribbon.status}", "ui-rib-k-#{ribbon.kind}", ("is-cl" if ribbon.cont_left), ("is-cr" if ribbon.cont_right), ("is-short" if ribbon.span <= 2), ("is-tiny" if ribbon.span == 1)].compact.join(" ")
 - style = "grid-column: #{ribbon.start + 1} / span #{ribbon.span}; grid-row: #{ribbon.lane + 1};"
 - data = { kind: ribbon.kind }
 - if stay

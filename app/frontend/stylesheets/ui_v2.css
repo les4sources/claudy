@@ -172,14 +172,14 @@ body.ui-v2-map .ui-main { height: 100dvh; }
 }
 .ui-me-item:hover { background: var(--ui-surface); }
 
-/* Avatar en arche */
+/* Avatar rond (Michael 2026-10-24 : les arches faisaient « fenêtres »). */
 .ui-av {
-  width: 32px; height: 34px; border-radius: 50% 50% 5px 5px / 58% 58% 5px 5px; display: inline-flex;
-  align-items: flex-end; justify-content: center; padding-bottom: 6px; font-size: 12px; font-weight: 700;
+  width: 32px; height: 32px; border-radius: 50%; display: inline-flex;
+  align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
   color: var(--ui-teal); flex: none; letter-spacing: .02em;
 }
 .ui-av-photo { padding: 0; object-fit: cover; background: var(--ui-surface); }
-.ui-av-s { width: 26px; height: 28px; font-size: 10px; padding-bottom: 4px; }
+.ui-av-s { width: 26px; height: 26px; font-size: 10px; }
 .ui-av-y { background: var(--ui-yellow); }
 .ui-av-g { background: #bfe8d6; }
 .ui-av-b { background: #cddcff; }
@@ -626,20 +626,55 @@ a.ui-row:hover .ui-row-t, a.ui-row-t:hover { text-decoration: underline; text-de
 .ui-ag-day.is-out b { color: var(--ui-ink3); }
 .ui-ag-day.is-today b { background: linear-gradient(transparent 55%, var(--ui-yellow) 55%, var(--ui-yellow) 92%, transparent 92%); padding: 0 .1em; }
 .ui-ag-day.is-sel { box-shadow: inset 0 -3px 0 var(--ui-teal); }
+.ui-ag-day-w { display: inline-flex; align-self: center; margin-left: auto; flex: none; }
+.ui-ag-day-w .ui-av { box-shadow: 0 0 0 2px #fff; }
+.ui-ag-day-w .ui-av + .ui-av { margin-left: -7px; }
+/* Les notes du jour, sous ses bandes, teintées par type (`Note::TYPES`). */
+.ui-ag-notes { display: flex; flex-direction: column; gap: 7px; min-width: 0; margin: 0 4px; }
+/* Post-its (Michael 2026-10-24) : la couleur du type de note (`Note::TYPES`),
+   la police de l'interface. Dans la grille, droits ; dans le panneau,
+   légèrement penchés, un sur deux de l'autre côté. */
+.ui-postit {
+  display: block; position: relative; padding: 9px 11px 11px; border-radius: 2px 2px 3px 10px;
+  background: #fff1a6; color: var(--ui-ink); text-decoration: none; overflow-wrap: break-word;
+  box-shadow: 0 1px 1px rgba(24, 47, 50, .08), 0 6px 12px -8px rgba(24, 47, 50, .45);
+}
+.ui-postit a, .ui-postit > span { color: var(--ui-ink); text-decoration: none; }
+a.ui-postit:hover, .ui-postit:has(a:hover) { box-shadow: 0 1px 1px rgba(24, 47, 50, .08), 0 10px 18px -8px rgba(24, 47, 50, .55); }
+.ui-postit-yellow { background: #fff1a6; }
+.ui-postit-pink { background: #ffd9e7; }
+.ui-postit-green { background: #d3f0dc; }
+.ui-postit-blue { background: #d9e6ff; }
+.ui-postit-orange { background: #ffdcc6; }
+.ui-postits { display: flex; flex-direction: column; gap: 12px; margin: 8px 2px 4px; padding: 0; list-style: none; }
+.ui-postits .ui-postit { font-size: 14px; line-height: 1.4; transform: rotate(-.8deg); }
+.ui-postits .ui-postit:nth-child(even) { transform: rotate(.7deg); }
+@media (prefers-reduced-motion: no-preference) {
+  .ui-postits .ui-postit { transition: transform .15s; }
+  .ui-postits .ui-postit:hover { transform: none; }
+}
+.ui-ag-dnote { padding: 6px 9px 8px; font-size: 12.5px; line-height: 1.35; }
+.ui-ag-dnote > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
 .ui-ag-day:hover b { text-decoration: underline; text-decoration-color: var(--ui-yellow); text-decoration-thickness: 2px; text-underline-offset: 4px; }
 .ui-ag-lanes {
-  position: relative; display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); grid-auto-rows: 44px;
+  position: relative; display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); grid-auto-rows: minmax(44px, auto);
   row-gap: 6px; padding: 10px 0 14px; min-height: 76px;
 }
 
 .ui-rib {
-  position: relative; display: flex; align-items: center; gap: 7px; min-width: 0; margin: 0 3px; padding: 0 10px;
+  position: relative; display: flex; align-items: center; gap: 7px; min-width: 0; margin: 0 3px; padding: 6px 10px;
   border-radius: 9px; border: 1.5px solid transparent; color: var(--ui-ink); text-decoration: none; overflow: hidden;
   transition: opacity .15s, box-shadow .15s;
 }
 .ui-rib .ui-ico { flex: none; }
 .ui-rib-t { display: flex; flex-direction: column; gap: 1px; min-width: 0; line-height: 1.2; }
-.ui-rib-t b, .ui-rib-t small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Lisible comme l'ancien calendrier (Michael 2026-10-24) : le nom passe à la
+   ligne au lieu d'être coupé, le détail tient sur deux lignes. Seul un
+   morceau d'une demi-journée (bord de semaine) garde une ligne tronquée. */
+.ui-rib-t b { overflow-wrap: break-word; hyphens: auto; }
+.ui-rib-t small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: break-word; }
+.ui-rib.is-tiny .ui-rib-t b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ui-rib.is-tiny .ui-rib-t small { display: none; }
 .ui-rib-t b { font-size: 13.5px; font-weight: 700; }
 .ui-rib-t small { font-size: 12px; font-weight: 500; opacity: .92; }
 .ui-rib.is-short { padding: 0 7px; }
@@ -671,7 +706,7 @@ a.ui-rib-ok:is(.ui-rib-k-activity, .ui-rib-k-meal):hover { color: var(--ui-ink);
 .ui-ag-tag { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: var(--ui-surface); color: var(--ui-ink2); font-size: 12.5px; font-weight: 700; }
 .ui-ag-panel-t { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
 /* Le veilleur devant, les renforts derrière (à gauche), bordés d'orange. */
-.ui-ag-watch { display: inline-flex; align-items: flex-end; flex: none; text-decoration: none; }
+.ui-ag-watch { display: inline-flex; align-items: center; flex: none; text-decoration: none; }
 .ui-ag-watch > * { position: relative; }
 .ui-ag-watch > * + * { margin-left: -8px; }
 .ui-ag-watch > .ui-av { box-shadow: 0 0 0 2px #fff; }
