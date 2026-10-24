@@ -1,0 +1,42 @@
+/ Bloc ARGENT du panneau séjour, nouvelle interface (maquette validée, Michael
+  2026-10-24) : le total, la jauge de ce qui est encaissé, les paiements, puis
+  ce qu'il reste à percevoir. Même frame que l'ancien panneau : les contrôleurs
+  qui le rafraîchissent (activités, party, services) n'ont rien à savoir.
+  Mêmes calculs que `stays/_payments_panel` : le solde porte sur l'EXIGIBLE.
+- paiements = @stay.payments.order(:created_at)
+- encaisse = @stay.amount_paid_cents
+- en_attente = @stay.total_amount_cents.to_i - @stay.payable_amount_cents
+- exigible = @stay.payable_amount_cents
+- avancement = exigible.positive? ? [[(encaisse * 100.0 / exigible).round, 0].max, 100].min : 0
+= turbo_frame_tag "stay_#{@stay.id}_payments" do
+  section.ui-sd-sec(aria-labelledby="stay-#{@stay.id}-money")
+    .ui-sd-sec-h
+      h3.ui-h3 id="stay-#{@stay.id}-money" Argent
+    dl.ui-sd-money
+      div
+        dt Total du séjour
+        dd = humanized_money_with_symbol(@stay.total_amount)
+      - if en_attente.positive?
+        div.is-muted
+          dt Activités à valider
+          dd = "− #{humanized_money_with_symbol(Money.new(en_attente))}"
+    - if exigible.positive?
+      .ui-sd-gauge(role="img" aria-label="#{avancement} % encaissé" class=("is-done" unless @stay.payable_now?))
+        i(style="width: #{avancement}%")
+
+    - if paiements.any?
+      ul.ui-sd-payments
+        - paiements.each do |payment|
+          = render "stays/payment_line", payment: payment.decorate, raw_payment: payment
+
+    /  Rien à devoir = une phrase, pas un zéro (Michael 2026-08-24).
+    - if @stay.payable_now?
+      .ui-sd-due
+        span Solde à percevoir
+        b = humanized_money_with_symbol(Money.new(@stay.balance_due_cents))
+    - else
+      p.ui-sd-ok
+        = ui_icon(:check, size: 16)
+        | Tout est en ordre
+
+    = render "stays/payment_form", paiements: paiements, v2: true

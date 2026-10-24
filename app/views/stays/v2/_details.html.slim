@@ -1,0 +1,208 @@
+/ FICHE SÉJOUR EN PANNEAU, nouvelle interface (maquette validée, Michael
+  2026-10-24). Le panneau glisse depuis la droite par-dessus l'agenda (le
+  <dialog> de la page, mis en panneau par `ui_v2.css`). De haut en bas : qui et
+  quand, où en est le dossier (Demande → Pré-confirmé → Confirmé), les faits
+  qu'on vient vérifier, puis l'argent, la composition, la note et la
+  facturation. Une seule action principale en pied de panneau, selon le
+  statut ; les autres dans le menu « … ».
+  Même `id` que l'ancienne fiche : les réponses Turbo Stream qui remplacent la
+  fiche après une action rapide (statut, email) n'ont rien à savoir.
+- occupants = @stay.occupants
+- contact = @stay.public_contact
+- lodgings = @stay.lodging_bookings.filter_map { |b| b.lodging&.name }.uniq
+- status = @stay.status.to_s
+- confirm_form = { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }
+- people = [(occupants[:adults].positive? ? "#{occupants[:adults]} adulte#{'s' if occupants[:adults] > 1}" : nil), (occupants[:children].positive? ? "#{occupants[:children]} enfant#{'s' if occupants[:children] > 1}" : nil)].compact
+- headcount = occupants[:adults] + occupants[:children]
+- customer = @stay.customer
+- real_customer = customer.present? && !customer.catch_all?
+/ « 3e séjour » : un client qui revient se reçoit autrement. Séjours annulés
+  exclus, ce séjour compris.
+- visit = real_customer && @stay.arrival_date ? customer.stays.where.not(status: "canceled").where("arrival_date <= ?", @stay.arrival_date).count : 0
+div id="stay-details-#{@stay.id}" class="ui-sd"
+  header.ui-sd-head
+    .ui-sd-top
+      p.ui-over.ui-sd-over
+        = "Séjour ##{@stay.id}"
+        - if lodgings.any?
+          span = " · #{lodgings.join(' · ')}"
+      .ui-sd-tools
+        = link_to new_stay_path(duplicate_from: @stay.id), class: "ui-ibtn", title: "Dupliquer ce séjour (nouvelles dates à choisir)", aria: { label: "Dupliquer ce séjour" } do
+          = ui_icon(:copy, size: 18)
+        /  La croix n'apparaît que dans le panneau : la même fiche sert la page
+           pleine /stays/:id, où il n'y a rien à fermer.
+        button.ui-ibtn.ui-sd-close(type="button" data-action="stay-details#close" aria-label="Fermer")
+          = ui_icon(:x, size: 20)
+    h2.ui-sd-title = @stay.display_name
+    p.ui-sd-when
+      = [@stay.arrival_date && @stay.departure_date ? "#{l(@stay.arrival_date, format: '%A %-d').capitalize} → #{l(@stay.departure_date, format: '%A %-d %B')}" : nil, (@stay.nights_count.to_i.positive? ? "#{@stay.nights_count} nuit#{'s' if @stay.nights_count > 1}" : nil), (headcount.positive? ? "#{headcount} personne#{'s' if headcount > 1}" : nil)].compact.join(" · ")
+
+    /  Le dossier en trois étapes. Annulé sort du chemin : une pastille rouge.
+    - if @stay.canceled?
+      p.ui-sd-steps
+        span.ui-st.ui-st-no
+          = ui_icon(:x, size: 12)
+          | Annulé
+    - else
+      - current = { "pending" => 0, "pre_confirmed" => 1, "confirmed" => 2 }.fetch(status, 0)
+      - deposit = @stay.amount_paid_cents.positive? ? "acompte reçu" : "acompte demandé"
+      ol.ui-sd-steps(aria-label="Où en est le dossier")
+        - [["Demande", nil], ["Pré-confirmé", deposit], ["Confirmé", nil]].each_with_index do |(label, sub), index|
+          - state = index < current || (index == 2 && current == 2) ? "done" : (index == current ? "now" : "todo")
+          li(class="is-#{state}" aria-current=(index == current ? "step" : nil))
+            i(aria-hidden="true")
+              - if state == "done"
+                = ui_icon(:check, size: 12)
+            span
+              = label
+              - if sub && index == current
+                small = " · #{sub}"
+
+    - badges = safe_join([@stay.platform_badge, @stay.referral_badge, @stay.referral_commission_tag, @stay.invoice_badge].compact_blank, " ")
+    - if badges.present?
+      .ui-sd-badges = badges
+
+  - if flash[:alert].present?
+    p.ui-sd-flash.is-alert(role="alert") = flash[:alert]
+  - elsif flash[:notice].present?
+    p.ui-sd-flash(role="status") = flash[:notice]
+
+  .ui-sd-body
+    dl.ui-sd-facts
+      div
+        dt Arrivée
+        dd = [@stay.arrival_date ? l(@stay.arrival_date, format: "%a %-d").capitalize : "—", @stay.arrival_time_label].compact.join(" · ")
+      div
+        dt Départ
+        dd = [@stay.departure_date ? l(@stay.departure_date, format: "%a %-d").capitalize : "—", @stay.departure_time_label].compact.join(" · ")
+      div
+        dt Personnes
+        dd = people.any? ? people.join(", ") : "—"
+      div
+        dt Client
+        dd
+          = link_to @stay.display_name, customer_path(customer), class: "ui-sd-link"
+          - if visit > 1
+            small = " · #{visit}e séjour"
+
+    /  Joindre le client d'un geste : qui prépare un accueil lui répond d'ici.
+    .ui-sd-contact
+      - if contact[:phone].present?
+        = link_to "tel:#{contact[:phone]}", class: "ui-chip" do
+          = ui_icon(:phone, size: 16)
+          = contact[:phone]
+      - if contact[:email].present?
+        = mail_to contact[:email], class: "ui-chip", title: "Écrire à #{contact[:email]}" do
+          = ui_icon(:mail, size: 16)
+          span.ui-sd-ellipsis = contact[:email]
+      - elsif @stay.no_contact_email?
+        span.ui-muted Pas d’adresse email, aucune notification envoyée
+      - if @stay.token.present?
+        = link_to public_stay_path(@stay.token, donottrack: 1), target: "_blank", rel: "noopener", class: "ui-sd-out" do
+          = ui_icon(:external, size: 16)
+          | Page client
+
+    /  Demande de modification du client : une décision à prendre, avant tout.
+    - pending_change = @stay.stay_change_requests.pending.order(created_at: :desc).first
+    - if pending_change.present?
+      .ui-sd-legacy = render "stays/pending_change", pending_change: pending_change
+
+    = render "stays/payments_panel"
+
+    = render "stays/v2/composition"
+
+    section.ui-sd-sec.ui-sd-legacy
+      = render "stays/activities"
+
+    - jalons = stay_timeline(@stay)
+    - if jalons.size > 2
+      section.ui-sd-sec(aria-labelledby="stay-#{@stay.id}-flow")
+        .ui-sd-sec-h
+          h3.ui-h3 id="stay-#{@stay.id}-flow" Déroulé
+        ol.ui-sd-flow
+          - jalons.each do |jalon|
+            li
+              b = jalon[:title]
+              - if jalon[:detail].present?
+                span = jalon[:detail]
+              - if jalon[:note].present?
+                em = jalon[:note]
+
+    .ui-sd-legacy = render "stays/kitchen_block"
+    .ui-sd-legacy = render "stays/extras_panel"
+
+    = render "stays/v2/internal_note"
+
+    section.ui-sd-sec(aria-labelledby="stay-#{@stay.id}-billing")
+      .ui-sd-sec-h
+        h3.ui-h3 id="stay-#{@stay.id}-billing" Facturation
+      .ui-sd-legacy.ui-sd-billing = render "stays/accounting_panel"
+      .ui-sd-field
+        label.ui-sd-label for="stay_#{@stay.id}_category" Type de groupe
+        = turbo_frame_tag "stay_#{@stay.id}_category" do
+          = form_with url: update_category_stay_path(@stay), method: :patch, data: { controller: "auto-submit", action: "change->auto-submit#submit" } do
+            .relative(data-controller="searchable-select" data-searchable-select-clearable-value="true" data-searchable-select-placeholder-value="Choisir un type…")
+              = select_tag "stay[category]", options_for_select(Stay::CATEGORIES.map(&:reverse), @stay.category), include_blank: "— Aucune —", id: "stay_#{@stay.id}_category", class: "block w-full rounded-md border-gray-300 text-sm py-1.5", data: { searchable_select_target: "select" }
+              = render "shared/searchable_select_search", label: "Type de groupe"
+      details.ui-sd-fold
+        summary Réassigner le client…
+        .ui-sd-legacy = render "stays/reassign_form"
+
+  /  PIED DE PANNEAU : ce que fera l'action principale, le menu des autres,
+     l'action principale. Un seul bouton plein, celui qui fait avancer le
+     dossier.
+  footer.ui-sd-foot
+    p.ui-sd-hint
+      - if @stay.canceled?
+        | Réactiver remet le séjour en attente.
+      - elsif status == "confirmed"
+        = @stay.can_resend_confirmation_email? ? @stay.confirmation_email_hint : "Séjour confirmé."
+      - elsif @stay.ask_email_on_confirm?
+        | Séjour déjà passé : on vous demandera s’il faut écrire au client.
+      - elsif real_customer && customer.email.present?
+        = "Confirmer envoie l’email de confirmation à #{contact[:name]}."
+      - else
+        | Confirmer n’écrit à personne : pas d’adresse client.
+
+    details.ui-sd-menu
+      summary.ui-ibtn.ui-ibtn-o(aria-label="Autres actions" title="Autres actions")
+        = ui_icon(:dots, size: 20)
+      .ui-sd-menu-l(role="menu")
+        - unless status == "confirmed"
+          = link_to "Modifier le séjour", edit_stay_path(@stay), role: "menuitem"
+        - if @stay.can_pre_confirm?
+          = link_to "Pré-confirmer et demander l’acompte", pre_confirm_stay_path(@stay), role: "menuitem"
+        - if @stay.can_resend_confirmation_email?
+          = button_to @stay.confirmation_email_button_label, send_confirmation_email_stay_path(@stay), method: :post, title: @stay.confirmation_email_hint, role: "menuitem", form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Envoyer l'email de confirmation au client ?" } }, data: { "confirm-click-target": "button" }
+        - if status == "confirmed"
+          = button_to "Repasser en attente", update_status_stay_path(@stay, status: "pending"), method: :patch, role: "menuitem", form: confirm_form, data: { "confirm-click-target": "button" }
+        /  Refuser ÉCRIT au client (motif obligatoire) ; Annuler est silencieux.
+        - if @stay.can_refuse?
+          = link_to "Refuser la demande…", refuse_stay_path(@stay), role: "menuitem", class: "is-danger"
+        - unless @stay.canceled?
+          = button_to "Annuler le séjour", update_status_stay_path(@stay, status: "canceled"), method: :patch, role: "menuitem", class: "is-danger", form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Vraiment annuler ?" } }, data: { "confirm-click-target": "button" }
+
+    - if @stay.canceled?
+      = button_to "Réactiver le séjour", update_status_stay_path(@stay, status: "pending"), method: :patch, class: "ui-btn ui-btn-p", form: confirm_form, data: { "confirm-click-target": "button" }
+    - elsif status == "confirmed"
+      = link_to "Modifier le séjour", edit_stay_path(@stay), class: "ui-btn ui-btn-p"
+    /  Séjour déjà passé (Michael, 2026-10-13) : confirmer après coup est une
+       régularisation ; on demande s'il faut écrire au client.
+    - elsif @stay.ask_email_on_confirm?
+      div(data-controller="choice-dialog")
+        button.ui-btn.ui-btn-p(type="button" data-action="choice-dialog#open") Confirmer le séjour
+        dialog.ui-sd-ask(data-choice-dialog-target="dialog" aria-labelledby="past-confirm-title-#{@stay.id}")
+          h4.ui-h3 id="past-confirm-title-#{@stay.id}" Ce séjour est déjà passé
+          p
+            | Il s’est terminé le #{l(@stay.departure_date, format: "%-d %B %Y")}. Faut-il envoyer au client l’email « votre séjour est confirmé » ?
+          p.ui-muted
+            | Destinataire : #{customer.email}
+            - if @stay.confirmation_email_sent_at.present?
+              br
+              | Un email de confirmation est déjà parti le #{l(@stay.confirmation_email_sent_at.to_date, format: "%-d %B %Y")}.
+          .ui-sd-ask-act
+            button.ui-btn.ui-btn-s(type="button" data-action="choice-dialog#close") Retour
+            = button_to "Confirmer et envoyer l’email", update_status_stay_path(@stay, status: "confirmed", notify_customer: 1), method: :patch, class: "ui-btn ui-btn-s"
+            = button_to "Confirmer sans email", update_status_stay_path(@stay, status: "confirmed", notify_customer: 0), method: :patch, autofocus: true, class: "ui-btn ui-btn-s ui-btn-p"
+    - else
+      = button_to "Confirmer le séjour", update_status_stay_path(@stay, status: "confirmed"), method: :patch, class: "ui-btn ui-btn-p", form: confirm_form, data: { "confirm-click-target": "button" }

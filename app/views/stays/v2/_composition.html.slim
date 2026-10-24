@@ -1,0 +1,45 @@
+/ Composition du séjour en cartes, nouvelle interface : une carte par élément,
+  son pictogramme, ce qu'il couvre, son montant. Mêmes lignes que
+  `stays/_composition_lines` ; toute modification passe par le formulaire, qui
+  vérifie la disponibilité.
+- lignes = []
+- @stay.lodging_bookings.each do |b|
+  - occupants = "#{b.adults.to_i} adulte#{'s' if b.adults.to_i > 1}#{b.children.to_i.positive? ? ", #{b.children} enfant#{'s' if b.children.to_i > 1}" : ''}"
+  - lignes << { icon: :bed, titre: b.lodging&.name.presence || "Hébergement", details: [b.decorate.date_range, occupants], montant: @stay.formatted_item_amount(b) }
+- @stay.space_bookings.each do |sb|
+  - d = sb.decorate
+  - lignes << { icon: :room, titre: @stay.item_label(sb), details: [d.date_range, d.duration], montant: @stay.formatted_item_amount(sb) }
+- @stay.camping_bookings.each do |c|
+  - lignes << { icon: :tent, titre: "Camping (#{c.kind})", details: ["#{c.people} personne#{'s' if c.people.to_i > 1}", outdoor_nights_label(c)], montant: @stay.formatted_item_amount(c) }
+- @stay.van_bookings.each do |v|
+  - lignes << { icon: :tent, titre: "Van (#{v.vehicles} véhicule#{'s' if v.vehicles.to_i > 1})", details: [outdoor_nights_label(v)], montant: @stay.formatted_item_amount(v) }
+- @stay.hamac_bookings.each do |hamac|
+  - lignes << { icon: :tent, titre: "#{hamac.label} × #{hamac.count}", details: [outdoor_nights_label(hamac)], montant: @stay.formatted_item_amount(hamac) }
+- @stay.linen_orders.each do |linen|
+  - lignes << { icon: :linen, titre: linen.label, details: ["#{linen.quantity} lit#{'s' if linen.quantity.to_i > 1}"], montant: @stay.formatted_item_amount(linen) }
+/ Un repas qui n'est qu'une demande d'info ne compte pas dans le total : sa
+  pastille le dit, plutôt qu'un écart inexpliqué entre les cartes et le total.
+- @stay.meals.each do |m|
+  - lignes << { icon: :utensils, titre: [m.label, (m.date ? l(m.date, format: "%A %-d") : nil)].compact.join(" · "), details: [m.moment_label, "#{m.people} couvert#{'s' if m.people.to_i > 1}", m.notes.presence], montant: @stay.formatted_item_amount(m), pill: (m.billable? ? nil : "#{m.status_label} · hors total") }
+
+section.ui-sd-sec(aria-labelledby="stay-#{@stay.id}-compo")
+  .ui-sd-sec-h
+    h3.ui-h3 id="stay-#{@stay.id}-compo" Composition
+    = link_to "Modifier", edit_stay_path(@stay), class: "ui-card-link"
+  - if lignes.any?
+    ul.ui-sd-items
+      - lignes.each do |ligne|
+        li.ui-sd-item
+          span.ui-sd-item-i(aria-hidden="true") = ui_icon(ligne[:icon], size: 20)
+          .ui-sd-item-m
+            b = ligne[:titre]
+            - details = ligne[:details].compact_blank
+            - if details.any?
+              span = details.join(" · ")
+          - if ligne[:pill]
+            span.ui-st.ui-st-todo = ligne[:pill]
+          span.ui-sd-item-a = ligne[:montant]
+  - else
+    .ui-sd-empty
+      p Rien dans ce séjour pour l’instant.
+      = link_to "Composer le séjour", edit_stay_path(@stay), class: "ui-btn ui-btn-s"

@@ -1,0 +1,26 @@
+/ NOTE INTERNE du panneau séjour, nouvelle interface : le mot laissé sur le
+  comptoir, en post-it jaune, qui l'a écrit et quand. Un clic dessus ouvre la
+  saisie (même formulaire et même frame que `stays/_internal_note`) ; on vient
+  d'abord LIRE le dossier, la saisie reste fermée à l'ouverture.
+- note_html = @stay.internal_notes&.body&.to_html
+- derniere = @stay.note_last_edit
+= turbo_frame_tag "stay_#{@stay.id}_notes" do
+  section.ui-sd-sec(aria-labelledby="stay-#{@stay.id}-note")
+    .ui-sd-sec-h
+      h3.ui-h3 id="stay-#{@stay.id}-note" Note interne
+      - if derniere
+        span.ui-sd-meta = [derniere[:by].presence, l(derniere[:at].to_date, format: "%A %-d %B")].compact.join(" · ")
+    details.ui-sd-note
+      summary
+        - if @stay.internal_note?
+          .ui-postit.ui-postit-yellow.ui-prose == note_html
+        - else
+          .ui-sd-note-empty Aucune note. Cliquer pour en ajouter une.
+      = form_with url: update_notes_stay_path(@stay), method: :patch, class: "ui-sd-note-form" do
+        = rich_text_area_tag "stay[internal_notes]", note_html, id: "stay_#{@stay.id}_internal_notes", class: "lexxy-content", placeholder: "Ce que l'équipe doit savoir sur ce séjour…"
+        = submit_tag "Enregistrer la note", class: "ui-btn ui-btn-s ui-btn-p"
+
+    - if @stay.public_notes.present?
+      .ui-sd-public
+        span.ui-over Note publique, visible par le client
+        .ui-prose == @stay.public_notes
