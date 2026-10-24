@@ -361,12 +361,15 @@ a.ui-row:hover .ui-row-t, a.ui-row-t:hover { text-decoration: underline; text-de
 /* --- Barre repliée en icônes (Michael 2026-10-24) -------------------------------
    Choix de chacun, sur tous les écrans de bureau et de tablette. Les libellés
    restent lus par les lecteurs d'écran (masqués visuellement, pas retirés). */
+.ui-side-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ui-side-head .ui-brand { flex: 1; min-width: 0; }
+/* Un contrôle, pas une rubrique : bouton-icône encadré, plus discret que les
+   liens et sans leur forme de ligne. */
 .ui-side-toggle {
-  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 40px; padding: 0 10px 0 12px;
-  border: 0; border-radius: 10px; background: none; color: var(--ui-side-muted);
-  font: 500 14px/1.2 var(--ui-f-ui); text-align: left; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; flex: none; width: 40px; height: 40px; padding: 0;
+  border: 1.5px solid rgba(255, 255, 255, .24); border-radius: 12px; background: none; color: var(--ui-side-muted); cursor: pointer;
 }
-.ui-side-toggle:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+.ui-side-toggle:hover { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .45); color: #fff; }
 .ui-side-toggle .ui-ico-fold { display: inline-flex; }
 .ui-side-toggle .ui-ico-unfold { display: none; }
 
@@ -391,7 +394,8 @@ a.ui-row:hover .ui-row-t, a.ui-row-t:hover { text-decoration: underline; text-de
   .ui-side-collapsed .ui-nav-t {
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
   }
-  .ui-side-collapsed .ui-nav a, .ui-side-collapsed .ui-side-toggle {
+  .ui-side-collapsed .ui-side-head { flex-direction: column; gap: 12px; }
+  .ui-side-collapsed .ui-nav a {
     flex-direction: row; justify-content: center; gap: 0; min-height: 42px; padding: 0;
   }
   .ui-side-collapsed .ui-nav a .ui-cnt {
@@ -709,8 +713,7 @@ a.ui-rib-ok:is(.ui-rib-k-activity, .ui-rib-k-meal):hover { color: var(--ui-ink);
   .ui-nav a .ui-cnt { position: absolute; top: 4px; left: 50%; margin: 0 0 0 8px; min-width: 18px; height: 18px; font-size: 11px; padding: 0 5px; }
   .ui-me > summary { justify-content: center; padding: 10px 0 2px; }
   .ui-me-menu { position: fixed; left: calc(var(--ui-side-w) + 8px); right: auto; bottom: 12px; width: 260px; }
-  .ui-side-toggle { justify-content: center; padding: 0; }
-  .ui-side-toggle .ui-nav-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ui-side-head { flex-direction: column; gap: 12px; }
   .ui-page { padding: 28px 28px 60px; }
   .ui-split { grid-template-columns: minmax(0, 1fr); }
 }
