@@ -1,0 +1,20 @@
+/ Barre latérale de la nouvelle interface (redesign, Michael 2026-10-24). Teal,
+  la seule surface sombre de l'écran : elle prolonge la bande verte de
+  juillet 2026. Les entrées sont regroupées par usage et nommées, sans icône
+  muette ; les compteurs jaunes disent ce qui attend une réponse. La liste vient
+  d'`InterfaceHelper#interface_nav_groups`, partagée avec les onglets du
+  téléphone.
+nav.ui-side(aria-label="Navigation principale")
+  = link_to today_or_home_path, class: "ui-brand" do
+    = vite_image_tag "images/les-4-sources-logo-seul-blanc.png", alt: "", class: "ui-brand-mark"
+    span.ui-brand-t
+      b Claudy
+      small Les 4 Sources
+  .ui-nav
+    - interface_nav_groups.each do |label, entries|
+      .ui-nav-g
+        p.ui-nav-l = label
+        = render "layouts/v2/nav_links", entries: entries
+  .ui-nav.ui-side-foot
+    = render "layouts/v2/nav_links", entries: interface_nav_footer
+    = render "layouts/v2/account"

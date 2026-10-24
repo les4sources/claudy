@@ -1,0 +1,194 @@
+/ « AUJOURD'HUI » (redesign, Michael 2026-10-24) : la journée du domaine en une
+  page, pour qui ouvre Claudy le matin. Une phrase qui dit l'essentiel, quatre
+  chiffres, puis ce qui se passe dans l'ordre de l'horloge. Les données viennent
+  de `Today::Board` ; AUCUN MONTANT ici (comptes partagés, tous rôles agenda).
+  Un séjour s'ouvre dans la même modale que le calendrier (`stay-details`).
+- board = @board
+- before, highlighted, after = board.phrase
+.ui-today(data-controller="stay-details")
+  header.ui-phead
+    .ui-phead-t
+      p.ui-over = l(board.date, format: "%A %-d %B").capitalize
+      h1.ui-h1 Aujourd’hui
+      p.ui-phrase
+        = before
+        mark.ui-hl = highlighted
+        = after
+    .ui-actions
+      - if section_writable?(:accounting)
+        = link_to new_finance_expense_report_path(kind: "expenses", human_id: current_user.linked_human&.id), class: "ui-btn ui-hide-m" do
+          = ui_icon(:receipt, size: 16)
+          | Note de frais
+      - if section_writable?(:full)
+        = link_to new_stay_path, class: "ui-btn ui-btn-p" do
+          = ui_icon(:plus, size: 16)
+          | Nouveau séjour
+
+  .ui-moment(role="list" aria-label="La journée en chiffres")
+    .ui-mo(role="listitem")
+      span.ui-mo-l
+        = ui_icon(:in, size: 16)
+        | Arrivées
+      span.ui-mo-v = board.arrivals.size
+      span.ui-mo-s = board.arrivals_people.positive? ? "#{board.arrivals_people} personnes" : "personne"
+    .ui-mo(role="listitem")
+      span.ui-mo-l
+        = ui_icon(:out, size: 16)
+        | Départs
+      span.ui-mo-v = board.departures.size
+      span.ui-mo-s = board.departures.any? ? "avant 11:00" : "aucun"
+    .ui-mo(role="listitem")
+      span.ui-mo-l
+        = ui_icon(:moon, size: 16)
+        | Sur place ce soir
+      span.ui-mo-v = board.staying_tonight_people
+      span.ui-mo-s = pluralize(board.staying_tonight.size, "groupe", plural: "groupes")
+    .ui-mo(role="listitem")
+      span.ui-mo-l
+        = ui_icon(:utensils, size: 16)
+        | Couverts ce soir
+      span.ui-mo-v = board.dinner_covers
+      span.ui-mo-s
+        - if board.dinner_covers_to_validate.positive?
+          = "dont #{board.dinner_covers_to_validate} à valider"
+        - elsif board.dinner_covers.positive?
+          | tous validés
+        - else
+          | pas de repas
+
+  .ui-split
+    .ui-stack
+      section.ui-card(aria-labelledby="t-accueil")
+        .ui-card-h
+          h2.ui-h3#t-accueil
+            = ui_icon(:bed, size: 18)
+            | Accueil du jour
+          = link_to "Agenda", root_path, class: "ui-card-link"
+        .ui-card-b
+          - if board.entries.empty?
+            p.ui-empty Personne n’arrive ni ne part aujourd’hui. Les groupes déjà là restent sur l’agenda.
+          - else
+            .ui-rows
+              - board.entries.each do |entry|
+                .ui-row
+                  span.ui-time
+                    = entry.time
+                    small = { arrival: "Arrivée", departure: "Départ", day: "Journée", event: "Événement" }[entry.kind]
+                  span.ui-row-ico.ui-only-d = ui_icon({ arrival: :in, departure: :out, day: :room, event: :star }[entry.kind], size: 16)
+                  span.ui-row-m
+                    - if entry.stay
+                      = link_to entry.title, stay_path(entry.stay), class: "ui-row-t", data: { action: "stay-details#open" }
+                    - else
+                      span.ui-row-t = entry.title
+                    - if entry.detail.present?
+                      span.ui-row-s = entry.detail
+                    - if entry.status
+                      span.ui-only-m = ui_status(*entry.status)
+                  - if entry.status
+                    span.ui-only-d = ui_status(*entry.status)
+
+      section.ui-card(aria-labelledby="t-cuisine")
+        .ui-card-h
+          h2.ui-h3#t-cuisine
+            = ui_icon(:chef, size: 18)
+            | Cuisine du jour
+          - if section_readable?(:full)
+            = link_to "Cuisine", kitchen_orders_path, class: "ui-card-link"
+        .ui-card-b
+          - if board.meal_rows.empty?
+            p.ui-empty Pas de repas commandé aujourd’hui.
+          - else
+            .ui-rows
+              - board.meal_rows.each do |meal|
+                .ui-row
+                  span.ui-time = meal.moment_label || "—"
+                  span.ui-row-m
+                    span.ui-row-t = [meal.label.sub(/\s*\(.*\)\z/, ""), meal.client_label].join(" · ")
+                    span.ui-row-s = [("#{meal.people} couverts" if meal.people.to_i.positive?), meal.responsible_human&.name].compact.join(" · ").presence || "personne ne s’en charge encore"
+                  - case meal.board_status
+                  - when "planned"
+                    = ui_status(:ok, "Prévu")
+                  - when "to_validate"
+                    = ui_status(:todo, "À valider")
+                  - when "inquiry"
+                    = ui_status(:wait, "Demande d’info")
+                  - when "to_cover"
+                    = ui_status(:no, "À couvrir")
+
+    .ui-stack
+      - if board.full_access?
+        section.ui-card(aria-labelledby="t-todo")
+          .ui-card-h
+            h2.ui-h3#t-todo
+              | À traiter
+              - if board.todos.any?
+                span.ui-pill-y = board.todos.size
+          .ui-card-b
+            - if board.todos.empty?
+              p.ui-empty
+                = ui_status(:ok, "Rien en attente")
+            - else
+              .ui-rows
+                - board.todos.each do |todo|
+                  - route, route_params = todo[:path]
+                  = link_to public_send("#{route}_path", route_params), class: "ui-row ui-row-link" do
+                    span.ui-row-m
+                      span.ui-row-t = todo[:title]
+                      - if todo[:detail]
+                        span.ui-row-s = todo[:detail]
+                    = ui_icon(:right, size: 16)
+
+      section.ui-card(aria-labelledby="t-roles")
+        .ui-card-h
+          h2.ui-h3#t-roles Rôles du jour
+          - if section_readable?(:full)
+            = link_to "Planning", human_roles_path, class: "ui-card-link"
+        .ui-card-b
+          - roles = board.roles_today
+          - tomorrow = board.my_role_tomorrow
+          - if roles.empty? && tomorrow.nil?
+            p.ui-empty Personne n’est inscrit aujourd’hui.
+          - else
+            .ui-rows
+              - roles.each do |human_role|
+                .ui-row
+                  = ui_avatar(human_role.human&.name)
+                  span.ui-row-m
+                    span.ui-row-t = human_role.human&.name
+                    span.ui-row-s = [human_role.role&.name, ("a le téléphone" if human_role.phone_holder?)].compact.join(" · ")
+                  - if human_role.phone_holder? && human_role.human&.phone.present?
+                    = link_to "tel:#{human_role.human.phone}", class: "ui-ibtn ui-ibtn-o", "aria-label": "Appeler #{human_role.human.name}" do
+                      = ui_icon(:phone, size: 16)
+              - if tomorrow
+                .ui-row
+                  = ui_avatar(current_user.linked_human&.name, tone: "y")
+                  span.ui-row-m
+                    span.ui-row-t Toi, demain
+                    span.ui-row-s = [tomorrow.role&.name, l(board.date + 1, format: "%A %-d")].compact.join(" · ")
+
+      - if current_user.linked_human && board.cycle
+        section.ui-card(aria-labelledby="t-cycle")
+          .ui-card-h
+            h2.ui-h3#t-cycle
+              = ui_icon(:cycle, size: 18)
+              | Mon cycle
+            - if (week = board.cycle_week)
+              span.ui-small.ui-muted = "semaine #{week[0]} sur #{week[1]}"
+          .ui-card-b
+            - if (week = board.cycle_week)
+              .ui-prog(role="img" aria-label="Semaine #{week[0]} sur #{week[1]}")
+                - week[1].times do |index|
+                  i(class=(index + 1 < week[0] ? "d" : (index + 1 == week[0] ? "n" : nil)))
+            - if board.cycle_actions.empty?
+              p.ui-empty Aucune action en cours dans ce cycle.
+            - else
+              .ui-rows
+                - board.cycle_actions.each do |action|
+                  .ui-row
+                    span.ui-row-m
+                      span.ui-row-t = action.label
+                      span.ui-row-s = [action.decorate.category_label.to_s.downcase.presence, ("#{action.completed_occurrences} fois sur #{action.occurrences}" if action.occurrences.to_i > 1), ("#{number_with_precision(action.hours, precision: 1, separator: ",", strip_insignificant_zeros: true)} h" if action.hours.to_f.positive?)].compact.join(" · ")
+            - if section_readable?(:full)
+              = link_to "Ouvrir mon cycle", organisation_path, class: "ui-card-link ui-card-foot"
+
+  = render "pages/calendar/stay_modal"
