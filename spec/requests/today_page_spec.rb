@@ -117,6 +117,28 @@ RSpec.describe "Nouvelle interface et écran Aujourd'hui", type: :request do
       expect(response.body).to include("Journée calme")
     end
 
+    it "condense le tableau de bord dans « Pour toi » : cuisine à trancher, notifications, prochains rôles" do
+      chorale = stay_with_room(name: "Chorale du Bocq", arrival: today + 4, departure: today + 5)
+      MealOrder.create!(stay: chorale, kind: "gouter", moment: "gouter", date: today + 4, people: 18,
+                        status: "requested", responsible_human: human, skip_notifications: true)
+      Notification.create!(recipient: user, kind: "comment", title: "Olivier a commenté le séjour", url: "/stays")
+      HumanRole.create!(human: human, role: Role.create!(name: "Veille de nuit"), date: today + 1, status: "selected")
+      olivier = Human.create!(name: "Olivier", email: "olivier@les4sources.be")
+      cycle = Cycle.create!(name: "Cycle d'automne", start_date: today - 7, end_date: today + 30)
+      CycleAction.create!(human: olivier, cycle: cycle, label: "Relire le contrat", category: :deleguee, delegate_to_human: human)
+
+      get "/aujourdhui"
+
+      body = response.body
+      expect(body).to include("Pour toi")
+      expect(body).to include("la cuisine attend ta réponse")
+      expect(body).to include("Ok !")
+      expect(body).to include("Olivier a commenté le séjour")
+      expect(body).to include("Toi, demain")
+      expect(body).to include("confiée par Olivier")
+      expect(body).not_to match(/\d\s?€/)
+    end
+
     it "s'ouvre au rôle Kid (agenda en lecture) sans la file « À traiter »" do
       kid = User.create!(email: "kid-v2@les4sources.be", password: "password123", access_roles: %w[kid], new_interface: true)
       stay_with_room(name: "Chorale du Bocq", arrival: today + 5, departure: today + 6, status: "pending")

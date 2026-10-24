@@ -115,6 +115,68 @@
                   - when "to_cover"
                     = ui_status(:no, "À couvrir")
 
+      / « Pour toi » (Michael 2026-10-24) : le tableau de bord du membre, en
+        condensé. Ce qui attend SA réponse d'abord, puis ce qu'il porte. Dans
+        la colonne large : les gestes de la cuisine y tiennent sur une ligne.
+      - if board.human && !board.for_me_empty?
+        section.ui-card.ui-card-me(aria-labelledby="t-me")
+          .ui-card-h
+            h2.ui-h3#t-me
+              = ui_avatar(board.human.name, human: board.human, small: true)
+              | Pour toi
+            = link_to "Mon tableau de bord", dashboard_path, class: "ui-card-link"
+          .ui-card-b
+            .ui-rows
+              - board.my_kitchen_to_answer.each do |meal|
+                .ui-row
+                  span.ui-row-ico = ui_icon(:utensils, size: 16)
+                  span.ui-row-m
+                    span.ui-row-t = [meal.moment_label, meal.label.sub(/\s*\(.*\)\z/, ""), meal.client_label].compact.uniq.join(" · ")
+                    span.ui-row-s = [(meal.date ? l(meal.date, format: "%A %-d %B") : "date à fixer"), ("#{meal.people} couverts" if meal.people.to_i.positive?), "la cuisine attend ta réponse"].compact.join(" · ")
+                  - if section_writable?(:full)
+                    .ui-row-act
+                      = button_to "Ok !", accept_kitchen_order_path(meal), method: :patch, class: "ui-btn ui-btn-p ui-btn-s"
+                      = link_to "Pas possible", new_refusal_kitchen_order_path(meal), class: "ui-btn ui-btn-s"
+              - if (service = board.my_next_service)
+                .ui-row
+                  span.ui-row-ico = ui_icon(:chef, size: 16)
+                  span.ui-row-m
+                    span.ui-row-t = "Ton prochain service : #{l(service.date, format: '%A %-d')}#{" #{service.moment_label.downcase}" if service.moment_label}"
+                    span.ui-row-s = [service.label.sub(/\s*\(.*\)\z/, ""), service.client_label, ("#{service.people} couverts" if service.people.to_i.positive?)].compact.join(" · ")
+              - board.my_unread_notifications.each do |notification|
+                = link_to notification_path(notification), class: "ui-row ui-row-link", data: { turbo: false } do
+                  span.ui-row-ico = ui_icon(:bell, size: 16)
+                  span.ui-row-m
+                    span.ui-row-t = notification.title
+                    span.ui-row-s = "il y a #{time_ago_in_words(notification.created_at)}"
+                  = ui_icon(:right, size: 16)
+              - if board.my_unread_count > board.my_unread_notifications.size
+                = link_to notifications_path, class: "ui-row ui-row-link" do
+                  span.ui-row-m
+                    - others = board.my_unread_count - board.my_unread_notifications.size
+                    span.ui-row-t = others == 1 ? "1 autre notification non lue" : "#{others} autres notifications non lues"
+                  = ui_icon(:right, size: 16)
+              - board.my_agenda_items.each do |item|
+                = link_to gathering_path(item.gathering), class: "ui-row ui-row-link" do
+                  span.ui-row-ico = ui_icon(:users, size: 16)
+                  span.ui-row-m
+                    span.ui-row-t = item.title
+                    span.ui-row-s = "tu portes ce point · #{GatheringDecorator.new(item.gathering).display_name}"
+                  = ui_icon(:right, size: 16)
+              - if board.my_gathering_actions_count.positive?
+                = link_to dashboard_path, class: "ui-row ui-row-link" do
+                  span.ui-row-ico = ui_icon(:check, size: 16)
+                  span.ui-row-m
+                    span.ui-row-t = board.my_gathering_actions_count == 1 ? "1 action de rassemblement à faire" : "#{board.my_gathering_actions_count} actions de rassemblement à faire"
+                  = ui_icon(:right, size: 16)
+              - board.my_open_tasks.each do |task|
+                = link_to task.project ? project_path(task.project) : projects_path, class: "ui-row ui-row-link" do
+                  span.ui-row-ico = ui_icon(:folder, size: 16)
+                  span.ui-row-m
+                    span.ui-row-t = task.name
+                    span.ui-row-s = [task.project&.name, (task.due_date ? (task.due_date < board.date ? "en retard, prévue le #{l(task.due_date, format: '%-d %B')}" : "pour le #{l(task.due_date, format: '%-d %B')}") : nil)].compact.join(" · ")
+                  = ui_icon(:right, size: 16)
+
     .ui-stack
       - if board.full_access?
         section.ui-card(aria-labelledby="t-todo")
@@ -145,11 +207,13 @@
             = link_to "Planning", human_roles_path, class: "ui-card-link"
         .ui-card-b
           - roles = board.roles_today
-          - tomorrow = board.my_role_tomorrow
-          - if roles.empty? && tomorrow.nil?
+          - mine = board.my_upcoming_roles
+          - if roles.empty? && mine.empty?
             p.ui-empty Personne n’est inscrit aujourd’hui.
           - else
             .ui-rows
+              - if roles.empty?
+                p.ui-empty Personne n’est inscrit aujourd’hui.
               - roles.each do |human_role|
                 .ui-row
                   = ui_avatar(human_role.human&.name, human: human_role.human)
@@ -159,12 +223,12 @@
                   - if human_role.phone_holder? && human_role.human&.phone.present?
                     = link_to "tel:#{human_role.human.phone}", class: "ui-ibtn ui-ibtn-o", "aria-label": "Appeler #{human_role.human.name}" do
                       = ui_icon(:phone, size: 16)
-              - if tomorrow
+              - mine.each do |human_role|
                 .ui-row
-                  = ui_avatar(current_user.linked_human&.name, tone: "y", human: current_user.linked_human)
+                  = ui_avatar(board.human.name, tone: "y", human: board.human)
                   span.ui-row-m
-                    span.ui-row-t Toi, demain
-                    span.ui-row-s = [tomorrow.role&.name, l(board.date + 1, format: "%A %-d")].compact.join(" · ")
+                    span.ui-row-t = human_role.date == board.date + 1 ? "Toi, demain" : "Toi, #{l(human_role.date, format: '%A %-d')}"
+                    span.ui-row-s = [human_role.role&.name, l(human_role.date, format: "%A %-d %B")].compact.join(" · ")
 
       - if current_user.linked_human && board.cycle
         section.ui-card(aria-labelledby="t-cycle")
@@ -188,6 +252,13 @@
                     span.ui-row-m
                       span.ui-row-t = action.label
                       span.ui-row-s = [action.decorate.category_label.to_s.downcase.presence, ("#{action.completed_occurrences} fois sur #{action.occurrences}" if action.occurrences.to_i > 1), ("#{number_with_precision(action.hours, precision: 1, separator: ",", strip_insignificant_zeros: true)} h" if action.hours.to_f.positive?)].compact.join(" · ")
+            - if board.delegated_actions.any?
+              .ui-rows.ui-rows-sub
+                - board.delegated_actions.each do |action|
+                  .ui-row
+                    span.ui-row-m
+                      span.ui-row-t = action.label
+                      span.ui-row-s = "confiée par #{action.human&.name}"
             - if section_readable?(:full)
               = link_to "Ouvrir mon cycle", organisation_path, class: "ui-card-link ui-card-foot"
 
