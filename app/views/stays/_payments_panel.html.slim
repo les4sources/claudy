@@ -4,87 +4,64 @@
 / « Total séjour » et « Solde dû » sur leurs anciens montants jusqu'au prochain
 / rechargement complet — l'écran contredisait la base.
 / Les montants se dérivent tous de `@stay` : la partial se rend seule.
-- paiements = @stay.payments.order(:created_at)
-- encaisse = @stay.amount_paid_cents
-/ Le « Solde dû » se calcule sur l'EXIGIBLE, qui exclut les activités encore à
-/ valider (sauf prix imposé, cf. `Stay#payable_amount_cents`). Sans la ligne qui
-/ les montre, « Total − Encaissé » ne retombait pas sur le solde affiché
-/ (Michael 2026-10-01 : 1 616 − 228 ≠ 668). La jauge suit la même base.
-- en_attente = @stay.total_amount_cents.to_i - @stay.payable_amount_cents
-- exigible = @stay.payable_amount_cents
-- avancement = exigible.positive? ? [[(encaisse * 100.0 / exigible).round, 0].max, 100].min : 0
-= turbo_frame_tag "stay_#{@stay.id}_payments" do
-  .border-t.border-gray-200.pt-4
-    .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Paiements
-    dl.mt-2.space-y-1.text-sm
-      .flex.items-baseline.justify-between
-        dt.text-gray-600 Total séjour
-        dd.font-semibold.text-gray-900 = humanized_money_with_symbol(@stay.total_amount)
-      - if en_attente.positive?
+/ Nouvelle interface : le bloc « Argent » du panneau séjour, même frame.
+- if new_interface?
+  = render "stays/v2/payments_panel"
+- else
+  - paiements = @stay.payments.order(:created_at)
+  - encaisse = @stay.amount_paid_cents
+  / Le « Solde dû » se calcule sur l'EXIGIBLE, qui exclut les activités encore à
+  / valider (sauf prix imposé, cf. `Stay#payable_amount_cents`). Sans la ligne qui
+  / les montre, « Total − Encaissé » ne retombait pas sur le solde affiché
+  / (Michael 2026-10-01 : 1 616 − 228 ≠ 668). La jauge suit la même base.
+  - en_attente = @stay.total_amount_cents.to_i - @stay.payable_amount_cents
+  - exigible = @stay.payable_amount_cents
+  - avancement = exigible.positive? ? [[(encaisse * 100.0 / exigible).round, 0].max, 100].min : 0
+  = turbo_frame_tag "stay_#{@stay.id}_payments" do
+    .border-t.border-gray-200.pt-4
+      .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Paiements
+      dl.mt-2.space-y-1.text-sm
         .flex.items-baseline.justify-between
-          dt.text-gray-600 Activités à valider
-          dd.text-gray-500 = "− #{humanized_money_with_symbol(Money.new(en_attente))}"
-      .flex.items-baseline.justify-between
-        dt.text-gray-600 Encaissé
-        dd.text-gray-900 = humanized_money_with_symbol(Money.new(encaisse))
+          dt.text-gray-600 Total séjour
+          dd.font-semibold.text-gray-900 = humanized_money_with_symbol(@stay.total_amount)
+        - if en_attente.positive?
+          .flex.items-baseline.justify-between
+            dt.text-gray-600 Activités à valider
+            dd.text-gray-500 = "− #{humanized_money_with_symbol(Money.new(en_attente))}"
+        .flex.items-baseline.justify-between
+          dt.text-gray-600 Encaissé
+          dd.text-gray-900 = humanized_money_with_symbol(Money.new(encaisse))
 
-    - if paiements.any?
-      ul.mt-3.space-y-2
-        - paiements.each do |payment|
-          = render "stays/payment_line", payment: payment.decorate, raw_payment: payment
-    - else
-      p.mt-3.text-sm.text-gray-500 Aucun paiement enregistré.
+      - if paiements.any?
+        ul.mt-3.space-y-2
+          - paiements.each do |payment|
+            = render "stays/payment_line", payment: payment.decorate, raw_payment: payment
+      - else
+        p.mt-3.text-sm.text-gray-500 Aucun paiement enregistré.
 
-    /  Jauge d'encaissement : le rapport encaissé/total se lit d'un coup
-       d'œil, là où deux montants demandent un calcul mental.
-    /  La jauge reprend le code couleur du solde juste en dessous : ambre
-       tant qu'il reste à encaisser, vert une fois le séjour soldé. Le
-       rouge reste réservé au montant dû, qui est l'alerte.
-    - if exigible.positive?
-      - teinte_jauge = @stay.payable_now? ? "bg-amber-500" : "bg-emerald-500"
-      .mt-3.h-2.w-full.overflow-hidden.rounded-full.bg-gray-200(role="img" aria-label="#{avancement}% encaissé")
-        .h-full.rounded-full(class=teinte_jauge style="width: #{avancement}%")
+      /  Jauge d'encaissement : le rapport encaissé/total se lit d'un coup
+         d'œil, là où deux montants demandent un calcul mental.
+      /  La jauge reprend le code couleur du solde juste en dessous : ambre
+         tant qu'il reste à encaisser, vert une fois le séjour soldé. Le
+         rouge reste réservé au montant dû, qui est l'alerte.
+      - if exigible.positive?
+        - teinte_jauge = @stay.payable_now? ? "bg-amber-500" : "bg-emerald-500"
+        .mt-3.h-2.w-full.overflow-hidden.rounded-full.bg-gray-200(role="img" aria-label="#{avancement}% encaissé")
+          .h-full.rounded-full(class=teinte_jauge style="width: #{avancement}%")
 
-    /  RIEN À DEVOIR = UNE PHRASE, PAS UN ZÉRO (Michael 2026-08-24). « Soldé · 0 € »
-       demandait de lire un montant nul pour en déduire qu'il n'y a rien à faire :
-       le chiffre n'apprenait rien, et sur un séjour à 0 € il annonçait un solde
-       sur une dette inexistante. Le solde chiffré ne s'affiche donc que s'il est
-       réellement exigible ; sinon on écrit la conclusion.
-    - if @stay.payable_now?
-      .mt-3.flex.items-baseline.justify-between
-        span.text-sm.font-semibold.text-red-700 Solde dû
-        span.text-lg.font-bold.text-red-700
-          = humanized_money_with_symbol(Money.new(@stay.balance_due_cents))
-    - else
-      .mt-3.flex.items-center.gap-2.rounded-md.bg-green-50.px-3.py-2
-        span.text-base.leading-none.text-green-700 ✓
-        span.text-sm.font-semibold.text-green-800 Tout est en ordre
+      /  RIEN À DEVOIR = UNE PHRASE, PAS UN ZÉRO (Michael 2026-08-24). « Soldé · 0 € »
+         demandait de lire un montant nul pour en déduire qu'il n'y a rien à faire :
+         le chiffre n'apprenait rien, et sur un séjour à 0 € il annonçait un solde
+         sur une dette inexistante. Le solde chiffré ne s'affiche donc que s'il est
+         réellement exigible ; sinon on écrit la conclusion.
+      - if @stay.payable_now?
+        .mt-3.flex.items-baseline.justify-between
+          span.text-sm.font-semibold.text-red-700 Solde dû
+          span.text-lg.font-bold.text-red-700
+            = humanized_money_with_symbol(Money.new(@stay.balance_due_cents))
+      - else
+        .mt-3.flex.items-center.gap-2.rounded-md.bg-green-50.px-3.py-2
+          span.text-base.leading-none.text-green-700 ✓
+          span.text-sm.font-semibold.text-green-800 Tout est en ordre
 
-    /  Enregistrer un paiement — REPLIÉ mais à un clic. C'est l'action la
-       plus fréquente du poste, d'où sa place en bas de colonne, sous le
-       solde qu'elle vient réduire.
-    details.mt-3(open=(@stay.payable_now? && paiements.empty?))
-      summary.w-full.cursor-pointer.select-none.rounded-md.bg-indigo-600.px-3.py-2.text-center.text-sm.font-medium.text-white.hover:bg-indigo-700
-        | Enregistrer un paiement
-      = form_with url: stay_payments_path(@stay), method: :post, class: "mt-2 space-y-2 rounded-md border border-gray-200 bg-white p-3" do |f|
-        label.block.text-xs.text-gray-600
-          | Montant (€)
-          = number_field_tag "payment[amount]", nil, step: "0.01", min: "0.01", required: true, class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
-        /  « Via Airbnb ou Booking » (Michael 2026-10-19) : un séjour venu d'une
-           de ces plateformes n'est payé ni par virement, ni en liquide, ni en
-           ligne — c'est la plateforme qui encaisse. Proposé d'office sur ces séjours.
-        div.relative.text-xs.text-gray-600(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un moyen…")
-          span.block Moyen
-          = select_tag "payment[payment_method]", options_for_select(Payment::STAY_METHOD_OPTIONS, @stay.ota? ? Payment::OTA_METHOD : "bank_transfer"), class: "mt-1 block w-full rounded border-gray-300 text-sm py-1", data: { searchable_select_target: "select" }
-          = render "shared/searchable_select_search", label: "Chercher un moyen de paiement"
-        div.relative.text-xs.text-gray-600(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un statut…")
-          span.block Statut
-          = select_tag "payment[status]", options_for_select([["Encaissé", "paid"], ["En attente", "pending"]], "paid"), class: "mt-1 block w-full rounded border-gray-300 text-sm py-1", data: { searchable_select_target: "select" }
-          = render "shared/searchable_select_search", label: "Chercher un statut"
-        /  Date d'ENCAISSEMENT — optionnelle. Le compte bancaire se pointe
-           avec du retard : sans elle, un virement reçu le 3 et encodé le
-           17 se lit au 17, et le rapprochement administratif est faux.
-        label.block.text-xs.text-gray-600
-          | Date du paiement <span class="text-gray-400">(optionnel)</span>
-          = date_field_tag "payment[paid_on]", nil, class: "mt-1 block w-full rounded border-gray-300 text-sm py-1"
-        = f.submit "Ajouter le paiement", class: "w-full cursor-pointer rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+      = render "stays/payment_form", paiements: paiements

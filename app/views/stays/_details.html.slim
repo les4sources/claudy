@@ -11,214 +11,218 @@
   disponibilité.
   Le partial garde son `id` : il est remplacé sur place par Turbo Stream après
   une action rapide (statut, catégorie, paiement, note).
-- statut_teinte = { "confirmed" => "bg-green-50 border-green-200", "pre_confirmed" => "bg-indigo-50 border-indigo-200", "pending" => "bg-amber-50 border-amber-200" }.fetch(@stay.status.to_s, "bg-red-50 border-red-200")
-- occupants = @stay.occupants
-div id="stay-details-#{@stay.id}"
-  /  En-tête TEINTÉ PAR LE STATUT : la couleur dit l'état du dossier avant même
-     qu'on lise le badge.
-  .flex.flex-wrap.items-center.justify-between.gap-3.border-b.px-5.py-3(class=statut_teinte)
-    .flex.items-center.gap-3.min-w-0
-      h3.font-averia.text-xl.font-bold.text-gray-900.pr-1
-        | Séjour ##{@stay.id}
-      = @stay.status_badge
-      = @stay.platform_badge
-      /  Apporteur (Michael, 2026-10-18) : séjour venu par un lien partenaire
-         (`/reservation?ref=semisto`) — à reverser, donc visible d'emblée.
-      = @stay.referral_badge
-      = @stay.referral_commission_tag
-      /  Facture attendue : l'en-tête le dit, sinon l'info ne vit que dans le
-         formulaire d'édition et dans la file de facturation.
-      = @stay.invoice_badge
-    /  `grow` : passée sous le titre, la rangée prend toute la largeur, et le
-       groupe Dupliquer · Modifier · croix se cale à droite (Michael, 2026-10-19).
-    .flex.grow.flex-wrap.items-center.gap-2
-      /  Trois états, trois jeux de boutons. Un séjour ANNULÉ ne se confirme pas
-         d'un clic : on le réactive en attente, puis on confirme — le second clic
-         est l'occasion de revérifier les dates (le veto n'est pas rejoué ici).
-      - if @stay.canceled?
-        = button_to "Réactiver le séjour", update_status_stay_path(@stay, status: "pending"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-transparent bg-amber-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-amber-600"
-      - elsif @stay.status == "confirmed"
-        = button_to "Repasser en attente", update_status_stay_path(@stay, status: "pending"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-      /  Séjour DÉJÀ PASSÉ (Michael, 2026-10-13) : confirmer après coup est une
-         régularisation. Une modale demande s'il faut écrire au client ; sans
-         réponse explicite, rien ne part.
-      - elsif @stay.ask_email_on_confirm?
-        div(data-controller="choice-dialog")
-          button.rounded-md.border.border-transparent.bg-green-600.px-3.text-sm.font-medium.text-white.shadow-sm(class="py-1.5 hover:bg-green-700" type="button" data-action="choice-dialog#open")
-            | Confirmer le séjour
-          dialog.rounded-lg.p-0.shadow-xl.w-full.max-w-lg(class="backdrop:bg-black/40" data-choice-dialog-target="dialog" aria-labelledby="past-confirm-title-#{@stay.id}")
-            .p-5.space-y-3
-              h4.text-lg.font-semibold.text-gray-900 id="past-confirm-title-#{@stay.id}"
-                | Ce séjour est déjà passé
-              p.text-sm.text-gray-700
-                | Il s'est terminé le #{l(@stay.departure_date, format: "%-d %B %Y")}. Faut-il envoyer au client l'email « votre séjour est confirmé » ?
-              p.text-sm.text-gray-500
-                | Destinataire : #{@stay.customer.email}
-                - if @stay.confirmation_email_sent_at.present?
-                  br
-                  | Un email de confirmation est déjà parti le #{l(@stay.confirmation_email_sent_at.to_date, format: "%-d %B %Y")}.
-            .flex.flex-wrap.justify-end.gap-2.border-t.bg-gray-50.px-5.py-3
-              button.rounded-md.border.border-gray-300.bg-white.px-3.text-sm.font-medium.text-gray-700(class="py-1.5 hover:bg-gray-50" type="button" data-action="choice-dialog#close")
-                | Retour
-              = button_to "Confirmer et envoyer l'email", update_status_stay_path(@stay, status: "confirmed", notify_customer: 1), method: :patch, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              = button_to "Confirmer sans email", update_status_stay_path(@stay, status: "confirmed", notify_customer: 0), method: :patch, autofocus: true, class: "rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
-      - else
-        = button_to "Confirmer le séjour", update_status_stay_path(@stay, status: "confirmed"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
-      /  L'annulation sort le séjour de l'agenda et libère ses dates, SANS email
-         au client (contrat anti-spam du toggle interne). Le séjour reste listé
-         avec son badge rouge ; le faire disparaître, c'est la suppression.
-      - unless @stay.canceled?
-        = button_to "Annuler le séjour", update_status_stay_path(@stay, status: "canceled"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Vraiment annuler ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
-      - if @stay.token.present?
-        = link_to "Page web ↗", public_stay_path(@stay.token, donottrack: 1), target: "_blank", rel: "noopener", class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-      /  Renvoi manuel de l'email de confirmation (Malau, 2026-08-20). N'apparaît
-         que sur un séjour CONFIRMÉ d'un client réel : sur un séjour en attente il
-         n'y a rien à confirmer, et sur un fourre-tout l'adresse est une boîte
-         maison. Le libellé dit si un email est déjà parti — sans quoi personne ne
-         sait s'il faut cliquer.
-      /  Pré-confirmation par le Pôle Accueil (issue #215). N'apparaît que sur une
-         demande ENCORE EN ATTENTE d'un client réel joignable : une fois
-         pré-confirmée, l'acompte est déjà demandé et rejouer l'action créerait un
-         second Payment. C'est un lien (pas un button_to) : l'action ouvre un
-         écran où l'on ajuste le montant avant d'envoyer quoi que ce soit.
-      - if @stay.can_pre_confirm?
-        = link_to "Pré-confirmer et demander l'acompte", pre_confirm_stay_path(@stay), class: "rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-      /  Refus d'une demande (Michael 2026-09-08) — le pendant du bouton
-         ci-dessus, à ne pas confondre avec « Annuler le séjour » juste à
-         gauche : celui-là est un toggle interne SILENCIEUX, celui-ci exige un
-         motif et l'ENVOIE au client. Visible tant que la demande n'est pas
-         payée (en attente OU pré-confirmée). Un lien, pas un button_to :
-         l'action ouvre l'écran de saisie du motif, rien ne part au clic.
-      - if @stay.can_refuse?
-        = link_to "Refuser la demande", refuse_stay_path(@stay), class: "rounded-md border border-transparent bg-red-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-red-700"
-      - if @stay.can_resend_confirmation_email?
-        = button_to @stay.confirmation_email_button_label, send_confirmation_email_stay_path(@stay), method: :post, title: @stay.confirmation_email_hint, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Envoyer l'email de confirmation au client ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-      .ml-auto.flex.items-center.gap-2
-        = link_to "Dupliquer", new_stay_path(duplicate_from: @stay.id), title: "Dupliquer ce séjour (nouvelles dates à choisir)", class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        /  « Modifier » est l'ISSUE DE SECOURS de cette modale : tout ce qui touche
-           à la composition (dates, gîtes, espaces, activités payantes) se règle
-           dans le formulaire, qui porte les vérifications de disponibilité.
-        = link_to "Modifier", edit_stay_path(@stay), class: "rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-        /  Fermeture logée DANS l'en-tête, au bout des actions. `stay-modal-close`
-           la masque hors <dialog> (règle contextuelle dans application.css) : ce
-           même partial sert la page pleine /stays/:id, où il n'y a rien à fermer.
-        button.stay-modal-close.hidden.ml-1.items-center.justify-center.rounded-md.p-1(class="text-gray-500 hover:bg-white/70 hover:text-gray-900" type="button" data-action="stay-details#close" aria-label="Fermer")
-          svg.h-5.w-5(xmlns="http://www.w3.org/2000/svg" fill="none" viewbox="0 0 24 24" stroke-width="1.75" stroke="currentColor")
-            path(stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12")
+/ Nouvelle interface : la fiche en panneau latéral (`stays/v2/_details`).
+- if new_interface?
+  = render "stays/v2/details"
+- else
+  - statut_teinte = { "confirmed" => "bg-green-50 border-green-200", "pre_confirmed" => "bg-indigo-50 border-indigo-200", "pending" => "bg-amber-50 border-amber-200" }.fetch(@stay.status.to_s, "bg-red-50 border-red-200")
+  - occupants = @stay.occupants
+  div id="stay-details-#{@stay.id}"
+    /  En-tête TEINTÉ PAR LE STATUT : la couleur dit l'état du dossier avant même
+       qu'on lise le badge.
+    .flex.flex-wrap.items-center.justify-between.gap-3.border-b.px-5.py-3(class=statut_teinte)
+      .flex.items-center.gap-3.min-w-0
+        h3.font-averia.text-xl.font-bold.text-gray-900.pr-1
+          | Séjour ##{@stay.id}
+        = @stay.status_badge
+        = @stay.platform_badge
+        /  Apporteur (Michael, 2026-10-18) : séjour venu par un lien partenaire
+           (`/reservation?ref=semisto`) — à reverser, donc visible d'emblée.
+        = @stay.referral_badge
+        = @stay.referral_commission_tag
+        /  Facture attendue : l'en-tête le dit, sinon l'info ne vit que dans le
+           formulaire d'édition et dans la file de facturation.
+        = @stay.invoice_badge
+      /  `grow` : passée sous le titre, la rangée prend toute la largeur, et le
+         groupe Dupliquer · Modifier · croix se cale à droite (Michael, 2026-10-19).
+      .flex.grow.flex-wrap.items-center.gap-2
+        /  Trois états, trois jeux de boutons. Un séjour ANNULÉ ne se confirme pas
+           d'un clic : on le réactive en attente, puis on confirme — le second clic
+           est l'occasion de revérifier les dates (le veto n'est pas rejoué ici).
+        - if @stay.canceled?
+          = button_to "Réactiver le séjour", update_status_stay_path(@stay, status: "pending"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-transparent bg-amber-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-amber-600"
+        - elsif @stay.status == "confirmed"
+          = button_to "Repasser en attente", update_status_stay_path(@stay, status: "pending"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        /  Séjour DÉJÀ PASSÉ (Michael, 2026-10-13) : confirmer après coup est une
+           régularisation. Une modale demande s'il faut écrire au client ; sans
+           réponse explicite, rien ne part.
+        - elsif @stay.ask_email_on_confirm?
+          div(data-controller="choice-dialog")
+            button.rounded-md.border.border-transparent.bg-green-600.px-3.text-sm.font-medium.text-white.shadow-sm(class="py-1.5 hover:bg-green-700" type="button" data-action="choice-dialog#open")
+              | Confirmer le séjour
+            dialog.rounded-lg.p-0.shadow-xl.w-full.max-w-lg(class="backdrop:bg-black/40" data-choice-dialog-target="dialog" aria-labelledby="past-confirm-title-#{@stay.id}")
+              .p-5.space-y-3
+                h4.text-lg.font-semibold.text-gray-900 id="past-confirm-title-#{@stay.id}"
+                  | Ce séjour est déjà passé
+                p.text-sm.text-gray-700
+                  | Il s'est terminé le #{l(@stay.departure_date, format: "%-d %B %Y")}. Faut-il envoyer au client l'email « votre séjour est confirmé » ?
+                p.text-sm.text-gray-500
+                  | Destinataire : #{@stay.customer.email}
+                  - if @stay.confirmation_email_sent_at.present?
+                    br
+                    | Un email de confirmation est déjà parti le #{l(@stay.confirmation_email_sent_at.to_date, format: "%-d %B %Y")}.
+              .flex.flex-wrap.justify-end.gap-2.border-t.bg-gray-50.px-5.py-3
+                button.rounded-md.border.border-gray-300.bg-white.px-3.text-sm.font-medium.text-gray-700(class="py-1.5 hover:bg-gray-50" type="button" data-action="choice-dialog#close")
+                  | Retour
+                = button_to "Confirmer et envoyer l'email", update_status_stay_path(@stay, status: "confirmed", notify_customer: 1), method: :patch, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                = button_to "Confirmer sans email", update_status_stay_path(@stay, status: "confirmed", notify_customer: 0), method: :patch, autofocus: true, class: "rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
+        - else
+          = button_to "Confirmer le séjour", update_status_stay_path(@stay, status: "confirmed"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Êtes-vous sûr·e ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-transparent bg-green-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-green-700"
+        /  L'annulation sort le séjour de l'agenda et libère ses dates, SANS email
+           au client (contrat anti-spam du toggle interne). Le séjour reste listé
+           avec son badge rouge ; le faire disparaître, c'est la suppression.
+        - unless @stay.canceled?
+          = button_to "Annuler le séjour", update_status_stay_path(@stay, status: "canceled"), method: :patch, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Vraiment annuler ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
+        - if @stay.token.present?
+          = link_to "Page web ↗", public_stay_path(@stay.token, donottrack: 1), target: "_blank", rel: "noopener", class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        /  Renvoi manuel de l'email de confirmation (Malau, 2026-08-20). N'apparaît
+           que sur un séjour CONFIRMÉ d'un client réel : sur un séjour en attente il
+           n'y a rien à confirmer, et sur un fourre-tout l'adresse est une boîte
+           maison. Le libellé dit si un email est déjà parti — sans quoi personne ne
+           sait s'il faut cliquer.
+        /  Pré-confirmation par le Pôle Accueil (issue #215). N'apparaît que sur une
+           demande ENCORE EN ATTENTE d'un client réel joignable : une fois
+           pré-confirmée, l'acompte est déjà demandé et rejouer l'action créerait un
+           second Payment. C'est un lien (pas un button_to) : l'action ouvre un
+           écran où l'on ajuste le montant avant d'envoyer quoi que ce soit.
+        - if @stay.can_pre_confirm?
+          = link_to "Pré-confirmer et demander l'acompte", pre_confirm_stay_path(@stay), class: "rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+        /  Refus d'une demande (Michael 2026-09-08) — le pendant du bouton
+           ci-dessus, à ne pas confondre avec « Annuler le séjour » juste à
+           gauche : celui-là est un toggle interne SILENCIEUX, celui-ci exige un
+           motif et l'ENVOIE au client. Visible tant que la demande n'est pas
+           payée (en attente OU pré-confirmée). Un lien, pas un button_to :
+           l'action ouvre l'écran de saisie du motif, rien ne part au clic.
+        - if @stay.can_refuse?
+          = link_to "Refuser la demande", refuse_stay_path(@stay), class: "rounded-md border border-transparent bg-red-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-red-700"
+        - if @stay.can_resend_confirmation_email?
+          = button_to @stay.confirmation_email_button_label, send_confirmation_email_stay_path(@stay), method: :post, title: @stay.confirmation_email_hint, form: { data: { controller: "confirm-click", action: "submit->confirm-click#confirm", "confirm-click-label-value": "Envoyer l'email de confirmation au client ?" } }, data: { "confirm-click-target": "button" }, class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        .ml-auto.flex.items-center.gap-2
+          = link_to "Dupliquer", new_stay_path(duplicate_from: @stay.id), title: "Dupliquer ce séjour (nouvelles dates à choisir)", class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          /  « Modifier » est l'ISSUE DE SECOURS de cette modale : tout ce qui touche
+             à la composition (dates, gîtes, espaces, activités payantes) se règle
+             dans le formulaire, qui porte les vérifications de disponibilité.
+          = link_to "Modifier", edit_stay_path(@stay), class: "rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+          /  Fermeture logée DANS l'en-tête, au bout des actions. `stay-modal-close`
+             la masque hors <dialog> (règle contextuelle dans application.css) : ce
+             même partial sert la page pleine /stays/:id, où il n'y a rien à fermer.
+          button.stay-modal-close.hidden.ml-1.items-center.justify-center.rounded-md.p-1(class="text-gray-500 hover:bg-white/70 hover:text-gray-900" type="button" data-action="stay-details#close" aria-label="Fermer")
+            svg.h-5.w-5(xmlns="http://www.w3.org/2000/svg" fill="none" viewbox="0 0 24 24" stroke-width="1.75" stroke="currentColor")
+              path(stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12")
 
-  /  Demande de modification client en attente (issue #133) : elle passe AVANT
-     les deux colonnes — c'est une décision à prendre, pas une information.
-  - pending_change = @stay.stay_change_requests.pending.order(created_at: :desc).first
-  - if pending_change.present?
-    = render "stays/pending_change", pending_change: pending_change
+    /  Demande de modification client en attente (issue #133) : elle passe AVANT
+       les deux colonnes — c'est une décision à prendre, pas une information.
+    - pending_change = @stay.stay_change_requests.pending.order(created_at: :desc).first
+    - if pending_change.present?
+      = render "stays/pending_change", pending_change: pending_change
 
-  /  La largeur de colonne passe par un attribut `class` : en notation à points,
-     Slim lirait le `[` de `lg:grid-cols-[20rem_1fr]` comme un début de bloc
-     d'attributs et avalerait tout le sous-arbre — il était rendu en TEXTE.
-  .grid(class="grid-cols-1 lg:grid-cols-[20rem_1fr]")
-    /  === COLONNE GAUCHE : identité et argent =============================
-    .space-y-5.border-r.border-gray-200.bg-gray-50.px-5.py-5
-      div
-        .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Dates
-        .mt-1.text-lg.font-semibold.text-gray-900 = @stay.date_range
-        - if (span = @stay.stay_span_label)
-          .text-sm.text-gray-500 = span
-        - if @stay.arrival_time.present? || @stay.departure_time.present?
-          .mt-1.text-sm.text-gray-500
-            = [(@stay.arrival_time.present? ? "Arrivée #{@stay.arrival_time}" : nil), (@stay.departure_time.present? ? "Départ #{@stay.departure_time}" : nil)].compact.join(" · ")
-
-      - if occupants[:adults].positive? || occupants[:children].positive?
+    /  La largeur de colonne passe par un attribut `class` : en notation à points,
+       Slim lirait le `[` de `lg:grid-cols-[20rem_1fr]` comme un début de bloc
+       d'attributs et avalerait tout le sous-arbre — il était rendu en TEXTE.
+    .grid(class="grid-cols-1 lg:grid-cols-[20rem_1fr]")
+      /  === COLONNE GAUCHE : identité et argent =============================
+      .space-y-5.border-r.border-gray-200.bg-gray-50.px-5.py-5
         div
-          .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Occupants
-          .mt-1.flex.flex-wrap.gap-1.5
-            - if occupants[:adults].positive?
-              span.inline-flex.items-center.rounded-full.border.border-gray-300.bg-white.px-2.5.py-1.text-sm.text-gray-700
-                = "#{occupants[:adults]} adulte#{'s' if occupants[:adults] > 1}"
-            - if occupants[:children].positive?
-              span.inline-flex.items-center.rounded-full.border.border-gray-300.bg-white.px-2.5.py-1.text-sm.text-gray-700
-                = "#{occupants[:children]} enfant#{'s' if occupants[:children] > 1}"
+          .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Dates
+          .mt-1.text-lg.font-semibold.text-gray-900 = @stay.date_range
+          - if (span = @stay.stay_span_label)
+            .text-sm.text-gray-500 = span
+          - if @stay.arrival_time.present? || @stay.departure_time.present?
+            .mt-1.text-sm.text-gray-500
+              = [(@stay.arrival_time.present? ? "Arrivée #{@stay.arrival_time}" : nil), (@stay.departure_time.present? ? "Départ #{@stay.departure_time}" : nil)].compact.join(" · ")
 
+        - if occupants[:adults].positive? || occupants[:children].positive?
+          div
+            .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Occupants
+            .mt-1.flex.flex-wrap.gap-1.5
+              - if occupants[:adults].positive?
+                span.inline-flex.items-center.rounded-full.border.border-gray-300.bg-white.px-2.5.py-1.text-sm.text-gray-700
+                  = "#{occupants[:adults]} adulte#{'s' if occupants[:adults] > 1}"
+              - if occupants[:children].positive?
+                span.inline-flex.items-center.rounded-full.border.border-gray-300.bg-white.px-2.5.py-1.text-sm.text-gray-700
+                  = "#{occupants[:children]} enfant#{'s' if occupants[:children] > 1}"
+
+        div
+          .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Client
+          .mt-1
+            = link_to @stay.display_name, customer_path(@stay.customer), class: "text-indigo-600 font-medium hover:underline"
+          /  L'adresse à laquelle écrire, sous le nom : qui prépare un accueil
+             répond au client depuis cette modale, sans passer par la fiche
+             client. Rien ne s'affiche quand on n'a pas d'adresse réelle (séjour
+             fourre-tout sans contact d'origine) — cf. `StayDecorator#contact_email`.
+          - contact_email = @stay.contact_email
+          - if contact_email.present?
+            .text-sm.truncate(class="mt-0.5")
+              = mail_to contact_email, class: "text-gray-600 hover:text-gray-900 hover:underline", title: "Écrire à #{contact_email}"
+          /  Client sans adresse email (issue #232) : c'est un cas NORMAL depuis
+             qu'un séjour se saisit au téléphone. On le dit une fois, discrètement,
+             pour que personne ne cherche pourquoi le client n'a rien reçu.
+          - elsif @stay.no_contact_email?
+            .text-sm.text-gray-500(class="mt-0.5") Pas d'adresse email — aucune notification envoyée
+          /  Réassignation REPLIÉE : c'est une opération rare (re-ventilation du
+             fourre-tout), elle ne doit pas occuper l'écran en permanence.
+          details.mt-2
+            summary.cursor-pointer.select-none.text-sm.text-gray-600.hover:text-gray-900 Réassigner le client…
+            .mt-2 = render "stays/reassign_form"
+
+        div
+          .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Type de groupe
+          /  Le choix EST la validation : pas de bouton « Enregistrer », le select
+             soumet au changement (même mécanique que le tableau des séjours).
+          = turbo_frame_tag "stay_#{@stay.id}_category" do
+            = form_with url: update_category_stay_path(@stay), method: :patch, data: { controller: "auto-submit", action: "change->auto-submit#submit" }, class: "mt-1" do
+              = select_tag "stay[category]", options_for_select(Stay::CATEGORIES.map(&:reverse), @stay.category), include_blank: "— Aucune —", class: "block w-full rounded-md border-gray-300 text-sm py-1.5"
+
+        /  Comptabilité (Michael, 2026-10-19), juste au-dessus des paiements :
+           statut de facturation et note comptable, modifiables sur place.
+        = render "stays/accounting_panel"
+
+        = render "stays/payments_panel"
+
+      /  === COLONNE DROITE : ce qu'on lit et modifie ========================
+         Séparateurs posés bloc par bloc plutôt qu'en `divide-y` : « Activités »
+         clôt la colonne sans trait, et la fin de la modale reste ouverte.
       div
-        .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Client
-        .mt-1
-          = link_to @stay.display_name, customer_path(@stay.customer), class: "text-indigo-600 font-medium hover:underline"
-        /  L'adresse à laquelle écrire, sous le nom : qui prépare un accueil
-           répond au client depuis cette modale, sans passer par la fiche
-           client. Rien ne s'affiche quand on n'a pas d'adresse réelle (séjour
-           fourre-tout sans contact d'origine) — cf. `StayDecorator#contact_email`.
-        - contact_email = @stay.contact_email
-        - if contact_email.present?
-          .text-sm.truncate(class="mt-0.5")
-            = mail_to contact_email, class: "text-gray-600 hover:text-gray-900 hover:underline", title: "Écrire à #{contact_email}"
-        /  Client sans adresse email (issue #232) : c'est un cas NORMAL depuis
-           qu'un séjour se saisit au téléphone. On le dit une fois, discrètement,
-           pour que personne ne cherche pourquoi le client n'a rien reçu.
-        - elsif @stay.no_contact_email?
-          .text-sm.text-gray-500(class="mt-0.5") Pas d'adresse email — aucune notification envoyée
-        /  Réassignation REPLIÉE : c'est une opération rare (re-ventilation du
-           fourre-tout), elle ne doit pas occuper l'écran en permanence.
-        details.mt-2
-          summary.cursor-pointer.select-none.text-sm.text-gray-600.hover:text-gray-900 Réassigner le client…
-          .mt-2 = render "stays/reassign_form"
+        = render "stays/internal_note"
 
-      div
-        .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Type de groupe
-        /  Le choix EST la validation : pas de bouton « Enregistrer », le select
-           soumet au changement (même mécanique que le tableau des séjours).
-        = turbo_frame_tag "stay_#{@stay.id}_category" do
-          = form_with url: update_category_stay_path(@stay), method: :patch, data: { controller: "auto-submit", action: "change->auto-submit#submit" }, class: "mt-1" do
-            = select_tag "stay[category]", options_for_select(Stay::CATEGORIES.map(&:reverse), @stay.category), include_blank: "— Aucune —", class: "block w-full rounded-md border-gray-300 text-sm py-1.5"
+        /  Déroulé du séjour : arrivée, activités datées, départ. Il donne la
+           forme du séjour dans le temps, ce qu'une liste de lignes ne dit pas.
+        - jalons = stay_timeline(@stay)
+        - if jalons.any?
+          .border-t.border-gray-200.px-5.py-4
+            .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Déroulé du séjour
+            ol.mt-3.space-y-3
+              - jalons.each_with_index do |jalon, index|
+                li.flex.gap-3
+                  .mt-1.flex.flex-col.items-center
+                    span.h-2.w-2.rounded-full(class=(index == jalons.size - 1 ? "bg-gray-900" : "border border-gray-400 bg-white"))
+                    - unless index == jalons.size - 1
+                      span.mt-1.w-px.flex-1.bg-gray-200
+                  .pb-1
+                    .text-sm.font-semibold.text-gray-900 = jalon[:title]
+                    - if jalon[:detail].present?
+                      .text-sm.text-gray-500 = jalon[:detail]
+                    /  L'heure annoncée par le client, quand c'est une phrase et
+                       non une heure : elle ne tient pas dans le titre, mais qui
+                       accueille a besoin de la lire — d'où l'indigo plutôt que
+                       le gris du lieu.
+                    - if jalon[:note].present?
+                      .text-sm.font-medium.text-indigo-700 = jalon[:note]
 
-      /  Comptabilité (Michael, 2026-10-19), juste au-dessus des paiements :
-         statut de facturation et note comptable, modifiables sur place.
-      = render "stays/accounting_panel"
-
-      = render "stays/payments_panel"
-
-    /  === COLONNE DROITE : ce qu'on lit et modifie ========================
-       Séparateurs posés bloc par bloc plutôt qu'en `divide-y` : « Activités »
-       clôt la colonne sans trait, et la fin de la modale reste ouverte.
-    div
-      = render "stays/internal_note"
-
-      /  Déroulé du séjour : arrivée, activités datées, départ. Il donne la
-         forme du séjour dans le temps, ce qu'une liste de lignes ne dit pas.
-      - jalons = stay_timeline(@stay)
-      - if jalons.any?
         .border-t.border-gray-200.px-5.py-4
-          .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Déroulé du séjour
-          ol.mt-3.space-y-3
-            - jalons.each_with_index do |jalon, index|
-              li.flex.gap-3
-                .mt-1.flex.flex-col.items-center
-                  span.h-2.w-2.rounded-full(class=(index == jalons.size - 1 ? "bg-gray-900" : "border border-gray-400 bg-white"))
-                  - unless index == jalons.size - 1
-                    span.mt-1.w-px.flex-1.bg-gray-200
-                .pb-1
-                  .text-sm.font-semibold.text-gray-900 = jalon[:title]
-                  - if jalon[:detail].present?
-                    .text-sm.text-gray-500 = jalon[:detail]
-                  /  L'heure annoncée par le client, quand c'est une phrase et
-                     non une heure : elle ne tient pas dans le titre, mais qui
-                     accueille a besoin de la lire — d'où l'indigo plutôt que
-                     le gris du lieu.
-                  - if jalon[:note].present?
-                    .text-sm.font-medium.text-indigo-700 = jalon[:note]
+          .flex.items-baseline.justify-between
+            .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Composition
+            /  Toute modification de composition passe par le formulaire : c'est
+               lui qui vérifie la disponibilité.
+            = link_to "Modifier la composition →", edit_stay_path(@stay), class: "text-xs text-indigo-600 hover:underline"
+          .mt-3 = render "stays/composition_lines"
 
-      .border-t.border-gray-200.px-5.py-4
-        .flex.items-baseline.justify-between
-          .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Composition
-          /  Toute modification de composition passe par le formulaire : c'est
-             lui qui vérifie la disponibilité.
-          = link_to "Modifier la composition →", edit_stay_path(@stay), class: "text-xs text-indigo-600 hover:underline"
-        .mt-3 = render "stays/composition_lines"
+        = render "stays/kitchen_block"
 
-      = render "stays/kitchen_block"
+        /  Pizza Party et Bar (Michael, 2026-10-13) : ils font partie de ce qui
+           compose le séjour, au sens large — à droite, avec la composition. La
+           colonne de gauche se termine ainsi sur les paiements.
+        = render "stays/extras_panel"
 
-      /  Pizza Party et Bar (Michael, 2026-10-13) : ils font partie de ce qui
-         compose le séjour, au sens large — à droite, avec la composition. La
-         colonne de gauche se termine ainsi sur les paiements.
-      = render "stays/extras_panel"
-
-      .px-5.py-4
-        = render "stays/activities"
+        .px-5.py-4
+          = render "stays/activities"
