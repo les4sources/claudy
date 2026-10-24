@@ -596,6 +596,8 @@ a.ui-row:hover .ui-row-t, a.ui-row-t:hover { text-decoration: underline; text-de
 .ui-ag-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; margin-bottom: 14px; }
 .ui-ag-month { display: flex; align-items: center; gap: 10px; }
 .ui-ag-title { font-family: var(--ui-f-d); font-weight: 700; font-size: 28px; line-height: 1.1; color: var(--ui-ink); min-width: 7.6em; text-align: center; }
+.ui-ag-jump { gap: 2px; }
+.ui-ag-jump .ui-seg-i { min-height: 34px; padding: 0 11px; font-size: 13.5px; white-space: nowrap; }
 .ui-ag-filters { display: flex; flex-wrap: wrap; gap: 8px; }
 .ui-chip {
   display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 16px; border-radius: 999px;

@@ -30,6 +30,15 @@ div(data-controller="stay-details stay-merge agenda-filter" data-stay-merge-setu
         = link_to root_path(date: next_month.iso8601), class: "ui-ibtn ui-ibtn-o", aria: { label: "Mois suivant, #{l(next_month, format: '%B %Y')}" } do
           = ui_icon(:right, size: 18)
         = link_to "Aujourd’hui", root_path, class: "ui-btn ui-btn-s"
+      /  Saut direct à trois mois de part et d'autre (Malau, qui gère les
+         séjours, s'en sert sans cesse dans l'ancien agenda). L'année n'est
+         écrite que quand elle change.
+      nav.ui-seg.ui-ag-jump(aria-label="Aller au mois")
+        - (-3..3).each do |offset|
+          - target = month >> offset
+          - label = l(target, format: "%b").capitalize
+          - label = "#{label} #{target.strftime('%y')}" if target.year != month.year
+          = link_to label, root_path(date: target.iso8601), class: "ui-seg-i", title: l(target, format: "%B %Y").capitalize, aria: { current: (offset.zero? ? "page" : nil) }
       = render "pages/v2/agenda_views", date: month
 
     .ui-ag-bar
