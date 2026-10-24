@@ -8,6 +8,10 @@
 class MapsController < BaseController
   access_section :map
   def show
+    # Nouvelle interface (Michael 2026-10-24) : la carte du domaine est celle de
+    # Terranova, en plein écran ; la carte interne reste à l'ancienne interface.
+    return render "maps/v2/terranova" if current_user&.new_interface?
+
     @base_layers = MapBaseLayer.ordered.to_a
     @base_layer = MapBaseLayer.find_by(id: params[:base_layer_id]) || MapBaseLayer.default_layer
     # Les couches des lieux (phase 3, la carte du jour), de Gestion (phase 2) et

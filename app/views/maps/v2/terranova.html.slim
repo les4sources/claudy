@@ -1,0 +1,10 @@
+/ La carte du domaine dans la nouvelle interface (Michael 2026-10-24) : la
+  page publique Terranova du lieu, sur toute la place à droite de la barre.
+  Le lien du coin l'ouvre dans un onglet, au cas où Terranova refuserait
+  l'intégration.
+- url = ENV.fetch("TERRANOVA_MAP_URL", "https://terranova.semisto.org/p/les-4-sources-jcmqywj24rjlga")
+.ui-tn
+  iframe.ui-tn-frame(src=url title="Carte du domaine (Terranova)" allow="fullscreen; geolocation" allowfullscreen=true loading="eager" referrerpolicy="strict-origin-when-cross-origin")
+  = link_to url, class: "ui-tn-open", target: "_blank", rel: "noopener" do
+    = ui_icon(:external, size: 16)
+    span Ouvrir dans Terranova
