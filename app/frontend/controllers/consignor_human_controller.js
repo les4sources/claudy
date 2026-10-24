@@ -29,7 +29,7 @@ export default class extends Controller {
     if (!this.hasIbanFieldTarget) return
 
     const mode = event ? event.target.value : this.currentMode()
-    this.ibanFieldTarget.hidden = mode !== "transfer"
+    this.ibanFieldTarget.hidden = !["transfer", "volunteering"].includes(mode)
   }
 
   currentMode() {

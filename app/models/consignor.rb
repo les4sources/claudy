@@ -2,10 +2,13 @@
 # l'épicerie (epic #248, décision 1). Il gère son stock lui-même ; chaque mois
 # il déclare ce qu'il a vendu et les 4 Sources lui reversent sa part.
 #
-# Deux modes de règlement, qui ne changent rien à la déclaration mais tout à ce
+# Trois modes de règlement, qui ne changent rien à la déclaration mais tout à ce
 # qui suit : `invoice`, l'artisan indépendant nous envoie sa facture (c'est une
 # facture d'achat comme une autre) ; `transfer`, on lui vire son net — d'où
-# l'IBAN, obligatoire dans ce mode et chiffré au repos.
+# l'IBAN, obligatoire dans ce mode et chiffré au repos ; `volunteering`, on lui
+# vire aussi son net, mais c'est un défraiement de volontaire (Michael,
+# 2026-10-22, Eline tant qu'elle est mineure) : 619105 sur la Fondation, et non
+# un achat de marchandises.
 #
 # Les relevés mensuels (`ConsignmentReport`, phase 2) portent ce qui a été vendu
 # chaque mois, déclaré par l'artisan lui-même.
@@ -45,12 +48,13 @@
 #  fk_rails_...  (third_party_id => third_parties.id)
 #
 class Consignor < ApplicationRecord
-  SETTLEMENT_MODES = %w[invoice transfer].freeze
+  SETTLEMENT_MODES = %w[invoice transfer volunteering].freeze
   PORTRAIT_CONTENT_TYPES = %w[image/jpeg image/png image/webp].freeze
 
   SETTLEMENT_MODE_LABELS = {
     "invoice"  => "L'artisan facture",
-    "transfer" => "Virement des 4 Sources"
+    "transfer" => "Virement des 4 Sources",
+    "volunteering" => "Volontariat (virement de la Fondation)"
   }.freeze
 
   has_paper_trail
@@ -93,7 +97,7 @@ class Consignor < ApplicationRecord
             if: :portal_enabled?
   validates :iban, iban: true, allow_blank: true
   validates :iban, presence: { message: "est obligatoire pour un règlement par virement" },
-                   if: :transfer?
+                   if: :paid_by_transfer?
   validate :ends_after_starts
   validates :tagline, length: { maximum: 140 }
   validate :portrait_is_an_image
@@ -115,6 +119,11 @@ class Consignor < ApplicationRecord
 
   def transfer? = settlement_mode == "transfer"
   def invoice?  = settlement_mode == "invoice"
+  def volunteering? = settlement_mode == "volunteering"
+
+  # Les deux modes où c'est nous qui virons son net : l'écriture se génère au
+  # règlement, puis le virement se rapproche depuis la banque.
+  def paid_by_transfer? = transfer? || volunteering?
 
   def settlement_mode_label = SETTLEMENT_MODE_LABELS.fetch(settlement_mode, settlement_mode)
 

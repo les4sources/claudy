@@ -11,6 +11,10 @@ module Accounting
   # `440000` avec le tiers de l'artisan — la ligne qu'on lettrera contre le
   # virement.
   #
+  # Un artisan payé en VOLONTARIAT (Michael, 2026-10-22) ne nous vend rien : son
+  # net est un défraiement de volontaire. La charge va alors en `619105` et
+  # l'écriture sur la Fondation, qui porte le volontariat.
+  #
   # Idempotent par construction : `PostDocument` rend l'écriture existante quand
   # le même document repasse dans le même journal.
   class PostConsignmentReport < ServiceBase
@@ -20,6 +24,22 @@ module Accounting
 
     SUPPLIER_CODE  = "440000".freeze
     GOODS_CODE     = "600000".freeze
+    VOLUNTEERING_CODE = "619105".freeze
+
+    # Le compte de charge que le mode de règlement de l'artisan appelle.
+    def self.charge_code_for(report)
+      report.consignor&.volunteering? ? VOLUNTEERING_CODE : GOODS_CODE
+    end
+
+    # L'entité qui porte la dette : la Fondation pour un volontaire, sinon la
+    # première entité active, comme depuis le début du dépôt-vente.
+    def self.entity_for(report)
+      if report.consignor&.volunteering?
+        LegalEntity.actives.find_by(form: "foundation")
+      else
+        LegalEntity.actives.ordered.first
+      end
+    end
 
     def initialize(consignment_report:, whodunnit: nil)
       @report = consignment_report
@@ -35,8 +55,12 @@ module Accounting
       net = @report.net_cents.to_i
       raise NothingToPost, "Ce relevé ne doit rien à l'artisan." unless net.positive?
 
-      entity = @report.legal_entity || default_entity
-      raise MissingEntity, "Aucune entité juridique active — impossible de comptabiliser." if entity.blank?
+      entity = self.class.entity_for(@report)
+      if entity.blank?
+        raise MissingEntity,
+              @report.consignor&.volunteering? ? "Aucune Fondation active — le volontariat ne se comptabilise pas." :
+                                                 "Aucune entité juridique active — impossible de comptabiliser."
+      end
 
       PostDocument.new(
         legal_entity: entity,
@@ -46,7 +70,7 @@ module Accounting
         source: @report,
         whodunnit: @whodunnit,
         lines: [
-          { account: goods_account, label: label, debit_cents: net },
+          { account: charge_account, label: label, debit_cents: net },
           { account: supplier_account, third_party: third_party, label: label, credit_cents: net }
         ]
       ).run!
@@ -67,10 +91,11 @@ module Accounting
       end
     end
 
-    def goods_account
-      GeneralAccount.find_by(code: GOODS_CODE) ||
+    def charge_account
+      code = self.class.charge_code_for(@report)
+      GeneralAccount.find_by(code: code) ||
         raise(MissingAccount,
-              "Le compte #{GOODS_CODE} n'existe pas — lance `rake accounting:seed_reference`.")
+              "Le compte #{code} n'existe pas — lance `rake accounting:seed_reference`.")
     end
 
     def supplier_account
@@ -78,7 +103,5 @@ module Accounting
         raise(MissingAccount,
               "Le compte #{SUPPLIER_CODE} n'existe pas — lance `rake accounting:seed_reference`.")
     end
-
-    def default_entity = LegalEntity.actives.ordered.first
   end
 end

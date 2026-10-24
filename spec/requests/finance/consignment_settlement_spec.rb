@@ -141,6 +141,26 @@ RSpec.describe "Dépôt-vente — vérification et règlement (epic #248, phase 
       expect(credit.third_party&.name).to eq("Eline")
     end
 
+    # Espace des partenaires, étape 2 : l'artisan passe en volontariat après
+    # le règlement, la fiche propose de repasser l'écriture.
+    it "propose de repasser l'écriture quand l'artisan passe en volontariat" do
+      volontariat = build_general_account(code: "619105", name: "Volontariat", klass: 6, nature: "expense")
+      post settle_finance_consignment_report_path(report)
+      eline.update!(settlement_mode: "volunteering")
+
+      get finance_consignment_report_path(report)
+      expect(response.body).to include("Repasser l&#39;écriture", "619105")
+
+      post repost_finance_consignment_report_path(report)
+      expect(response).to redirect_to(finance_consignment_report_path(report))
+      expect(flash[:notice]).to include("Écriture repassée")
+      debit = report.reload.journal_entry.journal_lines.find { |l| l.debit_cents.to_i.positive? }
+      expect(debit.general_account).to eq(volontariat)
+
+      get finance_consignment_report_path(report)
+      expect(response.body).not_to include("Repasser l&#39;écriture")
+    end
+
     it "est idempotent : régler deux fois ne crée qu'une écriture" do
       post settle_finance_consignment_report_path(report)
       expect { post settle_finance_consignment_report_path(report) }

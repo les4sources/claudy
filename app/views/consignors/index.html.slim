@@ -29,7 +29,7 @@
                 .text-xs.text-gray-500 = consignor.email
             td.px-4.py-3.text-gray-600
               = consignor.settlement_mode_label
-              - if consignor.transfer? && consignor.iban.present?
+              - if consignor.paid_by_transfer? && consignor.iban.present?
                 .text-xs.text-gray-400.font-mono = consignor.iban_masked
             td.px-4.py-3.text-right.font-medium.text-gray-900
               = "#{consignor.commission_percent} %"

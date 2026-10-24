@@ -191,7 +191,7 @@ class ConsignmentReport < ApplicationRecord
   # En mode facture, la dette est portée par la facture d'achat : la faire aussi
   # apparaître ici la compterait deux fois dans le total à payer.
   def awaiting_transfer?
-    consignor&.transfer? && verified? && posted?
+    consignor&.paid_by_transfer? && verified? && posted?
   end
 
   private

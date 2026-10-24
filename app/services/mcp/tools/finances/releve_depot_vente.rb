@@ -3,13 +3,13 @@ module Mcp
     module Finances
       # Comptabilité > Dépôt-vente, la fiche d'un relevé
       # (ConsignmentReportsController #update, #verify, #settle, #link_invoice,
-      # #unlink_invoice et #resend). On corrige ce que l'artisan a déclaré tant
+      # #unlink_invoice, #repost et #resend). On corrige ce que l'artisan a déclaré tant
       # que rien n'est figé, on vérifie (les totaux et le taux se figent : c'est
       # une dette), puis on règle par virement ou en liant sa facture.
       class ReleveDepotVente < Ecriture
         include Commun
 
-        GESTES = %w[corriger verifier regler lier_facture detacher_facture renvoyer].freeze
+        GESTES = %w[corriger verifier regler repasser lier_facture detacher_facture renvoyer].freeze
 
         LIGNE_DECLAREE = {
           type: "object",
@@ -28,7 +28,10 @@ module Mcp
              description: "Sur un relevé d'artisan (depot_vente). `corriger` : les lignes déclarées (libellé, quantité, " \
                           "prix unitaire, ajout, suppression) et les notes, tant qu'il est demandé ou déclaré. " \
                           "`verifier` : fige ventes, taux et net, le relevé devient une dette. `regler` (artisan payé " \
-                          "par virement) : passe l'écriture, le net entre dans « À payer ». `lier_facture` / " \
+                          "par virement ou en volontariat) : passe l'écriture, le net entre dans « À payer ». `repasser` : " \
+                          "contre-passe l'écriture d'un relevé réglé et la repasse selon le mode de règlement actuel de " \
+                          "l'artisan (volontariat : 619105 sur la Fondation ; virement : 600000), tant qu'aucun virement " \
+                          "n'y est rapproché. `lier_facture` / " \
                           "`detacher_facture` (artisan qui facture) : sa facture d'achat, dont le paiement soldera le " \
                           "relevé. `renvoyer` : ÉCRIT À L'ARTISAN (la demande de déclaration du mois) : dis-le avant.",
              schema: {
@@ -59,6 +62,7 @@ module Mcp
                    when "corriger" then corriger(releve, arguments, donnees)
                    when "verifier" then verification(releve)
                    when "regler" then regler(releve)
+                   when "repasser" then repasser(releve)
                    when "lier_facture" then lier(releve, arguments, donnees)
                    when "detacher_facture" then detacher(releve)
                    when "renvoyer" then renvoyer(releve)
@@ -122,6 +126,23 @@ module Mcp
             "(virement vers #{releve.consignor.iban_masked || "l'IBAN de l'artisan"}). Ce geste ne paie rien : le paiement se rapproche."
         end
 
+        def repasser(releve)
+          avant = releve.journal_entry
+          # Lue DANS la simulation : après le rollback, l'écriture nouvelle n'existe plus.
+          nouvelle = simuler do
+            metier! { ecriture_releve(::Consignments::Repost.new(consignment_report: ConsignmentReport.find(releve.id)).run!.journal_entry) }
+          end
+          "Repasser l'écriture du #{ligne_releve_depot(releve)} (#{releve.consignor.settlement_mode_label.downcase})\n" \
+            "Contre-passée : #{ecriture_releve(avant)}\nNouvelle : #{nouvelle}\n" \
+            "Les deux écritures restent au grand livre. Le net reste dans « À payer »."
+        end
+
+        def ecriture_releve(entry)
+          charge = entry.journal_lines.find { |l| l.debit_cents.to_i.positive? }
+          "#{entry.legal_entity.name} · #{charge&.general_account&.code} #{charge&.general_account&.name} / 440000 · " \
+            "#{euros(charge&.debit_cents.to_i)} au #{entry.entry_date}"
+        end
+
         def lier(releve, arguments, donnees)
           raise Error, "#{releve.consignor.name} est payé·e par virement : règle le relevé (regler)." unless releve.consignor.invoice?
 
@@ -158,6 +179,9 @@ module Mcp
           when "regler"
             releve = metier! { ::Consignments::Settle.new(consignment_report: releve, whodunnit: whodunnit).run! }
             "Écriture passée : #{ligne_releve_depot(releve)}. Le virement attend dans « À payer »."
+          when "repasser"
+            releve = metier! { ::Consignments::Repost.new(consignment_report: releve, whodunnit: whodunnit).run! }
+            "Écriture repassée : #{ecriture_releve(releve.journal_entry)}. Le virement attend dans « À payer »."
           when "lier_facture", "detacher_facture"
             facture = d[:facture] && PurchaseInvoice.find(d[:facture])
             ApplicationRecord.transaction do
