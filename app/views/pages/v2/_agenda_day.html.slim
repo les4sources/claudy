@@ -75,14 +75,15 @@ section.ui-card.ui-ag-panel(aria-labelledby="ag-day-title")
 
     - if day.notes.any?
       h3.ui-over.ui-ag-sub Pour l’équipe
-      ul.ui-ag-kv
+      / En post-its de la couleur de leur type (Michael 2026-10-24).
+      ul.ui-postits
         - day.notes.each do |note|
-          li.ui-ag-note-row
+          li(class="ui-postit ui-postit-#{note.color || 'yellow'}" title=note.type_label)
             - if section_writable?(:full)
               = link_to edit_note_path(note), data: { turbo_frame: "modal" } do
-                = truncate(note.body.to_s.squish, length: 90)
+                = truncate(note.body.to_s.squish, length: 160)
             - else
-              span = truncate(note.body.to_s.squish, length: 90)
+              span = truncate(note.body.to_s.squish, length: 160)
 
     .ui-ag-free
       span Libre ce soir
