@@ -382,7 +382,7 @@ RSpec.describe ReservationMailer, type: :mailer do
         html = mail.html_part.body.decoded.gsub(/\s+/, " ")
         text = mail.text_part.body.decoded.gsub(/\s+/, " ")
 
-        [html, text].each { |body| expect(body).to include("Pour le pôle Accueil des 4 Sources") }
+        [html, text].each { |body| expect(body).to include("L'équipe des 4 Sources") }
       end
     end
   end

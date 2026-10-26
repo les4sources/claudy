@@ -34,6 +34,21 @@ RSpec.describe StayBalanceReminderMailer, type: :mailer do
     expect(html).not_to include("Régler le solde de ma réservation")
   end
 
+  # Michael, 2026-10-26 : une seule phrase, le montant dedans.
+  it "annonce le solde en une phrase et signe au nom de l'équipe" do
+    html = mail.html_part.body.decoded
+    text = mail.text_part.body.decoded
+    amount = Money.new(stay.balance_due_cents, "EUR").format(symbol: "€")
+
+    expect(html).to include("Il reste un solde à régler de <strong>#{amount}</strong>.")
+    expect(text).to include("Il reste un solde à régler de #{amount}.")
+    [html, text].each do |body|
+      expect(body).not_to include("Pour finaliser")
+      expect(body).to include("L'équipe des 4 Sources")
+      expect(body).not_to include("Malau & Michael")
+    end
+  end
+
   it "affiche les dates sans fuite de syntaxe Slim" do
     html = mail.html_part.body.decoded
     expect(html).to include(stay.decorate.date_range)
