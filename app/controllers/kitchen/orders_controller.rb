@@ -68,6 +68,7 @@ module Kitchen
       else
         @rows = MealOrderDecorator.decorate_collection(rows_for(@view))
       end
+      render_v2_index if current_user&.new_interface?
     end
 
     def new
@@ -482,6 +483,17 @@ module Kitchen
     # Les compteurs du sélecteur : ce que chaque métier a à FAIRE, pas tout ce
     # qu'il voit. Le passé et les annulés se comptent par une requête, sans la
     # limite d'affichage.
+    # Nouvelle interface (redesign, Michael 2026-10-24) : même données, autre
+    # gabarit. Les puces de famille portent leur compte, celui de tout ce qui
+    # est à venir, quel que soit le filtre posé.
+    def render_v2_index
+      upcoming = MealOrder.upcoming.where.not(status: "cancelled").group(:kind).count
+      @family_counts = MealOrder::FAMILIES.index_with do |family|
+        upcoming.sum { |kind, count| MealOrder::KIND_FAMILIES[kind.to_s] == family ? count : 0 }
+      end
+      render "kitchen/orders/v2/index"
+    end
+
     def view_counts
       statuses = live_rows.map(&:board_status)
       { kitchen:   statuses.count("to_validate"),

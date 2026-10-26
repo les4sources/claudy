@@ -1,0 +1,105 @@
+/ CUISINE, nouvelle interface (redesign, Michael 2026-10-24, maquette validée).
+  Mêmes données et mêmes gestes que `kitchen/orders/index` (vues Cuisine |
+  Accueil, sections par `MealOrder#board_status`) : une phrase dit ce qui
+  attend, puis les sections en tableau, en cartes sur téléphone. Dans la vue
+  Cuisine, ce qui ne demande rien à la cuisine (demande d'info, à couvrir) se
+  range côte à côte en bas. Un séjour s'ouvre dans le panneau séjour.
+- side = @view == :kitchen ? %w[inquiry to_cover] : []
+- if @sections
+  - before, highlighted, after = kitchen_phrase(@view, @sections, current_user)
+.ui-kt(data-controller="stay-details")
+  header.ui-phead
+    .ui-phead-t
+      p.ui-over = l(Date.current, format: "%A %-d %B").capitalize
+      h1.ui-h1 Cuisine
+      - if @sections
+        p.ui-phrase
+          = before
+          - if highlighted
+            mark.ui-hl = highlighted
+          = after
+    .ui-actions
+      = link_to kitchen_reporting_path, class: "ui-btn ui-hide-m" do
+        = ui_icon(:receipt, size: 16)
+        | Bilan du mois
+      = link_to new_kitchen_order_path, class: "ui-btn ui-btn-p" do
+        = ui_icon(:plus, size: 16)
+        | Nouvelle demande
+
+  .ui-kt-bar
+    nav.ui-seg(aria-label="Vue")
+      - Kitchen::OrdersController::VIEWS.each do |view|
+        - todo = @counts[view[:key]]
+        = link_to kitchen_orders_path(view: view[:key]), class: "ui-seg-i", aria: { current: (view[:key] == @view ? "page" : nil) }, title: (view[:key] == :kitchen ? "#{todo} à valider" : "#{todo} à relancer ou couvrir") do
+          = view[:title]
+          - if todo.positive?
+            span.ui-kt-n = todo
+    - if @view == :kitchen
+      /  La famille, dans la vue Cuisine : qui cuisine quoi.
+      .ui-ag-filters(role="group" aria-label="Montrer")
+        = link_to "Tout", kitchen_orders_path(view: @view, responsible_human_id: @responsible), class: "ui-chip", aria: { pressed: @family.nil?.to_s }
+        - [["repas", "Repas"], ["buffet", "Buffets"], ["apero", "Apéros"]].each do |value, label|
+          = link_to kitchen_orders_path(view: @view, family: value, responsible_human_id: @responsible), class: "ui-chip", aria: { pressed: (@family == value).to_s } do
+            = label
+            span.ui-seg-n = @family_counts[value]
+    - elsif @view == :reception
+      /  L'origine, dans la vue Accueil : qui relancer.
+      .ui-ag-filters(role="group" aria-label="Origine")
+        - [[nil, "Toutes origines"]].concat(MealOrder::ORIGINS.map { |o| [o, MealOrder::ORIGIN_LABELS[o]] }).each do |value, label|
+          = link_to label, kitchen_orders_path(view: @view, origin: value, responsible_human_id: @responsible), class: "ui-chip", aria: { pressed: (@origin == value).to_s }
+    - else
+      = link_to kitchen_orders_path, class: "ui-btn ui-btn-s" do
+        = ui_icon(:left, size: 16)
+        | Retour aux demandes à venir
+
+  - if @sections
+    - @sections.reject { |status, _| side.include?(status) }.each do |status, orders|
+      section.ui-kt-sec(id="section-#{status}" aria-labelledby="kt-#{status}")
+        .ui-kt-sh
+          = kitchen_board_pill(status)
+          h2.ui-kt-count id="kt-#{status}"
+            - noun = status == "planned" ? "service" : "demande"
+            = "#{orders.size} #{noun}#{'s' if orders.size > 1}"
+          p = board_section_hint(@view, status)
+        - if orders.any?
+          = render "kitchen/orders/v2/table", orders: orders, status: status, columns: board_columns(@view, status), by_day: (@view == :kitchen && status == "planned")
+          - if @show_money && status == "planned"
+            p.ui-kt-total
+              | Total facturable :
+              b = humanized_money_with_symbol(Money.new(@total_cents))
+        - else
+          p.ui-empty Rien pour l’instant.
+
+    - if side.any?
+      .ui-kt-pair
+        - @sections.select { |status, _| side.include?(status) }.each do |status, orders|
+          section.ui-kt-sec(id="section-#{status}" aria-labelledby="kt-#{status}")
+            .ui-kt-sh
+              = kitchen_board_pill(status)
+              h2.ui-kt-count id="kt-#{status}" = orders.size
+            - if orders.any?
+              ul.ui-kt-cards
+                - orders.each do |order|
+                  = render "kitchen/orders/v2/card", order: order, status: status
+            - else
+              p.ui-empty Rien ici.
+  - else
+    section.ui-kt-sec
+      .ui-kt-sh
+        h2.ui-kt-count = Kitchen::OrdersController::ARCHIVE_VIEWS.find { |v| v[:key] == @view }[:title]
+      - if @rows.empty?
+        p.ui-empty Rien ici.
+      - else
+        = render "kitchen/orders/v2/table", orders: @rows, status: nil, columns: board_columns(@view, nil), by_day: false
+      - if @view == :past && !@old_archives
+        = link_to "Voir les archives de plus de 12 mois", kitchen_orders_path(view: :past, old_archives: 1), class: "ui-card-link"
+
+  nav.ui-kt-arch(aria-label="Archives")
+    - Kitchen::OrdersController::ARCHIVE_VIEWS.each do |view|
+      = link_to kitchen_orders_path(view: view[:key]), class: "ui-chip", aria: { current: (view[:key] == @view ? "page" : nil) } do
+        - if view[:key] == :past
+          = ui_icon(:clock, size: 16)
+        = view[:title]
+        span.ui-seg-n = @counts[view[:key]]
+
+  = render "pages/calendar/stay_modal"
