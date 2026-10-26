@@ -1,6 +1,6 @@
 Bonjour <%= @stay.customer.first_name.presence || "" %>,
 
-Votre venue aux 4 Sources approche ! Pour finaliser votre réservation, il reste un solde à régler.
+Votre venue aux 4 Sources approche ! Il reste un solde à régler de <%= @balance.format(symbol: "€") %>.
 
 Reste à régler : <%= @balance.format(symbol: "€") %>
 <% if @stay.arrival_date || @stay.departure_date %><%= @stay.arrival_date == @stay.departure_date ? "Votre date" : "Vos dates" %> : <%= @stay.decorate.date_range %>
@@ -17,5 +17,4 @@ En cas de question, contactez Malau au +32(0)490/46.77.10 ou écrivez à sejours
 
 À très bientôt aux 4 Sources !
 
-Malau & Michael,
-Pour le pôle Accueil des 4 Sources
+L'équipe des 4 Sources

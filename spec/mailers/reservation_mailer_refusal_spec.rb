@@ -54,9 +54,9 @@ RSpec.describe ReservationMailer, "#request_refused", type: :mailer do
     end
   end
 
-  it "porte la signature du pôle Accueil (html ET texte)" do
-    expect(mail.html_part.body.decoded).to include("Pour le pôle Accueil des 4 Sources")
-    expect(mail.text_part.body.decoded).to include("Pour le pôle Accueil des 4 Sources")
+  it "porte la signature de l'équipe (html ET texte)" do
+    expect(mail.html_part.body.decoded).to include("L'équipe des 4 Sources")
+    expect(mail.text_part.body.decoded).to include("L'équipe des 4 Sources")
   end
 
   # Bug 2026-07-20, toujours d'actualité : deux lignes `|` Slim consécutives se
