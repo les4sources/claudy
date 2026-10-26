@@ -1,23 +1,52 @@
+/ NB Slim : deux lignes `|` consécutives se concatènent SANS espace — toujours
+  une seule barre avec continuation indentée pour la prose multi-ligne.
+/ Styles EN LIGNE, aux couleurs de la page client (sable #F7F2E9, vert forêt
+  #0B3D3A) : la plupart des clients mail ignorent un <style> en tête.
+- muted = "color: #5C6659;"
+
 p Bonjour #{@stay.customer.first_name.presence || ""},
 
 p
-  | Votre venue aux 4 Sources approche. Il reste
-  strong = " #{@balance.format(symbol: '€')} "
-  | à régler pour finaliser votre réservation.
+  | Votre venue aux 4 Sources approche ! Pour finaliser votre réservation, il
+    reste un solde à régler.
 
-- if @stay.arrival_date && @stay.departure_date
-  p
-    strong Vos dates :
-    | = " #{l(@stay.arrival_date, format: :long)} → #{l(@stay.departure_date, format: :long)}"
+table(role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; max-width: 480px; margin: 20px 0; border-collapse: separate; background: #F7F2E9; border: 1px solid #E4DBC8; border-radius: 10px;")
+  tbody
+    tr
+      td(style="padding: 16px 20px 6px; #{muted} font-size: 13px;") Reste à régler
+      td(style="padding: 16px 20px 6px; text-align: right; font-size: 20px; font-weight: bold; color: #0B3D3A; white-space: nowrap;")
+        = @balance.format(symbol: "€")
+    - if @stay.arrival_date || @stay.departure_date
+      tr
+        td(style="padding: 6px 20px 16px; #{muted} font-size: 13px;")
+          = @stay.arrival_date == @stay.departure_date ? "Votre date" : "Vos dates"
+        td(style="padding: 6px 20px 16px; text-align: right; color: #0B3D3A;")
+          = @stay.decorate.date_range
 
-p = link_to "→ Régler le solde de ma réservation", @stay_url
+/ Bouton « à l'épreuve des clients mail » : un tableau porte le fond, le lien
+  remplit la cellule (Outlook ignore le padding d'un <a>).
+table(role="presentation" cellpadding="0" cellspacing="0" style="margin: 8px 0 12px;")
+  tbody
+    tr
+      td(style="background: #0B3D3A; border-radius: 8px;")
+        = link_to "Ma réservation en détail", @stay_url,
+                  style: "display: inline-block; padding: 12px 24px; color: #ffffff; font-weight: bold; text-decoration: none; border-radius: 8px;"
+
+p(style="#{muted} font-size: 13px; margin-top: 0;")
+  | Vous y retrouverez tout ce qui est réservé, ce qui a déjà été payé, et vous
+    pourrez régler le solde en ligne, en toute sécurité.
 
 p
   | Votre réservation reste bien confirmée : ce message est un simple rappel,
-  | rien n'est annulé. Vous pouvez régler le solde en ligne, en toute sécurité.
+    rien n'est annulé.
 
 p
-  | En cas de question, contactez Malau au +32(0)490/46.77.10 ou à
-  = link_to "sejours@les4sources.be", "mailto:sejours@les4sources.be"
+  | En cas de question, contactez Malau au
+  =< link_to "+32(0)490/46.77.10", "tel:+32490467710"
+  |  ou écrivez à
+  =< link_to "sejours@les4sources.be", "mailto:sejours@les4sources.be"
+  | .
 
 p À très bientôt aux 4 Sources !
+
+= render "shared/email_signature"

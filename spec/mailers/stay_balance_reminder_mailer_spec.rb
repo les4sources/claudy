@@ -26,8 +26,46 @@ RSpec.describe StayBalanceReminderMailer, type: :mailer do
     expect(mail.body.encoded).to include(stay.token)
   end
 
+  # Michael, 2026-10-26 : le lien mène à la page de la réservation, pas
+  # directement au paiement — son libellé ne doit pas laisser croire le contraire.
+  it "libelle le lien « Ma réservation en détail »" do
+    html = mail.html_part.body.decoded
+    expect(html).to include("Ma réservation en détail")
+    expect(html).not_to include("Régler le solde de ma réservation")
+  end
+
+  it "affiche les dates sans fuite de syntaxe Slim" do
+    html = mail.html_part.body.decoded
+    expect(html).to include(stay.decorate.date_range)
+    expect(html).not_to include(":=")
+  end
+
+  context "pour un séjour d'un jour" do
+    let(:stay) do
+      Stay.create!(customer: customer, status: "pending", total_amount_cents: 15_000,
+                   arrival_date: Date.new(2026, 11, 8), departure_date: Date.new(2026, 11, 8))
+    end
+
+    it "n'affiche qu'une date, sans flèche" do
+      html = mail.html_part.body.decoded
+      expect(html).to include("Votre date")
+      expect(html).to include("8 novembre 2026")
+      expect(html).not_to match(/8 novembre 2026\s*→/)
+    end
+  end
+
+  it "garde les espaces entre les phrases et autour des liens" do
+    text = mail.text_part.body.decoded
+    expect(text).to include("simple rappel, rien n'est annulé")
+    expect(text).to include("ou écrivez à sejours@les4sources.be")
+
+    html = mail.html_part.body.decoded
+    expect(html).to match(/simple rappel,\s+rien/)
+    expect(html).to match(/écrivez à <a [^>]*>sejours@les4sources\.be/)
+  end
+
   it "rassure explicitement : aucun blocage ni annulation" do
-    expect(mail.body.encoded).to match(/rien n'est annulé|reste bien confirmée/)
+    expect(mail.html_part.body.decoded).to match(/rien n.est annulé|reste bien confirmée/)
   end
 
   # Issue #232 — un client peut vivre sans email : la relance se tait plutôt que

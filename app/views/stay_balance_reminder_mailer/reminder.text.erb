@@ -1,0 +1,21 @@
+Bonjour <%= @stay.customer.first_name.presence || "" %>,
+
+Votre venue aux 4 Sources approche ! Pour finaliser votre réservation, il reste un solde à régler.
+
+Reste à régler : <%= @balance.format(symbol: "€") %>
+<% if @stay.arrival_date || @stay.departure_date %><%= @stay.arrival_date == @stay.departure_date ? "Votre date" : "Vos dates" %> : <%= @stay.decorate.date_range %>
+<% end %>
+
+Ma réservation en détail :
+<%= @stay_url %>
+
+Vous y retrouverez tout ce qui est réservé, ce qui a déjà été payé, et vous pourrez régler le solde en ligne, en toute sécurité.
+
+Votre réservation reste bien confirmée : ce message est un simple rappel, rien n'est annulé.
+
+En cas de question, contactez Malau au +32(0)490/46.77.10 ou écrivez à sejours@les4sources.be.
+
+À très bientôt aux 4 Sources !
+
+Malau & Michael,
+Pour le pôle Accueil des 4 Sources
