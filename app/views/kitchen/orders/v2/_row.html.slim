@@ -1,0 +1,123 @@
+/ Une ligne de la Cuisine, nouvelle interface : un service. Mêmes colonnes
+  (`KitchenHelper#board_columns`) et mêmes gestes que `_board_row` ; la
+  personne qui s'en charge est toujours nommée, jamais déduite du compte.
+  Les menus restent des popovers en `position: fixed`.
+- dom   = "order-#{order.id}"
+- past  = order.past?
+- muted = order.cancelled? || past
+- date  = order.object.date
+- btn_go  = "ui-btn ui-btn-s ui-btn-p"
+- btn_no  = "ui-btn ui-btn-s ui-kt-no"
+- btn_alt = "ui-btn ui-btn-s"
+- panel   = "absolute left-0 top-0 z-40 invisible opacity-0 transition-opacity rounded-lg bg-white shadow-lg ring-1 ring-gray-200 text-left font-normal"
+- pop     = ->(target, placement) { { "controller" => "popover", "action" => "click->popover#toggle click@window->popover#hideOnClickOutside", "popover-target-value" => target, "popover-strategy-value" => "fixed", "popover-placement-value" => placement } }
+- moment = order.moment_label
+
+tr(id=dom class=("is-muted" if muted))
+  - columns.each do |column|
+    - case column
+    / QUAND : « Ce soir », « Demain », sinon le jour court ; le détail dessous.
+    - when :date
+      td.is-date
+        - if date.nil?
+          b Sans date
+        - elsif date == Date.current
+          b = order.object.moment.to_s == "soir" ? "Ce soir" : "Aujourd’hui"
+          small = [l(date, format: "%A %-d").downcase, moment&.downcase].compact.join(" · ")
+        - elsif date == Date.current + 1
+          b Demain
+          small = [l(date, format: "%A %-d").downcase, moment&.downcase].compact.join(" · ")
+        - else
+          b = l(date, format: (date.year == Date.current.year ? "%a %-d %b" : "%a %-d %b %Y")).capitalize
+          - if moment
+            small = moment.downcase
+
+    - when :moment
+      td.is-moment
+        b = moment.presence || "—"
+
+    / POUR QUI : le séjour s'ouvre dans le panneau séjour ; sinon d'où vient la
+      demande.
+    - when :client
+      td.is-client
+        - if order.stay
+          = link_to order.client_label, stay_path(order.stay), class: "ui-kt-who", data: { action: "stay-details#open" }
+          small = "séjour ##{order.stay.id}"
+        - else
+          b.ui-kt-who = order.client_label
+          small = ["sans séjour", order.object.origin_short_label].compact_blank.join(" · ")
+
+    - when :kind
+      td.is-kind
+        span = order.label
+        = order.trio_badge
+        - if !past && order.warnings.any?
+          span.ui-kt-warn(title=order.warnings.join(". ")) = ui_icon(:bell, size: 14)
+        - if order.notes.present?
+          small.ui-kt-notes(title=order.notes) = order.notes_short
+
+    - when :people
+      td.is-people
+        b = order.people
+        |  couv.
+
+    - when :responsible
+      td.is-responsible
+        - if order.responsible_missing?
+          span.ui-kt-none Personne n’est désigné
+        - else
+          span.ui-kt-person
+            = ui_avatar(order.responsible_label, small: true, human: order.object.responsible_human)
+            = order.responsible_label
+
+    / DEMANDÉE LE : ambre au-delà de deux semaines sans réponse.
+    - when :requested_at
+      td.is-requested
+        span.ui-kt-lbl> Demandée le
+        span(class=("ui-kt-stale" if order.stale_request?)) = order.requested_at_label
+
+    - when :client_status
+      td.is-status = kitchen_client_pill(order)
+
+    - when :reason
+      td.is-reason = order.reason || "—"
+
+    - when :price
+      td.is-price = order.price
+
+    - when :waiting_for
+      td.is-waiting
+        - if order.pending? && !order.responsible_missing?
+          = "Réponse de #{order.responsible_label}"
+        - else
+          span.ui-kt-none Quelqu’un qui s’en charge
+
+    - when :actions
+      td.is-actions
+        .ui-kt-act
+          - unless muted
+            - if @view == :kitchen && status == "to_validate"
+              /  Personne ne s'en charge : on nomme d'abord quelqu'un (ce qui vaut
+                 acceptation pour un buffet ou un apéro).
+              - if order.responsible_missing?
+                button(type="button" class=btn_go data=pop.call("#{dom}-assign", "bottom-end")) Je m’en charge
+                = render "kitchen/orders/assign_panel", order: order, dom: dom, panel: panel
+              - else
+                - mine = current_user&.linked_human.present? && order.object.responsible_human == current_user.linked_human
+                /  « Oui, je cuisine » quand c'est la personne connectée qui s'en
+                   charge ; sinon « Oui », le nom est déjà dans la ligne.
+                = button_to accept_kitchen_order_path(order), method: :patch, class: btn_go, title: "#{order.responsible_label} s'en charge" do
+                  = ui_icon(:check, size: 16)
+                  = mine ? "Oui, je cuisine" : "Oui"
+              - if order.pending?
+                = link_to "Pas possible", new_refusal_kitchen_order_path(order), class: btn_no
+            - elsif @view == :reception && status == "inquiry"
+              = button_to "Demande ferme", status_kitchen_order_path(order), method: :patch, params: { status: "requested" }, class: btn_go
+              = render "kitchen/orders/cancel_button", order: order, dom: dom, panel: panel, btn: btn_alt, pop: pop
+            - elsif @view == :reception && status == "planned" && order.requested?
+              = button_to "Confirmer", status_kitchen_order_path(order), method: :patch, params: { status: "confirmed" }, class: btn_alt
+            - elsif @view == :reception && status == "to_cover"
+              button(type="button" class=btn_go data=pop.call("#{dom}-assign", "bottom-end")) Confier à…
+              = render "kitchen/orders/assign_panel", order: order, dom: dom, panel: panel
+              = render "kitchen/orders/cancel_button", order: order, dom: dom, panel: panel, btn: btn_alt, pop: pop
+          = render "kitchen/orders/menu", order: order, dom: dom, panel: panel, pop: pop, past: past

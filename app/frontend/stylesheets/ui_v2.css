@@ -988,3 +988,98 @@ dialog .ui-sd-close { display: inline-flex; }
 /* La section s'appelle déjà « Facturation » : le titre du bloc repris s'efface. */
 .ui-sd-billing > .border-t { padding-top: 0; }
 .ui-sd-billing > .border-t > .uppercase:first-child { display: none; }
+
+/* --- Cuisine (Michael 2026-10-24, maquette validée) ---------------------------
+   Sections par statut ; chaque section = un tableau, une carte par ligne sur
+   téléphone. Dans la vue Cuisine, demande d'info et à couvrir côte à côte. */
+.ui-kt-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-bottom: 26px; }
+.ui-kt-n {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px;
+  background: var(--ui-yellow); color: var(--ui-teal); font-size: 12px; font-weight: 700;
+}
+.ui-ag-filters .ui-chip { text-decoration: none; }
+.ui-ag-filters .ui-chip .ui-seg-n { font-weight: 600; }
+.ui-kt-sec { margin-bottom: 30px; }
+.ui-kt-sh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin-bottom: 12px; }
+.ui-kt-sh .ui-st { align-self: center; }
+.ui-kt-count { font-family: var(--ui-f-d); font-weight: 700; font-size: 22px; line-height: 1.2; color: var(--ui-ink); }
+.ui-kt-sh p { font-size: 14.5px; color: var(--ui-ink2); }
+.ui-kt-total { margin-top: 10px; text-align: right; font-size: 14px; color: var(--ui-ink2); }
+.ui-kt-total b { margin-left: 6px; color: var(--ui-ink); }
+
+.ui-kt-wrap { overflow: visible; }
+.ui-kt-table thead th:first-child { border-top-left-radius: 16px; }
+.ui-kt-table thead th:last-child { border-top-right-radius: 16px; }
+.ui-kt-lbl { display: none; }
+.ui-kt-table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.ui-kt-table thead th {
+  padding: 12px 14px; text-align: left; background: var(--ui-paper-2); border-bottom: 1.5px solid var(--ui-line-soft);
+  font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ui-ink2); white-space: nowrap;
+}
+.ui-kt-table td { padding: 12px 14px; vertical-align: middle; border-top: 1.5px solid var(--ui-line-soft); color: var(--ui-ink); }
+.ui-kt-table tbody tr:first-child td { border-top: 0; }
+.ui-kt-table :is(td, th):first-child { padding-left: 20px; }
+.ui-kt-table :is(td, th):last-child { padding-right: 18px; }
+.ui-kt-table td b { font-weight: 700; }
+.ui-kt-table td small { display: block; margin-top: 2px; font-size: 13px; color: var(--ui-ink3); }
+.ui-kt-table tr.is-muted td { color: var(--ui-ink3); }
+.ui-kt-day th { padding: 16px 20px 6px; text-align: left; border-top: 1.5px solid var(--ui-line-soft); }
+.ui-kt-day b { font-family: var(--ui-f-d); font-size: 18px; font-weight: 700; color: var(--ui-ink); margin-right: 10px; }
+.ui-kt-day span { font-size: 13px; font-weight: 600; color: var(--ui-ink3); margin-right: 6px; }
+.ui-kt-day + tr td { border-top: 0; }
+.ui-kt-who { font-weight: 700; color: var(--ui-ink); text-decoration: none; }
+a.ui-kt-who:hover { text-decoration: underline; text-decoration-color: var(--ui-yellow); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.ui-kt-table .is-people { white-space: nowrap; color: var(--ui-ink3); font-size: 13px; }
+.ui-kt-table .is-people b { font-size: 15px; color: var(--ui-ink); }
+.ui-kt-table .is-date { white-space: nowrap; }
+.ui-kt-table td.is-reason { color: var(--ui-red-ink); }
+.ui-kt-table thead th.is-price { text-align: right; }
+.ui-kt-table .is-price { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+.ui-kt-warn { display: inline-flex; vertical-align: -2px; margin-left: 4px; color: var(--ui-warn-ink); }
+.ui-kt-notes { max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ui-kt-none { font-weight: 600; color: var(--ui-red-ink); }
+.ui-kt-stale { font-weight: 700; color: var(--ui-warn-ink); }
+.ui-kt-person { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.ui-kt-table .is-actions { width: 1%; white-space: nowrap; }
+.ui-kt-act { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.ui-kt-act form { display: contents; }
+.ui-kt-no { border-color: #e4a79d; color: var(--ui-red-ink); }
+.ui-kt-no:hover { background: var(--ui-red-tint); color: var(--ui-red-ink); }
+
+.ui-kt-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
+.ui-kt-cards { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.ui-kt-card { display: flex; align-items: flex-start; gap: 16px; padding: 16px 18px; background: #fff; border: 1.5px solid var(--ui-line); border-radius: 18px; }
+.ui-kt-card-d { width: 64px; flex: none; display: flex; flex-direction: column; gap: 2px; }
+.ui-kt-card-d b { font-weight: 700; font-size: 15px; }
+.ui-kt-card-d small { font-size: 13px; color: var(--ui-ink3); }
+.ui-kt-card-m { flex: 1; min-width: 0; }
+.ui-kt-card-m b { font-weight: 700; font-size: 15px; }
+.ui-kt-card-m p { margin-top: 4px; font-size: 14px; color: var(--ui-ink2); }
+.ui-kt-arch { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 6px; }
+.ui-kt-arch .ui-chip { text-decoration: none; }
+.ui-kt-arch .ui-chip[aria-current="page"] { border-color: var(--ui-teal); }
+
+@media (max-width: 1100px) {
+  .ui-kt-pair { grid-template-columns: minmax(0, 1fr); }
+}
+/* Téléphone : une carte par service, les gestes en pleine largeur. */
+@media (max-width: 760px) {
+  .ui-kt-wrap { overflow: visible; background: transparent; border: 0; }
+  .ui-kt-table, .ui-kt-table tbody, .ui-kt-table tr, .ui-kt-table td { display: block; }
+  .ui-kt-table thead { display: none; }
+  .ui-kt-table tbody { display: flex; flex-direction: column; gap: 12px; }
+  .ui-kt-table tr:not(.ui-kt-day) {
+    position: relative; padding: 14px 16px; background: #fff; border: 1.5px solid var(--ui-line); border-radius: 18px;
+  }
+  .ui-kt-table td, .ui-kt-table :is(td, th):first-child, .ui-kt-table :is(td, th):last-child { padding: 0; border: 0; }
+  .ui-kt-table td + td { margin-top: 6px; }
+  .ui-kt-table td.is-people { position: absolute; top: 14px; right: 16px; margin: 0; }
+  .ui-kt-table td.is-actions { width: auto; margin-top: 12px; }
+  .ui-kt-act { justify-content: stretch; flex-wrap: wrap; }
+  .ui-kt-act > .ui-btn, .ui-kt-act > form > .ui-btn { flex: 1; }
+  .ui-kt-day { display: block; }
+  .ui-kt-day th { display: block; padding: 10px 2px 0; border: 0; }
+  .ui-kt-notes { white-space: normal; }
+  .ui-kt-lbl { display: inline; color: var(--ui-ink3); }
+  .ui-kt-card { padding: 14px 16px; }
+}

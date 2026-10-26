@@ -1,0 +1,23 @@
+/ Une demande qui ne demande rien à la cuisine (demande d'info, à couvrir), en
+  carte compacte dans la vue Cuisine : quand, pour qui, et la phrase qui dit
+  pourquoi il n'y a rien à faire ici. Le « ⋯ » garde les gestes rares.
+- dom   = "order-#{order.id}"
+- panel = "absolute left-0 top-0 z-40 invisible opacity-0 transition-opacity rounded-lg bg-white shadow-lg ring-1 ring-gray-200 text-left font-normal"
+- pop   = ->(target, placement) { { "controller" => "popover", "action" => "click->popover#toggle click@window->popover#hideOnClickOutside", "popover-target-value" => target, "popover-strategy-value" => "fixed", "popover-placement-value" => placement } }
+- date  = order.object.date
+li.ui-kt-card(id=dom)
+  .ui-kt-card-d
+    - if date
+      b = l(date, format: (date.year == Date.current.year ? "%-d %b" : "%-d %b"))
+      small = date.year == Date.current.year ? (order.moment_label&.downcase || order.label.downcase) : date.year
+    - else
+      b Sans date
+  .ui-kt-card-m
+    b = "#{order.client_label} · #{order.people} couvert#{'s' if order.people.to_i > 1}"
+    p
+      - if status == "inquiry"
+        | #{order.responsible_missing? ? "La cuisine a dit oui" : "#{order.responsible_label.split.first} a dit oui"}, le client n’a pas encore décidé. Rien à préparer.
+      - else
+        - reason = order.reason
+        = "La cuisine a dit non#{reason ? " : « #{reason} »" : ''}. L’accueil s’en occupe."
+  = render "kitchen/orders/menu", order: order, dom: dom, panel: panel, pop: pop, past: order.past?

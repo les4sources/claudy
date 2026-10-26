@@ -1,0 +1,31 @@
+/ Une section de la Cuisine en tableau ; sur téléphone, chaque ligne devient une
+  carte (règles `.ui-kt-table` de `ui_v2.css`). Dans la vue Cuisine, « Prévu »
+  se lit jour par jour, avec les couverts du jour en intertitre.
+.ui-card.ui-kt-wrap
+  table.ui-kt-table
+    thead
+      tr
+        - columns.each do |column|
+          th(scope="col" class="is-#{column}") = KitchenHelper::BOARD_COLUMN_TITLES[column]
+    tbody
+      - if by_day
+        - orders.group_by { |order| order.object.date }.each do |day, orders_of_day|
+          - covers = orders_of_day.sum { |o| o.object.people.to_i }
+          tr.ui-kt-day
+            th(colspan=columns.size scope="rowgroup")
+              - if day.nil?
+                b Sans date
+              - elsif day == Date.current
+                b Aujourd’hui
+                span = l(day, format: "%A %-d").downcase
+              - elsif day == Date.current + 1
+                b Demain
+                span = l(day, format: "%A %-d").downcase
+              - else
+                b = l(day, format: (day.year == Date.current.year ? "%A %-d %B" : "%A %-d %B %Y")).capitalize
+              span = [("#{orders_of_day.size} services" if orders_of_day.size > 1), "#{covers} couvert#{'s' if covers > 1}"].compact.join(" · ")
+          - orders_of_day.each do |order|
+            = render "kitchen/orders/v2/row", order: order, status: status, columns: columns
+      - else
+        - orders.each do |order|
+          = render "kitchen/orders/v2/row", order: order, status: status, columns: columns

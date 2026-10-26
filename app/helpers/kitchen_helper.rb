@@ -163,4 +163,52 @@ module KitchenHelper
     else value.to_s
     end
   end
+
+  # --- Nouvelle interface (redesign, Michael 2026-10-24) -------------------
+  # Statut de section et statut côté client en pastilles du DS : forme + mot.
+  BOARD_STATUS_UI = { "to_validate" => "todo", "inquiry" => "wait", "planned" => "ok", "to_cover" => "no" }.freeze
+  CLIENT_STATUS_UI = { "inquiry" => "wait", "requested" => "pre", "confirmed" => "ok", "cancelled" => "off" }.freeze
+
+  def kitchen_board_pill(status)
+    ui_status(BOARD_STATUS_UI.fetch(status.to_s, "off"), MealOrder::BOARD_STATUS_LABELS[status] || "—")
+  end
+
+  def kitchen_client_pill(order)
+    ui_status(CLIENT_STATUS_UI.fetch(order.status.to_s, "off"), order.status_label)
+  end
+
+  # La phrase du jour en tête de page, découpée pour surligner l'essentiel :
+  # [avant, surligné, après]. Côté cuisine : ce qui attend une réponse, puis
+  # les couverts du jour (et ceux qu'un oui ajouterait). Côté accueil : ce
+  # qu'il faut relancer ou couvrir. Le prénom est celui du compte connecté.
+  def kitchen_phrase(view, sections, user)
+    by_status = sections.to_h
+    first = user&.linked_human&.name.to_s.split.first
+    hello = first.present? ? "#{first}, " : ""
+
+    if view == :reception
+      todo = by_status.fetch("to_cover", []).size + by_status.fetch("inquiry", []).size
+      return ["#{hello}rien à relancer ni à couvrir. ", "Tout suit son cours", "."] if todo.zero?
+
+      return [hello, "#{todo} demande#{'s' if todo > 1}", " à relancer ou à couvrir."]
+    end
+
+    waiting = by_status.fetch("to_validate", [])
+    today = Date.current
+    planned_today = by_status.fetch("planned", []).select { |o| o.date == today }.sum { |o| o.people.to_i }
+    waiting_today = waiting.select { |o| o.date == today }.sum { |o| o.people.to_i }
+    day = if planned_today.positive?
+            " Aujourd'hui, #{planned_today} couvert#{'s' if planned_today > 1} prévu#{'s' if planned_today > 1}" \
+              "#{waiting_today.positive? ? ", et #{waiting_today} de plus si tu dis oui" : ''}."
+          elsif waiting_today.positive?
+            " Aujourd'hui, #{waiting_today} couvert#{'s' if waiting_today > 1} si tu dis oui."
+          else
+            " Rien à servir aujourd'hui."
+          end
+
+    return ["#{hello}aucune demande n'attend ta réponse.", nil, day] if waiting.empty?
+
+    verb = waiting.size > 1 ? " attendent" : " attend"
+    [hello, "#{waiting.size} demande#{'s' if waiting.size > 1}", "#{verb} ta réponse.#{day}"]
+  end
 end
