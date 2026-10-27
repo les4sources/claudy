@@ -54,7 +54,7 @@ RSpec.describe "Écrans Devise — gabarit et français", type: :request do
     post user_password_path, params: { user: { email: user.email } }
     follow_redirect!
 
-    expect(response.body).to include("Vous allez recevoir sous quelques minutes un email")
+    expect(response.body).to include("Tu vas recevoir dans quelques minutes un email")
   end
 
   it "nouveau mot de passe : la page du lien reçu est en français et l'enregistre" do
@@ -99,5 +99,6 @@ RSpec.describe "Email de mot de passe (aussi l'invitation des porteurs)", type: 
     expect(mail.body.encoded).to include("Choisir mon mot de passe")
     expect(mail.body.encoded).to include("/users/password/edit?reset_password_token=")
     expect(mail.body.encoded).not_to include("Change my password")
+    expect(mail.body.encoded).not_to match(/\b(vous|votre)\b/i) # Claudy tutoie
   end
 end

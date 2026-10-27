@@ -15,6 +15,6 @@ class UserMailer < ApplicationMailer
     # ne suit pas les clics (aucun configuration set de suivi).
     headers["TRACK-LINKS"] = "None"
 
-    mail(to: user.email, subject: "Votre lien de connexion — Claudy")
+    mail(to: user.email, subject: "Ton lien de connexion — Claudy")
   end
 end
