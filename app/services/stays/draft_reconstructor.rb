@@ -25,6 +25,14 @@ module Stays
     #
     # `call` garde les lignes `halls` : la duplication en a besoin pour vider
     # les dates sans perdre les salles.
+    # L'occupation d'hébergement que le formulaire édite (modèle mono-Booking,
+    # issue #138). Si l'historique en a laissé plusieurs, celle qui porte un gîte
+    # l'emporte, sinon la plus ancienne.
+    def self.lodging_booking_of(stay)
+      bookings = stay.stay_items.where(bookable_type: "Booking").order(:id).filter_map(&:bookable)
+      bookings.find(&:lodging) || bookings.first
+    end
+
     def self.priced(stay)
       draft = call(stay)
       arrival, departure = draft.arrival_date, draft.departure_date
@@ -175,7 +183,7 @@ module Stays
     end
 
     def lodging_booking
-      @stay.stay_items.where(bookable_type: "Booking").first&.bookable
+      self.class.lodging_booking_of(@stay)
     end
 
     def space_booking

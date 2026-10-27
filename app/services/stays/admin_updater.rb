@@ -358,6 +358,23 @@ module Stays
       # On les rebâtit intégralement pour rester la source de vérité : gîte entier
       # → toutes les chambres du gîte ; chambres seules → le sous-ensemble coché.
       rebuild_reservations!(booking)
+      detach_extra_lodging_bookings!(booking)
+    end
+
+    # Le formulaire ne porte qu'UNE occupation d'hébergement (modèle mono-Booking,
+    # issue #138). Un second Booking laissé par une fusion ou l'historique n'était
+    # jamais touché à l'édition : ses dates gardaient le séjour ouvert (séjour
+    # #1438, date de fin restée en avril après un passage en janvier). Le
+    # formulaire faisant foi, on le détache et on libère ses nuits.
+    def detach_extra_lodging_bookings!(kept)
+      @stay.stay_items.where(bookable_type: "Booking").where.not(bookable_id: kept.id).each do |item|
+        extra = item.bookable
+        item.soft_delete!(validate: false)
+        next unless extra
+
+        extra.reservations.destroy_all
+        extra.soft_delete!(validate: false)
+      end
     end
 
     # Rebâtit les Reservation {room, date} de l'occupation depuis le draft courant.
@@ -404,8 +421,10 @@ module Stays
       end
     end
 
+    # Même choix que `DraftReconstructor#lodging_booking` : le formulaire a été
+    # prérempli depuis ce Booking-là, c'est donc lui qu'on met à jour.
     def existing_lodging_booking
-      @stay.stay_items.where(bookable_type: "Booking").first&.bookable
+      DraftReconstructor.lodging_booking_of(@stay)
     end
 
     # Réconcilie l'occupation d'ESPACES du séjour (epic #66, Phase 2) : rebuild
