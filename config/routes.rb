@@ -1030,6 +1030,8 @@ Rails.application.routes.draw do
 
   namespace :webhooks do
     resource :stripe_hooks, only: :create
+    # Amazon SES → SNS : rebonds et plaintes des emails envoyés.
+    resource :ses_notifications, only: :create
     # Ligne de garde (Twilio) : appel entrant, puis issue de chaque <Dial>.
     post "twilio/voice", to: "twilio_voice#incoming", as: :twilio_voice
     post "twilio/voice/dial_status", to: "twilio_voice#dial_status", as: :twilio_voice_dial_status

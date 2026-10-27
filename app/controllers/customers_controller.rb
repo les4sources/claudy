@@ -49,7 +49,9 @@ class CustomersController < BaseController
     @past_stays     = preload_stays_composition(@customer.past_stays)
     # Journal des emails envoyés — colonnes lourdes (corps HTML) exclues de la
     # liste : la modale les recharge à l'ouverture.
-    @sent_emails = @customer.sent_emails.recent.select(:id, :customer_id, :subject, :sent_at)
+    @sent_emails = SentEmailDecorator.decorate_collection(
+      @customer.sent_emails.recent.select(:id, :customer_id, :subject, :sent_at, :delivery_issue)
+    )
   end
 
   def edit

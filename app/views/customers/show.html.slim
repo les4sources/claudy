@@ -172,7 +172,11 @@
                             customer_sent_email_path(@customer, sent_email),
                             data: { turbo_frame: "modal" },
                             class: "block text-sm font-medium text-indigo-600 hover:underline"
-                  .text-xs.text-gray-500 = l(sent_email.sent_at, format: :short)
+                  .text-xs.text-gray-500
+                    = l(sent_email.sent_at, format: :short)
+                    - if sent_email.delivery_issue_label
+                      span.ml-2.inline-flex.items-center.rounded.bg-red-50.px-1.5.py-0.5.font-medium.text-red-700
+                        = sent_email.delivery_issue_label
 
       / Notes internes (ActionText) : rendu NON échappé (== ) via le rendu standard,
       / et carte entièrement masquée quand le corps est vide (`.body.present?`) —

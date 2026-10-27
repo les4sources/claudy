@@ -11,7 +11,8 @@ class UserMailer < ApplicationMailer
     # LE TRACKING DE LIENS EST COUPÉ. Postmark réécrit sinon l'URL pour compter
     # les clics, et le premier scanner qui suit le lien réécrit brûlerait le
     # jeton à usage unique avant l'utilisateur. La gem `postmark-rails` lit cet
-    # en-tête et le traduit en `TrackLinks` côté API.
+    # en-tête et le traduit en `TrackLinks` côté API. Sans effet chez SES, qui
+    # ne suit pas les clics (aucun configuration set de suivi).
     headers["TRACK-LINKS"] = "None"
 
     mail(to: user.email, subject: "Votre lien de connexion — Claudy")

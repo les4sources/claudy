@@ -5,25 +5,30 @@ require "rails_helper"
 #
 # Table name: sent_emails
 #
-#  id                  :bigint           not null, primary key
-#  body_html           :text
-#  body_text           :text
-#  mailer              :string
-#  sent_at             :datetime         not null
-#  source              :string           default("app"), not null
-#  subject             :string
-#  tag                 :string
-#  to_email            :citext           not null
-#  created_at          :datetime         not null
-#  updated_at          :datetime         not null
-#  customer_id         :bigint           not null
-#  postmark_message_id :string
+#  id                    :bigint           not null, primary key
+#  body_html             :text
+#  body_text             :text
+#  delivery_issue        :string
+#  delivery_issue_at     :datetime
+#  delivery_issue_detail :string
+#  mailer                :string
+#  sent_at               :datetime         not null
+#  source                :string           default("app"), not null
+#  subject               :string
+#  tag                   :string
+#  to_email              :citext           not null
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  customer_id           :bigint           not null
+#  postmark_message_id   :string
+#  ses_message_id        :string
 #
 # Indexes
 #
 #  index_sent_emails_on_customer_id              (customer_id)
 #  index_sent_emails_on_customer_id_and_sent_at  (customer_id,sent_at)
 #  index_sent_emails_on_postmark_message_id      (postmark_message_id) UNIQUE WHERE (postmark_message_id IS NOT NULL)
+#  index_sent_emails_on_ses_message_id           (ses_message_id) WHERE (ses_message_id IS NOT NULL)
 #
 # Foreign Keys
 #

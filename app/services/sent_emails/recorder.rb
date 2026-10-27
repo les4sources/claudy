@@ -43,6 +43,7 @@ module SentEmails
         mailer: mailer_name,
         tag: header_value("TAG"),
         postmark_message_id: postmark_message_id,
+        ses_message_id: ses_message_id,
         sent_at: Time.current,
         source: "app"
       )
@@ -69,6 +70,12 @@ module SentEmails
     # ne passe pas par l'API.
     def postmark_message_id
       @postmark_message_id ||= header_value("X-PM-Message-Id")
+    end
+
+    # La gem `aws-actionmailer-ses` pose l'identifiant SES renvoyé par
+    # `SendEmail` (celui que citent les notifications de rebond) après l'envoi.
+    def ses_message_id
+      header_value("ses-message-id")
     end
 
     # `delivery_handler` est la classe du mailer, posée par ActionMailer au

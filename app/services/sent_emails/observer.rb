@@ -1,7 +1,8 @@
 module SentEmails
   # Observer ActionMailer : notifié APRÈS chaque livraison réelle (cf. Mail
   # `deliver` → `inform_observers`), donc une fois l'en-tête `X-PM-Message-Id`
-  # posé par Postmark. Enregistré via `config.action_mailer.observers`.
+  # posé par Postmark (ou `ses-message-id` par SES). Enregistré via
+  # `config.action_mailer.observers`.
   #
   # Journaliser ne doit JAMAIS faire échouer un envoi : toute erreur est avalée,
   # tracée dans les logs et remontée à Sentry.
