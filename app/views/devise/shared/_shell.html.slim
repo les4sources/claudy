@@ -1,0 +1,28 @@
+/  Gabarit commun des écrans de compte (Devise) : deux colonnes, le logo, la
+   photo à droite, comme `users/magic_links/*`. Le gabarit `devise` n'affiche
+   PAS les flash : sans ce bloc, « Vous allez recevoir un email… » ou « Email
+   ou mot de passe incorrect » ne s'afficheraient nulle part.
+.flex.min-h-full
+  .flex.flex-1.flex-col.justify-center.px-4.py-12.sm:px-6.lg:flex-none.lg:px-20.xl:px-24
+    .mx-auto.w-full.max-w-sm.lg:w-96
+      div
+        = vite_image_tag "images/les-4-sources-logo-seul.png",
+                         class: "h-10 w-auto",
+                         alt: "Les 4 Sources"
+        h2.mt-8.text-4xl.font-bold.leading-9.tracking-tight.text-4s-main.font-averia
+          = title
+        - if local_assigns[:intro].present?
+          p.mt-3.text-sm.leading-6.text-gray-600
+            = intro
+      - if flash[:notice].present?
+        .mt-6.rounded-md.p-4.text-sm(class="bg-emerald-50 text-emerald-900")
+          = flash[:notice]
+      - if flash[:alert].present?
+        .mt-6.rounded-md.p-4.text-sm(class="bg-amber-50 text-amber-900")
+          = flash[:alert]
+      .mt-10
+        = yield
+  .relative.hidden.w-0.flex-1.lg:block
+    = vite_image_tag "images/les-4-sources-bar-crepuscule.jpg",
+                     class: "absolute inset-0 h-full w-full object-cover",
+                     alt: ""

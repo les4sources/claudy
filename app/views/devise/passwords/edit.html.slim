@@ -1,0 +1,28 @@
+/  Sert aussi à la PREMIÈRE définition du mot de passe d'un compte porteur :
+   l'invitation est un email de réinitialisation.
+= render layout: "devise/shared/shell",
+         locals: { title: "Nouveau mot de passe",
+                   intro: ("#{@minimum_password_length} caractères minimum." if @minimum_password_length) } do
+  = form_for(resource, as: resource_name, url: password_path(resource_name), builder: ActionView::Helpers::FormBuilder, html: { method: :put, class: "space-y-6" }) do |f|
+    = render "devise/shared/error_messages", resource: resource
+    = f.hidden_field :reset_password_token
+    div
+      = f.label :password, "Nouveau mot de passe", class: "block text-sm font-medium leading-6 text-gray-900"
+      .mt-2
+        = f.password_field :password,
+                           required: true,
+                           autofocus: true,
+                           autocomplete: "new-password",
+                           class: "block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+    div
+      = f.label :password_confirmation, "Confirmez le mot de passe", class: "block text-sm font-medium leading-6 text-gray-900"
+      .mt-2
+        = f.password_field :password_confirmation,
+                           required: true,
+                           autocomplete: "new-password",
+                           class: "block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+    div
+      button(type="submit" class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600")
+        | Enregistrer mon mot de passe
+  .mt-6.text-sm.leading-6.text-center
+    = link_to "Retour à la connexion", new_session_path(resource_name), class: "font-semibold text-indigo-600 hover:text-indigo-500"

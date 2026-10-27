@@ -1,0 +1,5 @@
+- if resource.errors.any?
+  .rounded-md.p-4.text-sm(class="bg-red-50 text-red-800" data-turbo-cache="false")
+    ul.list-disc.space-y-1.pl-5
+      - resource.errors.full_messages.each do |message|
+        li= message

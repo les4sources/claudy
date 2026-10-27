@@ -1,0 +1,42 @@
+= render layout: "devise/shared/shell", locals: { title: "Mon compte" } do
+  = form_for(resource, as: resource_name, url: registration_path(resource_name), builder: ActionView::Helpers::FormBuilder, html: { method: :put, class: "space-y-6" }) do |f|
+    = render "devise/shared/error_messages", resource: resource
+    div
+      = f.label :email, "Adresse email", class: "block text-sm font-medium leading-6 text-gray-900"
+      .mt-2
+        = f.email_field :email,
+                        required: true,
+                        autofocus: true,
+                        autocomplete: "email",
+                        class: "block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+    div
+      = f.label :password, "Nouveau mot de passe", class: "block text-sm font-medium leading-6 text-gray-900"
+      .mt-2
+        = f.password_field :password,
+                           autocomplete: "new-password",
+                           class: "block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+      p.mt-2.text-xs.text-gray-500 Laissez vide pour le garder.
+    div
+      = f.label :password_confirmation, "Confirmez le nouveau mot de passe", class: "block text-sm font-medium leading-6 text-gray-900"
+      .mt-2
+        = f.password_field :password_confirmation,
+                           autocomplete: "new-password",
+                           class: "block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+    div
+      = f.label :current_password, "Mot de passe actuel", class: "block text-sm font-medium leading-6 text-gray-900"
+      .mt-2
+        = f.password_field :current_password,
+                           required: true,
+                           autocomplete: "current-password",
+                           class: "block w-full rounded-md border-0 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+      p.mt-2.text-xs.text-gray-500 Nécessaire pour enregistrer les changements.
+    div
+      button(type="submit" class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600")
+        | Enregistrer
+  .mt-6.flex.items-center.justify-between.gap-4.text-sm.leading-6
+    = link_to "Retour à Claudy", root_path, class: "font-semibold text-indigo-600 hover:text-indigo-500"
+    = button_to "Supprimer mon compte",
+                registration_path(resource_name),
+                method: :delete,
+                form: { data: { turbo_confirm: "Supprimer définitivement ce compte ?" } },
+                class: "font-semibold text-red-600 hover:text-red-500"
