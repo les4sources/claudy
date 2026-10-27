@@ -94,7 +94,11 @@ RSpec.describe "Comptabilité — Notes de frais", type: :request do
       get new_finance_expense_report_path(human_id: 0)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).not_to include('selected="selected" value="' + human.id.to_s + '"')
+      # Seule la liste des bénéficiaires compte : celle des entités a toujours une option
+      # choisie, dont l'id peut tomber sur celui du membre.
+      human_select = response.body[/<select[^>]*name="expense_report\[human_id\]".*?<\/select>/m]
+      expect(human_select).to be_present
+      expect(human_select).not_to include('selected="selected"')
     end
 
     it "crée une note de trois lignes en une passe" do
