@@ -10,6 +10,9 @@ module Mcp
     skip_forgery_protection
     layout false
 
+    # Point d'entrée de machine : les moteurs de recherche n'ont rien à en garder.
+    after_action { response.headers["X-Robots-Tag"] = "noindex, nofollow" }
+
     rate_limit to: 20, within: 1.minute, only: %i[register token],
                with: -> { render json: { error: "slow_down" }, status: :too_many_requests }
 

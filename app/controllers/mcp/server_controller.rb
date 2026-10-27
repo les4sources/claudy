@@ -9,6 +9,9 @@ module Mcp
     skip_forgery_protection
     layout false
 
+    # Point d'entrée de machine : les moteurs de recherche n'ont rien à en garder.
+    after_action { response.headers["X-Robots-Tag"] = "noindex, nofollow" }
+
     before_action :authenticate_token!, only: :handle
 
     def handle
