@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_24_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_27_070000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2356,9 +2356,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_130000) do
     t.text "body_text"
     t.datetime "created_at", null: false
     t.bigint "customer_id", null: false
+    t.string "delivery_issue"
+    t.datetime "delivery_issue_at"
+    t.string "delivery_issue_detail"
     t.string "mailer"
     t.string "postmark_message_id"
     t.datetime "sent_at", null: false
+    t.string "ses_message_id"
     t.string "source", default: "app", null: false
     t.string "subject"
     t.string "tag"
@@ -2367,6 +2371,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_24_130000) do
     t.index ["customer_id", "sent_at"], name: "index_sent_emails_on_customer_id_and_sent_at"
     t.index ["customer_id"], name: "index_sent_emails_on_customer_id"
     t.index ["postmark_message_id"], name: "index_sent_emails_on_postmark_message_id", unique: true, where: "(postmark_message_id IS NOT NULL)"
+    t.index ["ses_message_id"], name: "index_sent_emails_on_ses_message_id", where: "(ses_message_id IS NOT NULL)"
   end
 
   create_table "services", force: :cascade do |t|

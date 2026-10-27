@@ -5,6 +5,14 @@
       dd.text-gray-900 = l(@sent_email.sent_at, format: :long)
       dt.text-gray-500 Destinataire
       dd.text-gray-900 = @sent_email.to_email
+      - if @sent_email.delivery_issue_label
+        dt.text-gray-500 Remise
+        dd.text-red-700
+          span.font-medium = @sent_email.delivery_issue_label
+          - if @sent_email.delivery_issue_at
+            |  (#{l(@sent_email.delivery_issue_at, format: :short)})
+          - if @sent_email.delivery_issue_detail.present?
+            .text-xs.text-gray-500.break-words = @sent_email.delivery_issue_detail
       - if @sent_email.tag.present?
         dt.text-gray-500 Type
         dd.text-gray-900 = @sent_email.tag

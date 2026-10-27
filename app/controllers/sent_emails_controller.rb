@@ -5,7 +5,7 @@ class SentEmailsController < BaseController
 
   def show
     @customer = Customer.find(params[:customer_id])
-    @sent_email = @customer.sent_emails.find(params[:id])
+    @sent_email = @customer.sent_emails.find(params[:id]).decorate
   end
 
   private

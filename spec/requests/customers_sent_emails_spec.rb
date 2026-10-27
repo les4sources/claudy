@@ -53,6 +53,25 @@ RSpec.describe "Customers#show — historique des emails envoyés", type: :reque
     end
   end
 
+  describe "un email que SES n'a pas pu remettre" do
+    before do
+      sent_email.update!(delivery_issue: "bounce", delivery_issue_detail: "smtp; 550 5.1.1 user unknown",
+                         delivery_issue_at: Time.zone.local(2026, 7, 20, 9, 31))
+    end
+
+    it "le signale dans la liste de la fiche" do
+      get customer_path(customer)
+      expect(response.body).to include("Non remis : adresse refusée")
+    end
+
+    it "donne la raison dans la modale" do
+      get customer_sent_email_path(customer, sent_email)
+
+      expect(response.body).to include("Non remis : adresse refusée")
+      expect(response.body).to include("smtp; 550 5.1.1 user unknown")
+    end
+  end
+
   describe "la modale de consultation" do
     it "montre le contenu HTML de l'email, isolé dans une iframe" do
       get customer_sent_email_path(customer, sent_email)

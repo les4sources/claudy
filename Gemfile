@@ -87,6 +87,10 @@ gem "rqrcode", "~> 3.1"
 gem "paper_trail"
 gem "phonelib", "~> 0.10.27"
 gem "postmark-rails"
+# Amazon SES (envoi des emails, EMAIL_DELIVERY=ses) et vérification des
+# notifications SNS de rebonds et de plaintes.
+gem "aws-actionmailer-ses", "~> 1.2"
+gem "aws-sdk-sns", "~> 1"
 gem "public_activity"
 gem "sentry-ruby"
 gem "sentry-rails"

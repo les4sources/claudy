@@ -76,8 +76,21 @@ module Claudy
     config.active_record.encryption.key_derivation_salt =
       ENV.fetch("ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT") { encryption_defaults.fetch(:key_derivation_salt) }
 
-    config.action_mailer.delivery_method = :postmark
-    config.action_mailer.postmark_settings = { api_token: ENV.fetch('POSTMARK_API_TOKEN') }
+    # Envoi des emails : Amazon SES quand EMAIL_DELIVERY=ses, Postmark sinon.
+    # Revenir à Postmark = effacer EMAIL_DELIVERY (ou y mettre `postmark`) et
+    # redémarrer. SES tourne en Irlande (eu-west-1), où le domaine
+    # les4sources.be est vérifié. Rebonds et plaintes : `Webhooks::SesNotificationsController`.
+    if ENV["EMAIL_DELIVERY"] == "ses"
+      config.action_mailer.delivery_method = :ses_v2
+      config.action_mailer.ses_v2_settings = {
+        region: ENV.fetch("AWS_SES_REGION", "eu-west-1"),
+        access_key_id: ENV.fetch("AWS_SES_ACCESS_KEY_ID"),
+        secret_access_key: ENV.fetch("AWS_SES_SECRET_ACCESS_KEY")
+      }
+    else
+      config.action_mailer.delivery_method = :postmark
+      config.action_mailer.postmark_settings = { api_token: ENV.fetch('POSTMARK_API_TOKEN') }
+    end
     # Journal des emails envoyés aux clients (visible sur la fiche client).
     # Déclaré en chaîne : la classe n'est constantisée qu'au chargement
     # d'ActionMailer, pas au boot du framework.

@@ -97,6 +97,26 @@ RSpec.describe SentEmails::Recorder do
     end
   end
 
+  describe "envoi par Amazon SES" do
+    # Le vrai mailer de la gem, avec un client SES bouchonné : on vérifie que
+    # l'identifiant SES qu'il pose après l'envoi arrive bien dans le journal.
+    it "conserve l'identifiant SES du message" do
+      client = Aws::SESV2::Client.new(stub_responses: { send_email: { message_id: "ses-0102" } })
+      message = Mail.new do
+        from    "accueil@les4sources.be"
+        to      "cliente@example.com"
+        subject "Envoi SES"
+        body    "Bonjour"
+      end
+
+      Aws::ActionMailer::SESV2::Mailer.new(sesv2_client: client).deliver!(message)
+      described_class.record(message)
+
+      expect(SentEmail.last.ses_message_id).to eq("ses-0102")
+      expect(SentEmail.last.postmark_message_id).to be_nil
+    end
+  end
+
   describe "robustesse" do
     # Journaliser ne doit jamais faire échouer un envoi.
     it "avale l'erreur et laisse l'email partir" do
