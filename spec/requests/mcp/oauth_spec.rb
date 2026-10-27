@@ -55,6 +55,15 @@ RSpec.describe "Serveur MCP et OAuth", type: :request do
     expect(response.headers["WWW-Authenticate"]).to include("resource_metadata=")
   end
 
+  it "tient /mcp hors des moteurs de recherche" do
+    get "/mcp"
+    expect(response).to have_http_status(:method_not_allowed)
+    expect(response.headers["X-Robots-Tag"]).to eq("noindex, nofollow")
+
+    get "/.well-known/oauth-authorization-server"
+    expect(response.headers["X-Robots-Tag"]).to eq("noindex, nofollow")
+  end
+
   it "refuse d'enregistrer une adresse de retour étrangère à Claude" do
     register(["https://evil.example/callback"])
     expect(response).to have_http_status(:bad_request)

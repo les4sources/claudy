@@ -1,1 +1,8 @@
 # See https://www.robotstxt.org/robotstxt.html for documentation on how to use the robots.txt file
+#
+# Le connecteur MCP et son serveur OAuth ne parlent qu'aux machines (claude.ai) :
+# rien à explorer ni à indexer.
+User-agent: *
+Disallow: /mcp
+Disallow: /oauth/
+Disallow: /.well-known/
