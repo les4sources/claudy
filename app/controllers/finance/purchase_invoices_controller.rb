@@ -13,7 +13,12 @@ module Finance
 
     def index
       @scope = filtered
-      @invoices = @scope.ordered.includes(:third_party, :legal_entity, :purchase_invoice_lines)
+      @sort = params[:sort] == "due_on" ? "due_on" : "issued_on"
+      @invoices = (@sort == "due_on" ? @scope.by_due_date : @scope.ordered)
+                  .includes(:third_party, :legal_entity, :purchase_invoice_lines)
+      # Les échues du filtre courant : c'est ce qu'il faut voir en premier.
+      @today = Date.current
+      @overdue = @invoices.select { |invoice| invoice.overdue?(@today) }
       # Les totaux par statut portent sur TOUTES les factures, pas sur le filtre :
       # c'est une boussole, et une boussole qui suit le filtre ne sert à rien.
       @totals = PurchaseInvoice::STATUSES.index_with do |status|

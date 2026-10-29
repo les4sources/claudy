@@ -87,6 +87,9 @@ class PurchaseInvoice < ApplicationRecord
   # voudrait dire réécrire le grand livre.
   FROZEN_STATUSES = %w[to_pay paid].freeze
 
+  # Les statuts d'une facture réglée : elle n'est plus jamais échue.
+  SETTLED_STATUSES = %w[paid member_paid].freeze
+
   include Commentable
   # Ce que la maison doit (epic #240, phase 4) : `cash_allocations`, le calcul de
   # ce qui reste dû et la notion de retard viennent de là — pour que la file
@@ -142,6 +145,9 @@ class PurchaseInvoice < ApplicationRecord
                              if: :disputed?
 
   scope :ordered, -> { order(issued_on: :desc, id: :desc) }
+  # L'échéance la plus proche (ou la plus dépassée) d'abord ; sans échéance, en
+  # fin de liste : elles n'ont pas de promesse à tenir.
+  scope :by_due_date, -> { order(Arel.sql("purchase_invoices.due_on ASC NULLS LAST"), issued_on: :desc, id: :desc) }
   scope :with_status, ->(status) { where(status: status) }
   scope :payable, -> { where(status: "to_pay") }
   # Ce que le pôle doit trancher (phase 3) : le callout de sa page s'en sert.
@@ -162,6 +168,12 @@ class PurchaseInvoice < ApplicationRecord
   def locked_for_edit? = frozen_content? || member_paid?
   def double_signature? = total_cents >= DOUBLE_SIGNATURE_CENTS
   def reference = [third_party&.name, number].compact_blank.join(" · ")
+
+  # Échue = l'échéance est passée et la facture n'est pas réglée. Lu sur le
+  # statut, pas sur les affectations (`payable_overdue?`) : la liste en affiche
+  # des dizaines, une requête par ligne pour la même réponse serait du gâchis.
+  def overdue?(on = Date.current) = due_on.present? && due_on < on && !SETTLED_STATUSES.include?(status)
+  def days_overdue(on = Date.current) = overdue?(on) ? (on - due_on).to_i : 0
 
   # Les notes de frais qui remboursent cette facture, rejetées et supprimées
   # exclues : une note rejetée ne rembourse personne.
