@@ -116,6 +116,9 @@ class StaysController < BaseController
   def new
     @stay  = Stay.new(status: "pending")
     @draft = build_prefilled_draft
+    # « Nouveau séjour pour Claire Dubois » depuis la palette ⌘K : le client
+    # arrive présélectionné, comme pour une duplication.
+    @preselected_customer_id ||= Customer.where(id: params[:customer_id]).pick(:id) if params[:customer_id].present?
     prepare_form
   end
 

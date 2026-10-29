@@ -29,7 +29,10 @@ class BaseController < ActionController::Base
     # 2026-10-19 ; `User#guide_roles`). Clé = `controller_path`, pas
     # `controller_name` : « pages » serait aussi le calendrier.
     "guide/pages" => %w[index show],
-    "guide/revisions" => %w[index show]
+    "guide/revisions" => %w[index show],
+    # La palette ⌘K (2026-10-29) : elle ne lui montre que ses écrans et les
+    # pages du Guide qui lui sont ouvertes.
+    "searches" => %w[show]
   }.freeze
 
   # breadcrumb "Calendrier", :root_path

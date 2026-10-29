@@ -19,6 +19,9 @@ Rails.application.routes.draw do
   # worker et la page hors ligne sont des fichiers de `public/`.
   get "manifest.json", to: "pwa#manifest", as: :pwa_manifest, defaults: { format: :json }
 
+  # La palette ⌘K (redesign, Michael 2026-10-29) : les résultats d'une frappe.
+  get "recherche", to: "searches#show", as: :command_search
+
   if Rails.env.development?
     mount Lookbook::Engine, at: "/lookbook"
   end

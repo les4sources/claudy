@@ -30,7 +30,7 @@ html(lang="fr")
     = turbo_frame_tag "modal"
 
     - if new_interface?
-      .ui-app
+      .ui-app(data-controller="command-palette")
         = render "layouts/v2/sidebar"
         .ui-main
           = render "layouts/v2/mobile_top"
@@ -55,6 +55,7 @@ html(lang="fr")
 
               = render 'layouts/components/footer'
         = render "layouts/v2/tabbar"
+        = render "layouts/v2/command_palette"
     - else
       = render "layouts/components/navbar"
 

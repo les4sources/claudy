@@ -1,5 +1,6 @@
 / Barre du haut, sur téléphone seulement : le nom de l'écran, en Averia.
 header.ui-mtop
   span.ui-mtop-t = interface_page_title
+  button.ui-ibtn(type="button" data-action="command-palette#open" aria-label="Chercher") = ui_icon(:search)
   = link_to dashboard_path, class: "ui-mtop-me", "aria-label": "Mon tableau de bord" do
     = ui_avatar(current_user.display_name, small: true, human: current_user.linked_human)
