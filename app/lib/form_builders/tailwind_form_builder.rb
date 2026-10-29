@@ -65,6 +65,12 @@ module FormBuilders
       text_field(name, *args, &block)
     end
 
+    # Sans cette surcharge, `url_field` tombait sur celui d'ActionView : ni
+    # libellé ni aide, et `label:` / `hint:` fuyaient en attributs HTML.
+    def url_field(method, options = {}) # rubocop:disable Style/OptionHash
+      text_field(method, options.merge(type: 'url'))
+    end
+
     # Ce `file_field` ne rendait PAS un champ fichier : il fusionnait
     # `type: 'file'` dans les options et déléguait à `text_field`. Le
     # `file_field` d'ActionView n'était donc JAMAIS appelé — et avec lui
