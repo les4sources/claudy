@@ -18,16 +18,28 @@
       - if account.last_error.present?
         span.ml-1.text-red-700= "· #{account.last_error}"
 
-nav.mb-5.flex.gap-2
-  - MailMessage::STATUSES.each do |status|
-    - actif = @status == status
-    = link_to finance_mail_messages_path(status: status), class: "rounded-full px-3 py-1 text-sm ring-1 #{actif ? 'bg-4s-main text-white ring-4s-main' : 'bg-white text-gray-700 ring-gray-200 hover:ring-4s-main'}" do
-      = MailMessage::STATUS_LABELS[status]
-      span.ml-1.opacity-70= @counts[status].to_i
+.mb-5.flex.flex-wrap.items-center.justify-between.gap-3
+  nav.flex.gap-2
+    - MailMessage::STATUSES.each do |status|
+      - actif = @status == status
+      = link_to finance_mail_messages_path(status: status, q: @query.presence), class: "rounded-full px-3 py-1 text-sm ring-1 #{actif ? 'bg-4s-main text-white ring-4s-main' : 'bg-white text-gray-700 ring-gray-200 hover:ring-4s-main'}" do
+        = MailMessage::STATUS_LABELS[status]
+        span.ml-1.opacity-70= @counts[status].to_i
+  / Recherche libre : expéditeur (nom ou adresse) et sujet. Elle reste dans
+    l'URL et suit le changement d'onglet.
+  = form_with url: finance_mail_messages_path, method: :get, class: "flex items-center gap-2", data: { turbo_action: "advance" } do
+    = hidden_field_tag :status, @status
+    = label_tag :q, "Rechercher", class: "sr-only"
+    = search_field_tag :q, @query, placeholder: "expéditeur, adresse, sujet…", autocomplete: "off", autocorrect: "off", autocapitalize: "off", spellcheck: "false", class: "w-72 rounded-md border-gray-300 text-sm shadow-sm"
+    = submit_tag "Rechercher", name: nil, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+    - if @query.present?
+      = link_to "Effacer", finance_mail_messages_path(status: @status), class: "text-sm text-gray-500 hover:text-gray-700"
 
 - if @messages.empty?
   .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
-    - if @status == "pending"
+    - if @query.present?
+      p= "Aucun mail ne correspond à « #{@query} » ici."
+    - elsif @status == "pending"
       p.font-medium.text-gray-700 La file est vide.
       p.mt-1 Chaque facture reçue sur la boîte compta apparaîtra ici, avec ce que Claudy a déjà reconnu.
     - else

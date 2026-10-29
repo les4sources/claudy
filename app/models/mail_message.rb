@@ -50,6 +50,15 @@ class MailMessage < ApplicationRecord
 
   scope :pending, -> { where(status: "pending") }
   scope :recent_first, -> { order(received_at: :desc, id: :desc) }
+  # Recherche libre de la boite de réception : chaque mot doit se retrouver dans
+  # le nom de l'expéditeur, son adresse ou le sujet, sans casse ni accents.
+  # « proximus septembre » trouve « Votre facture de septembre » de Proximus.
+  scope :matching, lambda { |text|
+    text.to_s.split.reduce(all) do |scope, word|
+      fields = %w[from_name from_address subject].map { |f| "#{AccentFolding.sql("COALESCE(mail_messages.#{f}, '')")} LIKE :p" }
+      scope.where(fields.join(" OR "), p: AccentFolding.pattern(word))
+    end
+  }
   # Jamais lu, ou lu par une version plus ancienne de l'analyse et encore à
   # traiter : la file profite de ce que la lecture a appris depuis.
   scope :to_analyze, lambda {
