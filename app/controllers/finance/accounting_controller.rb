@@ -35,6 +35,7 @@ module Finance
       # « À faire » (2026-10-17) : les files dans l'ordre du travail, pour que
       # la personne qui démarre sache par où commencer.
       @todo = Finance::AccountingTodo.new
+      render_v2_index if current_user&.new_interface?
     end
 
     # Le détail d'un montant de « Peut-on dépenser ? » (Michael, 2026-10-19) :
@@ -45,6 +46,24 @@ module Finance
       @part = params[:part]
       @verdict = Finance::SpendingVerdict.new(legal_entity: LegalEntity.actives.find(params[:legal_entity_id]))
       render layout: "modal"
+    end
+
+    private
+
+    # La nouvelle interface (redesign, Michael 2026-10-29) : la même page, lue
+    # pour UNE entité à la fois (`?entity=`, la Fondation d'abord). Le verdict,
+    # les chiffres, la courbe, les échéances, les dettes et les prêts sont ceux
+    # de l'entité choisie ; « À faire » reste commun, les files n'ont pas
+    # d'entité. L'aide de l'écran se pose sous l'en-tête, pas au-dessus.
+    def render_v2_index
+      @verdict = @verdicts.find { |verdict| verdict.entity.id.to_s == params[:entity].to_s } || @verdicts.first
+      entity = @verdict&.entity
+      deadlines = @deadlines_overdue + @deadlines_soon
+      @entity_deadlines = entity ? deadlines.select { |deadline| deadline.legal_entity == entity } : deadlines
+      @entity_liabilities = entity ? @open_liabilities.select { |liability| liability.legal_entity == entity } : @open_liabilities
+      @entity_loans = entity && @loans.groups.find { |group| group.entity == entity }
+      @page_guide_inline = true
+      render "finance/accounting/v2/index"
     end
   end
 end

@@ -24,6 +24,10 @@
         polyline points=projection_path fill="none" stroke=line_color stroke-width="2" stroke-dasharray="6 4" stroke-linejoin="round"
       - step_markers.each do |marker|
         circle cx=marker[:x] cy=marker[:y] r="3.5" fill="white" stroke=line_color stroke-width="2" data-balance-point=""
+      - if (low = lowest_marker)
+        circle cx=low[:x] cy=low[:y] r="6" fill="#eac20b" stroke=line_color stroke-width="2" data-balance-lowest=""
+        text x=low[:x] y=(low[:below] ? low[:y] + 22 : low[:y] - 12) text-anchor=low[:anchor] font-size="12" font-weight="700" fill=line_color
+          = low[:label]
       / Le repère du point survolé, déplacé par `balance-chart`.
       g visibility="hidden" pointer-events="none" data-balance-chart-target="cursor"
         line x1="0" y1="8" x2="0" y2=baseline stroke=line_color stroke-width="1" stroke-opacity="0.35" data-balance-chart-target="guide"

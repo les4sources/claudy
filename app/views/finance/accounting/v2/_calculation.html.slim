@@ -1,0 +1,39 @@
+/ Le calcul derrière le verdict, déplié sous « Voir le détail » : les mêmes
+  lignes que `finance/accounting/_spending_verdicts`, et ce que le verdict ne
+  sait pas, dit en clair. Un montant qui a une liste derrière l'ouvre en
+  fenêtre.
+- detail = lambda do |part, cents|
+  - next accounting_euros(cents) if cents.zero?
+  - link_to accounting_euros(cents), finance_accounting_verdict_detail_path(v.entity, part), data: { turbo_frame: "modal", spending_detail: part }
+- unless v.verdict == "inconnu"
+  dl.ui-acc-calc-dl
+    div
+      dt Solde vérifié
+      dd = accounting_euros(v.balance_cents)
+    div
+      dt + À encaisser (séjours confirmés)
+      dd(data-spending-incoming="") = detail.("incoming", v.incoming_cents)
+    - if v.late_cents.positive?
+      div.is-sub
+        dt dont séjours passés pas encore soldés
+        dd = accounting_euros(v.late_cents)
+    div
+      dt = "− À payer (#{Finance::Treasury::HORIZON_DAYS} j, factures, charges fixes, dettes)"
+      dd = detail.("outgoing", v.outgoing_cents)
+    - if v.liabilities_later_cents.positive?
+      div
+        dt − Dettes et litiges plus tard
+        dd = detail.("liabilities_later", v.liabilities_later_cents)
+    div
+      dt − Prêts reçus à rendre (hors long terme)
+      dd = detail.("loans", v.loans_cents)
+    div.is-total
+      dt Marge
+      dd = accounting_euros(v.margin_cents)
+    div.is-sub
+      dt Réserve : un mois de charges fixes
+      dd = accounting_euros(v.reserve_cents)
+- if v.reserves.any?
+  ul.ui-acc-calc-res
+    - v.reserves.each do |line|
+      li = line

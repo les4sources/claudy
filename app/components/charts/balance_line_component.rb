@@ -27,6 +27,9 @@
 # et c'est la ligne du zéro qu'on regarde en premier.
 class Charts::BalanceLineComponent < ViewComponent::Base
   PLOT_WIDTH   = 760
+  # Dans une carte à demi-largeur (Vue d'ensemble, nouvelle interface) : un
+  # tracé plus étroit garde des libellés lisibles une fois le SVG réduit.
+  COMPACT_PLOT_WIDTH = 480
   PLOT_HEIGHT  = 220
   AXIS_WIDTH   = 60
   TOP_MARGIN   = 16
@@ -41,13 +44,21 @@ class Charts::BalanceLineComponent < ViewComponent::Base
   LINE_COLOR = "#024442".freeze # 4s-main
   NEGATIVE_COLOR = "#b91c1c".freeze
 
-  def initialize(history:, projection:, today:, title: "Évolution de la trésorerie")
+  # `lowest` (facultatif, nouvelle interface 2026-10-29) : le point bas
+  # projeté, marqué d'un rond jaune et de son montant — c'est le chiffre que
+  # la phrase « Peut-on dépenser ? » surligne. `compact` : le tracé étroit, un
+  # mois sur deux nommé dans l'historique.
+  def initialize(history:, projection:, today:, title: "Évolution de la trésorerie", lowest: nil, compact: false)
     super()
     @history = history.to_a
     @projection = projection.to_a
     @today = today
     @title = title
+    @lowest = lowest
+    @compact = compact
   end
+
+  def plot_width = @compact ? COMPACT_PLOT_WIDTH : PLOT_WIDTH
 
   attr_reader :title, :today
 
@@ -55,7 +66,7 @@ class Charts::BalanceLineComponent < ViewComponent::Base
 
   def axis_width = AXIS_WIDTH
 
-  def width = AXIS_WIDTH + PLOT_WIDTH + RIGHT_MARGIN
+  def width = AXIS_WIDTH + plot_width + RIGHT_MARGIN
 
   def height = TOP_MARGIN + PLOT_HEIGHT + LABEL_HEIGHT
 
@@ -105,9 +116,13 @@ class Charts::BalanceLineComponent < ViewComponent::Base
     while date <= end_date
       label = I18n.l(date, format: "%b").delete(".")
       label = "#{label} #{date.year}" if date.month == 1
-      ticks << { x: x_for(date), label: label }
+      ticks << { x: x_for(date), label: label, past: date <= split_date }
       date = date.next_month
     end
+    return ticks unless @compact
+
+    past = ticks.select { |tick| tick[:past] }
+    past.reverse.each_with_index.select { |_, index| index.odd? }.each { |tick, _| ticks.delete(tick) }
     ticks
   end
 
@@ -127,6 +142,14 @@ class Charts::BalanceLineComponent < ViewComponent::Base
   # Les marches de la projection portent un point visible : chacune est un
   # mouvement attendu, qu'on veut pouvoir survoler.
   def step_markers = hover_points.select { |point| point[:projected] }
+
+  def lowest_marker
+    return nil if @lowest.nil? || empty?
+
+    x, y = xy(@lowest)
+    { x: x.round(1), y: y.round(1), label: number_to_currency(@lowest.balance_cents / 100.0, unit: "€", precision: 0, format: "%n %u", delimiter: " "),
+      below: y < baseline - 28, anchor: x > width - 60 ? "end" : "middle" }
+  end
 
   def description
     return "Aucun solde à afficher." if empty?
@@ -171,7 +194,7 @@ class Charts::BalanceLineComponent < ViewComponent::Base
     if date <= split_date
       scale(date, start_date, split_date, AXIS_WIDTH, split_x)
     else
-      scale(date, split_date, end_date, split_x, AXIS_WIDTH + PLOT_WIDTH)
+      scale(date, split_date, end_date, split_x, AXIS_WIDTH + plot_width)
     end
   end
 
@@ -179,8 +202,8 @@ class Charts::BalanceLineComponent < ViewComponent::Base
 
   def split_x
     @split_x ||= if split_date == start_date then AXIS_WIDTH.to_f
-                 elsif split_date == end_date then (AXIS_WIDTH + PLOT_WIDTH).to_f
-                 else AXIS_WIDTH + (PLOT_WIDTH * (1 - PROJECTION_SHARE))
+                 elsif split_date == end_date then (AXIS_WIDTH + plot_width).to_f
+                 else AXIS_WIDTH + (plot_width * (1 - PROJECTION_SHARE))
                  end
   end
 

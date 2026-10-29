@@ -43,7 +43,7 @@ html(lang="fr")
                 .ui-page-header
                   = yield :page_header
 
-              - if @accounting_view
+              - if @accounting_view && !@page_guide_inline
                 = render "finance/shared/page_guide"
 
               = render 'layouts/components/messages'

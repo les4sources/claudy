@@ -1083,3 +1083,140 @@ a.ui-kt-who:hover { text-decoration: underline; text-decoration-color: var(--ui-
   .ui-kt-lbl { display: inline; color: var(--ui-ink3); }
   .ui-kt-card { padding: 14px 16px; }
 }
+
+/* --- Comptabilité, Vue d'ensemble (redesign, Michael 2026-10-29) --------------
+   `finance/accounting/v2/*` : le verdict en bandeau sombre, quatre chiffres,
+   « À faire » à gauche, la courbe et les échéances à droite. */
+.ui-acc .ui-phead { align-items: flex-end; margin-bottom: 22px; }
+.ui-acc .ui-seg-i { min-height: 38px; padding: 0 16px; }
+.ui-acc [data-page-guide] { margin-bottom: 18px; }
+
+.ui-acc-hero {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px 32px; align-items: start;
+  padding: 28px 28px 26px; border-radius: 22px; background: var(--ui-teal); color: #fff; margin-bottom: 20px;
+}
+.ui-acc-hero-over { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #c9d6d6; }
+.ui-acc-hero-phrase { margin-top: 10px; font-family: var(--ui-f-d); font-size: 25px; line-height: 1.45; max-width: 34ch; text-wrap: pretty; }
+.ui-acc-hero .ui-hl { padding: 0 .2em; border-radius: 4px; background: var(--ui-yellow); color: var(--ui-teal-deep); }
+.ui-acc-hero-n { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; }
+.ui-acc-hero-n b { font-family: var(--ui-f-d); font-size: 44px; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ui-acc-hero-n span { font-size: 14px; color: #dbe4e4; }
+.ui-acc-hero-n span.is-stale { color: var(--ui-yellow); font-weight: 600; }
+.ui-acc-hero-q { grid-row: span 2; }
+/* Fermé, « Voir le détail » se range sous le solde ; ouvert, le calcul prend
+   toute la largeur du bandeau. */
+.ui-acc-calc { grid-column: 2; justify-self: end; }
+.ui-acc-calc[open] { grid-column: 1 / -1; justify-self: stretch; }
+.ui-acc-calc-btn {
+  display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; margin-left: auto; width: max-content;
+  border-radius: 999px; border: 1.5px solid #8fa5a7; color: #fff; font-weight: 600; font-size: 14px; cursor: pointer; list-style: none;
+}
+.ui-acc-calc > summary { display: flex; }
+.ui-acc-calc-btn::-webkit-details-marker { display: none; }
+.ui-acc-calc-btn:hover { background: rgba(255, 255, 255, .08); }
+.ui-acc-calc-close, .ui-acc-calc[open] .ui-acc-calc-open { display: none; }
+.ui-acc-calc[open] .ui-acc-calc-close { display: inline; }
+.ui-acc-calc-b { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, .18); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 36px; }
+.ui-acc-calc-dl { font-size: 14px; font-variant-numeric: tabular-nums; }
+.ui-acc-calc-dl > div { display: flex; justify-content: space-between; gap: 16px; padding: 4px 0; }
+.ui-acc-calc-dl dt { color: #dbe4e4; }
+.ui-acc-calc-dl dd { font-weight: 600; white-space: nowrap; }
+.ui-acc-calc-dl dd a { color: #fff; text-decoration: underline; text-decoration-color: #8fa5a7; text-underline-offset: 4px; }
+.ui-acc-calc-dl .is-sub { padding-left: 14px; font-size: 13px; }
+.ui-acc-calc-dl .is-sub dt, .ui-acc-calc-dl .is-sub dd { color: #b9c8c9; font-weight: 400; }
+.ui-acc-calc-dl .is-total { margin-top: 4px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, .18); font-weight: 700; }
+.ui-acc-calc-dl .is-total dt { color: #fff; }
+.ui-acc-calc-res { display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; line-height: 1.45; color: #dbe4e4; }
+.ui-acc-calc-res li { padding: 8px 12px; border-radius: 10px; background: rgba(255, 255, 255, .07); }
+
+.ui-acc-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+.ui-acc-stat { display: flex; flex-direction: column; gap: 6px; padding: 18px 20px; text-decoration: none; color: var(--ui-ink); }
+.ui-acc-stat:hover { border-color: var(--ui-control); }
+.ui-acc-stat-l { font-size: 13.5px; font-weight: 600; color: var(--ui-ink2); }
+.ui-acc-stat b { font-family: var(--ui-f-d); font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ui-acc-stat-s { font-size: 13.5px; color: var(--ui-ink3); }
+.ui-acc-stat.is-warn { border-color: #e2cf7a; background: var(--ui-yellow-tint); }
+.ui-acc-stat.is-warn .ui-acc-stat-s { color: var(--ui-warn-ink); font-weight: 600; }
+.ui-acc .is-neg { color: var(--ui-red-ink); }
+
+.ui-acc-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.ui-acc-side { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+.ui-acc-todo { padding-bottom: 6px; }
+.ui-acc-todo-bar { display: flex; gap: 6px; padding: 4px 20px 8px; }
+.ui-acc-todo-bar span { flex: 1; height: 5px; border-radius: 99px; background: var(--ui-line-soft); }
+.ui-acc-todo-bar .is-done { background: var(--ui-green); }
+.ui-acc-todo-bar .is-now { background: var(--ui-yellow); }
+.ui-acc-todo-bar .is-wait { background: var(--ui-line); }
+.ui-acc-todo-l { padding: 0 20px; }
+.ui-acc-todo-l li + li { border-top: 1px solid var(--ui-line-soft); }
+.ui-acc-todo-i { display: flex; align-items: center; gap: 14px; padding: 14px 0; color: var(--ui-ink); text-decoration: none; }
+.ui-acc-todo-i:hover .ui-acc-todo-t b { text-decoration: underline; text-decoration-color: var(--ui-yellow); text-underline-offset: 4px; }
+.ui-acc-todo-n {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; width: 30px; height: 30px; border-radius: 999px;
+  border: 1.5px dashed var(--ui-control); font-size: 13.5px; font-weight: 700; color: var(--ui-ink2);
+}
+.ui-acc-todo-n.is-done { border: 0; background: var(--ui-green-tint); color: var(--ui-green-ink); }
+.ui-acc-todo-n.is-wait { border-style: solid; border-color: var(--ui-line); color: var(--ui-ink3); }
+.ui-acc-todo-n.is-now { border: 0; background: var(--ui-yellow); color: var(--ui-teal-deep); }
+.ui-acc-todo-t { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.ui-acc-todo-t b { font-size: 15px; font-weight: 600; }
+.ui-acc-todo-t small { font-size: 13.5px; color: var(--ui-ink3); }
+.ui-acc-todo-l li[data-todo-state="done"] .ui-acc-todo-t b { font-weight: 500; color: var(--ui-ink2); }
+.ui-acc-todo-c { flex: none; min-width: 26px; padding: 2px 8px; border-radius: 99px; background: var(--ui-yellow-tint); color: var(--ui-warn-ink); font-size: 12.5px; font-weight: 700; text-align: center; }
+.ui-acc-todo-go { flex: none; color: var(--ui-ink3); }
+.ui-acc-todo-f { padding: 10px 20px 12px; }
+
+.ui-acc-chart .ui-card-b { padding-top: 6px; }
+.ui-acc-chart svg { min-width: 0 !important; }
+.ui-acc-chart .text-stone-400 { display: none; }
+
+.ui-acc-dl { padding: 0 20px 8px; }
+.ui-acc-dl li { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 0; }
+.ui-acc-dl li + li { border-top: 1px solid var(--ui-line-soft); }
+.ui-acc-dl-d { font-size: 14.5px; font-weight: 700; }
+.ui-acc-dl li.is-late .ui-acc-dl-d { color: var(--ui-red-ink); }
+.ui-acc-dl-m { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ui-acc-dl-m a { font-weight: 600; color: var(--ui-ink); text-decoration: none; }
+.ui-acc-dl-m a:hover { text-decoration: underline; text-decoration-color: var(--ui-yellow); }
+.ui-acc-dl-m small { font-size: 13.5px; color: var(--ui-ink3); }
+.ui-acc-dl-amount { font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.ui-acc-owed-l { padding: 0 20px 8px; }
+.ui-acc-owed-l li + li { border-top: 1px solid var(--ui-line-soft); }
+.ui-acc-owed-l a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; color: var(--ui-ink); text-decoration: none; }
+.ui-acc-owed-l a > span { display: flex; flex-direction: column; gap: 2px; font-weight: 600; min-width: 0; }
+.ui-acc-owed-l small { font-size: 13px; font-weight: 400; color: var(--ui-ink3); }
+.ui-acc-owed-l b { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.ui-acc-refs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--ui-line); }
+.ui-acc-refs a {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border-radius: 999px;
+  border: 1.5px solid var(--ui-line); background: #fff; color: var(--ui-ink2); font-size: 13.5px; font-weight: 600; text-decoration: none;
+}
+.ui-acc-refs a:hover { border-color: var(--ui-control); color: var(--ui-ink); }
+.ui-acc-refs a span { color: var(--ui-ink3); font-variant-numeric: tabular-nums; }
+
+@media (max-width: 1100px) {
+  .ui-acc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ui-acc-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .ui-acc .ui-phead { margin-bottom: 14px; }
+  .ui-acc-hero { grid-template-columns: minmax(0, 1fr); padding: 22px 20px; border-radius: 18px; }
+  .ui-acc-hero-phrase { font-size: 21px; }
+  .ui-acc-hero-n { align-items: flex-start; text-align: left; }
+  .ui-acc-hero-n b { font-size: 36px; }
+  .ui-acc-hero-q { grid-row: auto; }
+  .ui-acc-calc { grid-column: 1; justify-self: start; }
+  .ui-acc-calc-btn { margin-left: 0; }
+  .ui-acc-calc-b { grid-template-columns: minmax(0, 1fr); }
+  .ui-acc-stats { gap: 12px; }
+  .ui-acc-stat { padding: 14px 16px; }
+  .ui-acc-stat b { font-size: 25px; }
+  .ui-acc-todo-i { flex-wrap: wrap; }
+  .ui-acc-todo-l li.is-now .ui-acc-todo-t { flex-basis: calc(100% - 44px); }
+  .ui-acc-todo-l li.is-now .ui-btn { margin-left: 44px; }
+  .ui-acc-dl li { grid-template-columns: 58px minmax(0, 1fr); }
+  .ui-acc-dl-s { grid-column: 2; }
+}
