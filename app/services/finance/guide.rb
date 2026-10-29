@@ -321,7 +321,8 @@ module Finance
       "finance/purchase_invoices" => Page.new(
         "Les factures reçues des fournisseurs, et où chacune en est.",
         ["Complète les factures « À traiter » : fournisseur, lignes, comptes, jusqu'à couvrir le total.",
-         "Celles « À valider » attendent le oui d'un pôle ; celles « À payer » sont dans la file À payer."],
+         "Celles « À valider » attendent le oui d'un pôle ; celles « À payer » sont dans la file À payer.",
+         "Clique sur « Échéance » pour voir d'abord ce qui presse : les factures échues sont sur fond rouge."],
         %w[facture-achat tiers compte]
       ),
       "finance/payables" => Page.new(

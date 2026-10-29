@@ -5,6 +5,7 @@ require Rails.root.join("spec/support/finance_builders")
 RSpec.describe "Comptabilité > Achats", type: :request do
   include Devise::Test::IntegrationHelpers
   include FinanceBuilders
+  include ActiveSupport::Testing::TimeHelpers
 
   let(:user) { User.create!(email: "compta@les4sources.be", password: "password123") }
   let!(:entity) { build_legal_entity(name: "Fondation Les 4 Sources") }
@@ -64,6 +65,39 @@ RSpec.describe "Comptabilité > Achats", type: :request do
       get finance_purchase_invoices_path(from: "2026-07-01")
 
       expect(response.body).to include("Aucune facture ne correspond")
+    end
+
+    it "trie par échéance, la plus pressante d'abord, et signale les échues" do
+      travel_to Date.new(2026, 10, 29) do
+        echue = cree_facture(number: "ECHUE")
+        echue.update_column(:due_on, Date.new(2026, 10, 1))
+        proche = cree_facture(tiers: luminus, number: "PROCHE")
+        proche.update_column(:due_on, Date.new(2026, 11, 3))
+        payee = cree_facture(number: "PAYEE", status: "paid")
+        payee.update_column(:due_on, Date.new(2026, 9, 1))
+        cree_facture(number: "SANS")
+
+        get finance_purchase_invoices_path(sort: "due_on")
+
+        body = response.body
+        expect(body.index("PAYEE")).to be < body.index("ECHUE")
+        expect(body.index("ECHUE")).to be < body.index("PROCHE")
+        expect(body.index("PROCHE")).to be < body.index("SANS")
+        expect(body).to include("1 facture(s) dont l&#39;échéance est passée")
+        expect(body).to include("en retard de 28 j", "dans 5 j")
+        expect(body).not_to include("en retard de 58 j")
+      end
+    end
+
+    it "garde le tri par date par défaut et propose le tri par échéance" do
+      travel_to Date.new(2026, 10, 29) do
+        cree_facture.update_column(:due_on, Date.new(2026, 10, 1))
+
+        get finance_purchase_invoices_path(status: "to_process")
+
+        expect(response.body).to include("Trier par échéance")
+        expect(response.body).to include("sort=due_on")
+      end
     end
 
     it "ne tombe pas sur une date illisible" do
