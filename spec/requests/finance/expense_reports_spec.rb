@@ -94,7 +94,10 @@ RSpec.describe "Comptabilité — Notes de frais", type: :request do
       get new_finance_expense_report_path(human_id: 0)
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).not_to include('selected="selected" value="' + human.id.to_s + '"')
+      # On vise l'option de la personne : l'entité, présélectionnée dans la
+      # liste voisine, peut porter le même id qu'elle.
+      expect(response.body).to include(%(<option value="#{human.id}">Sébastien Test<))
+      expect(response.body).not_to match(/<option selected="selected" value="#{human.id}">Sébastien Test</)
     end
 
     it "crée une note de trois lignes en une passe" do
