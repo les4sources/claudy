@@ -259,7 +259,8 @@ module Finance
       ),
       "finance/coda_imports" => Page.new(
         "Le dépôt des relevés bancaires : chaque fichier ajoute ses mouvements à la trésorerie.",
-        ["Télécharge le relevé dans la banque en ligne (CODA chez Triodos, Excel chez Beobank).",
+        ["Télécharge le relevé dans la banque en ligne (CODA chez Triodos, Excel chez Beobank). " \
+         "Un export Triodos qui réunit le compte à vue et l'épargne passe tel quel : chaque relevé va à son compte.",
          "Dépose-le ici. Redéposer un fichier déjà importé ne crée rien : pas de doublon à craindre.",
          "Les nouvelles lignes attendent ensuite dans « À affecter »."],
         %w[coda tresorerie a-affecter]

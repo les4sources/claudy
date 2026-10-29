@@ -23,13 +23,18 @@ module Coda
   #    déjà importé pour ce compte, soit bout à bout, soit par recouvrement. Le
   #    trou entre deux imports se voit là, et nulle part ailleurs.
   # 4. **Couverture du relevé** — une fois les lignes créées, le journal doit
-  #    porter exactement les mouvements du relevé sur sa période, en nombre et en
-  #    somme. C'est le filet sous la déduplication : une ligne prise à tort pour
+  #    porter exactement les mouvements des relevés de chaque compte sur leur
+  #    période, en nombre et en somme. C'est le filet sous la déduplication : une ligne prise à tort pour
   #    un doublon disparaîtrait sans lui, et rien ne le dirait.
   #
   # Le recouvrement n'est pas un cas tordu, c'est le cas NORMAL chez Triodos, qui
   # n'expose pas de relevés numérotés mais un export « mutations » libre : on
   # redemande la période en cours, et elle ressort en entier à chaque fois.
+  #
+  # Un dépôt peut réunir plusieurs fichiers CODA mis bout à bout : c'est l'export
+  # Triodos quand on coche le compte à vue ET l'épargne, un fichier par compte et
+  # par période. Chacun est contrôlé sur ses propres totaux, chaque relevé va au
+  # compte de trésorerie de son IBAN, et le tout reste UNE transaction.
   #
   # L'import ne crée AUCUNE allocation : les lignes arrivent en attente, et c'est
   # un humain qui ventile. Un compte analytique deviné serait exactement le
@@ -82,23 +87,33 @@ module Coda
                                      "sous le nom « #{deja.filename} ». Rien n'a été créé."])
       end
 
-      file = Parser.call(@content)
-      accounts = resolve_accounts(file)
-      validate!(file, accounts)
+      files = Parser.call_all(@content)
+      # Chaque relevé garde son fichier : c'est lui qui donne l'année d'un
+      # relevé sans date de nouveau solde.
+      statements = files.flat_map { |file| file.statements.map { |statement| [file, statement] } }
+      accounts = resolve_accounts(statements.map(&:last))
+      validate!(files, statements.map(&:last))
+      numbers = sequence_numbers(statements.map(&:last))
 
       entries_created = 0
       entries_skipped = 0
       coda_import = nil
 
-      ApplicationRecord.transaction do
-        coda_import = reprendre_ou_creer(deja, file, sha)
+      # Le rang d'un mouvement identique à un autre (même jour, même montant…)
+      # se compte par COMPTE sur tout le dépôt, pas par relevé : un export qui
+      # coupe la période en plusieurs relevés peut séparer deux jumeaux, et les
+      # compter chacun premier ferait passer le second pour un doublon.
+      occurrences = Hash.new { |hash, key| hash[key] = Hash.new(0) }
 
-        file.statements.each do |statement|
+      ApplicationRecord.transaction do
+        coda_import = reprendre_ou_creer(deja, files.first, sha)
+
+        statements.each_with_index do |(file, statement), index|
           account = accounts.fetch(normalize(statement.account_number))
 
           coda_statement = CodaStatement.create!(
             coda_import: coda_import, cash_account: account,
-            sequence_number: statement.sequence_number,
+            sequence_number: numbers[index],
             period_year: (statement.new_balance_date || file.creation_date).year,
             old_balance_cents: statement.old_balance_cents,
             new_balance_cents: statement.new_balance_cents,
@@ -106,25 +121,27 @@ module Coda
             new_balance_date: statement.new_balance_date
           )
 
-          created, ignored = create_entries(statement, account, coda_statement)
+          created, ignored = create_entries(statement, account, coda_statement, occurrences[account.id])
           coda_statement.update!(entries_count: created)
           entries_created += created
           entries_skipped += ignored
 
-          verify_coverage!(statement, account)
-
-          @messages << "Relevé #{statement.label} : #{created} ligne(s) créée(s)" +
+          @messages << "Relevé #{statement.label}#{period(statement)} : #{created} ligne(s) créée(s)" +
                        (ignored.positive? ? ", #{ignored} déjà présente(s) et ignorée(s)." : ".")
         end
 
-        coda_import.update!(statements_count: file.statements.size,
+        statements.map(&:last).group_by { |s| normalize(s.account_number) }.each do |key, du_compte|
+          verify_coverage!(du_compte, accounts.fetch(key))
+        end
+
+        coda_import.update!(statements_count: statements.size,
                             entries_count: entries_created,
                             report: @messages.join("\n"))
       end
 
       @messages.unshift("#{entries_created} ligne(s) créée(s) et #{entries_skipped} déjà présente(s), " \
-                        "sur #{file.statements.size} relevé(s) lus.")
-      Report.new(status: "imported", statements: file.statements.size, entries_created: entries_created,
+                        "sur #{statements.size} relevé(s) lus.")
+      Report.new(status: "imported", statements: statements.size, entries_created: entries_created,
                  entries_skipped: entries_skipped, statements_skipped: 0,
                  messages: @messages, coda_import: coda_import)
     end
@@ -159,12 +176,12 @@ module Coda
     # reviendrait à décider seul qu'un compte bancaire existe, et avec quel
     # compte général de contrepartie — une décision qui n'appartient pas à un
     # import de fichier.
-    def resolve_accounts(file)
+    def resolve_accounts(statements)
       known = CashAccount.all.reject { |account| account.iban.blank? }
       manquants = []
       ambigus = []
 
-      resolved = file.statements.each_with_object({}) do |statement, hash|
+      resolved = statements.each_with_object({}) do |statement, hash|
         key = normalize(statement.account_number)
         candidats = known.select { |account| same_account?(account.iban, statement.account_number) }
 
@@ -209,10 +226,10 @@ module Coda
 
     def digits(value) = value.to_s.gsub(/\D/, "")
 
-    def validate!(file, _accounts)
-      validate_trailer!(file)
+    def validate!(files, statements)
+      files.each_with_index { |file, index| validate_trailer!(file, index, files.size) }
 
-      file.statements.each do |statement|
+      statements.each do |statement|
         ecart = statement.movements_total_cents - statement.balance_delta_cents
         next if ecart.zero?
 
@@ -223,8 +240,10 @@ module Coda
               "Rien n'a été importé."
       end
 
-      # Chaînage à l'intérieur du fichier, compte par compte.
-      file.statements.group_by { |s| normalize(s.account_number) }.each_value do |statements|
+      # Chaînage à l'intérieur du dépôt, compte par compte, dans l'ordre du
+      # fichier : un export multi-comptes alterne les comptes, mais chacun y
+      # reste dans l'ordre chronologique.
+      statements.group_by { |s| normalize(s.account_number) }.each_value do |statements|
         statements.each_cons(2) do |precedent, suivant|
           next if suivant.old_balance_cents == precedent.new_balance_cents
 
@@ -236,7 +255,7 @@ module Coda
       end
 
       # Continuité avec ce qui est déjà en base.
-      file.statements.group_by { |s| normalize(s.account_number) }.each_value do |statements|
+      statements.group_by { |s| normalize(s.account_number) }.each_value do |statements|
         # Le MÊME rapprochement que `resolve_accounts`, sinon le contrôle de
         # continuité se croit sans compte et se tait — exactement le contrôle
         # qu'on ne veut pas voir se taire.
@@ -291,26 +310,37 @@ module Coda
             "antérieure#{repere} : le recouvrement, lui, est accepté. Rien n'a été importé."
     end
 
-    # Après création, le journal doit porter EXACTEMENT le relevé sur sa période.
+    # Après création, le journal doit porter EXACTEMENT les relevés du compte
+    # sur leur période.
     #
     # C'est le filet sous la déduplication. Si une empreinte appariait deux
     # mouvements distincts, la ligne réelle ne serait jamais créée et rien
     # d'autre ne le dirait : les soldes du fichier, eux, resteraient justes.
-    def verify_coverage!(statement, account)
-      mouvements = statement.main_movements
-      dates = mouvements.filter_map { |m| m.entry_date || statement.new_balance_date }
+    #
+    # Le contrôle porte sur l'ensemble des relevés d'un même compte, pas relevé
+    # par relevé : deux relevés successifs partagent souvent leur date de
+    # bascule (le 08/10 ferme l'un et ouvre l'autre), et un contrôle relevé par
+    # relevé compterait les lignes de ce jour-là dans les deux. Le chaînage des
+    # soldes, vérifié avant, garantit qu'aucun trou ne se cache entre eux.
+    def verify_coverage!(statements, account)
+      mouvements = statements.flat_map do |statement|
+        statement.main_movements.map { |m| [m.entry_date || statement.new_balance_date, m.amount_cents] }
+      end
+      dates = mouvements.map(&:first).compact
       return if dates.empty?
 
       nombre, somme = CashEntry.with_deleted do
         portee = CashEntry.where(cash_account_id: account.id, entry_date: dates.min..dates.max)
         [portee.count, portee.sum(:amount_cents)]
       end
-      return if nombre == mouvements.size && somme == mouvements.sum(&:amount_cents)
+      attendu = mouvements.sum(&:last)
+      return if nombre == mouvements.size && somme == attendu
 
+      libelle = statements.size == 1 ? "Relevé #{statements.first.label}" : "Compte #{statements.first.account_number}"
       raise Rejected,
-            "Relevé #{statement.label} : entre le #{I18n.l(dates.min)} et le #{I18n.l(dates.max)}, le journal " \
+            "#{libelle} : entre le #{I18n.l(dates.min)} et le #{I18n.l(dates.max)}, le journal " \
             "porterait #{nombre} ligne(s) pour #{money(somme)}, alors que le relevé en compte " \
-            "#{mouvements.size} pour #{money(mouvements.sum(&:amount_cents))}. " \
+            "#{mouvements.size} pour #{money(attendu)}. " \
             "Une ligne a été prise pour un doublon, ou le journal en portait déjà d'ailleurs. " \
             "Rien n'a été importé."
     end
@@ -319,28 +349,32 @@ module Coda
     # débit / crédit. Les lire sans les vérifier laisse passer le cas où un
     # débit et un crédit fabriqués se compensent : les trois autres contrôles
     # sont satisfaits, et deux fausses lignes entrent quand même.
-    def validate_trailer!(file)
+    #
+    # Dans un export qui en concatène plusieurs, chaque fichier a sa fin et ses
+    # totaux : on les vérifie un par un, sans quoi une erreur dans l'un pourrait
+    # se compenser par une autre dans le suivant.
+    def validate_trailer!(file, index, count)
       mouvements = file.statements.flat_map(&:main_movements)
       debits = mouvements.select { |m| m.amount_cents.negative? }.sum { |m| m.amount_cents.abs }
       credits = mouvements.select { |m| m.amount_cents.positive? }.sum(&:amount_cents)
+      fichier = count > 1 ? "le fichier n°#{index + 1} (sur #{count} réunis dans ce dépôt)" : "le fichier"
 
       if file.debit_total_cents != debits
         raise Rejected,
-              "Total des débits annoncé par le fichier : #{money(file.debit_total_cents)}, " \
+              "Total des débits annoncé par #{fichier} : #{money(file.debit_total_cents)}, " \
               "somme des mouvements lus : #{money(debits)}. Rien n'a été importé."
       end
 
       return if file.credit_total_cents == credits
 
       raise Rejected,
-            "Total des crédits annoncé par le fichier : #{money(file.credit_total_cents)}, " \
+            "Total des crédits annoncé par #{fichier} : #{money(file.credit_total_cents)}, " \
             "somme des mouvements lus : #{money(credits)}. Rien n'a été importé."
     end
 
-    def create_entries(statement, account, coda_statement)
+    def create_entries(statement, account, coda_statement, occurrences)
       created = 0
       ignored = 0
-      occurrences = Hash.new(0)
 
       statement.main_movements.each do |movement|
         champs = fingerprint_fields(movement, statement)
@@ -396,6 +430,29 @@ module Coda
     def label_for(movement)
       [movement.counterparty_name.presence, movement.communication.presence]
         .compact.join(" — ").presence || "Mouvement #{movement.sequence}"
+    end
+
+    # Triodos numérote `000` chacun de ses relevés : un export qui en réunit
+    # plusieurs pour un même compte heurterait l'unicité du numéro dans le
+    # dépôt. Le premier garde le numéro de la banque, les suivants prennent un
+    # rang (`000-02`, `000-03`…).
+    def sequence_numbers(statements)
+      vus = Hash.new(0)
+      statements.map do |statement|
+        cle = [normalize(statement.account_number), statement.sequence_number]
+        vus[cle] += 1
+        next statement.sequence_number if vus[cle] == 1
+
+        format("%<numero>s-%<rang>02d", numero: statement.sequence_number, rang: vus[cle])
+      end
+    end
+
+    def period(statement)
+      debut = statement.old_balance_date
+      fin = statement.new_balance_date
+      return "" if debut.nil? || fin.nil?
+
+      " (du #{I18n.l(debut)} au #{I18n.l(fin)})"
     end
 
     def normalize(value) = value.to_s.gsub(/\s+/, "").upcase

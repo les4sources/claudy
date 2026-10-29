@@ -50,6 +50,13 @@ module Coda
 
     def self.call(content) = new(content).parse
 
+    # Un export peut mettre bout à bout plusieurs fichiers CODA complets, chacun
+    # de son en-tête (0) à son enregistrement de fin (9). C'est ce que fait
+    # Triodos quand on lui demande les mouvements de plusieurs comptes à la
+    # fois : un fichier par compte et par période, collés dans le même export.
+    # `call` les refuse, `call_all` les rend un par un.
+    def self.call_all(content) = new(content).parse_all
+
     # Le CODA est un format à positions fixes en OCTETS. Le lire en UTF-8
     # ferait compter un caractère accentué pour un, alors qu'il en occupe deux :
     # toutes les positions suivantes glisseraient. On travaille donc en binaire
@@ -58,7 +65,13 @@ module Coda
       @content = content.to_s.dup.force_encoding(Encoding::ASCII_8BIT)
     end
 
-    def parse
+    def parse = parse_files(multiple: false).first
+
+    def parse_all = parse_files(multiple: true)
+
+    private
+
+    def parse_files(multiple:)
       lines = @content.split(/\r?\n/).reject { |line| line.strip.empty? }
       raise ParseError, "Fichier vide — aucun enregistrement." if lines.empty?
 
@@ -70,32 +83,51 @@ module Coda
               "Le fichier est tronqué ou n'est pas un CODA."
       end
 
+      @files = []
+      start_file
+
+      lines.each_with_index do |line, index|
+        if @closed
+          # Après un enregistrement de fin, seul un nouvel en-tête est permis :
+          # n'importe quoi d'autre serait un mouvement orphelin, sans fichier.
+          if !multiple
+            raise ParseError,
+                  "Enregistrement #{index + 1} : il suit l'enregistrement de fin. Le fichier en contient " \
+                  "plusieurs concaténés — dépose-les séparément."
+          elsif line[0] != "0"
+            raise ParseError,
+                  "Enregistrement #{index + 1} : il suit l'enregistrement de fin sans ouvrir un nouveau " \
+                  "fichier (type 0). Le fichier est mal assemblé."
+          end
+
+          finish_file
+          start_file
+        end
+
+        dispatch(line, index)
+      end
+
+      finish_file
+      @files
+    end
+
+    def start_file
       @file = nil
       @closed = false
       @statements = []
       @current = nil
       @movements = []
       @current_movement = nil
+    end
 
-      lines.each_with_index do |line, index|
-        if @closed
-          raise ParseError,
-                "Enregistrement #{index + 1} : il suit l'enregistrement de fin. Le fichier en contient " \
-                "plusieurs concaténés — dépose-les séparément."
-        end
-
-        dispatch(line, index)
-      end
-
+    def finish_file
       raise ParseError, "Fichier sans enregistrement d'en-tête (type 0)." if @file.nil?
       raise ParseError, "Fichier sans enregistrement de fin (type 9)." if @file.records_count.nil?
 
       close_statement
       @file.statements = @statements
-      @file
+      @files << @file
     end
-
-    private
 
     def dispatch(line, index)
       case line[0]
