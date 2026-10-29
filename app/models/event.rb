@@ -18,6 +18,7 @@
 #  status                  :string
 #  summary                 :string
 #  url                     :string
+#  video_url               :string
 #  created_at              :datetime         not null
 #  updated_at              :datetime         not null
 #  event_category_id       :bigint           not null
@@ -46,6 +47,14 @@ class Event < ApplicationRecord
   include Commentable
 
   SUMMARY_MAX_LENGTH = 200
+
+  # Les adresses YouTube reconnues pour la vidéo publique : page de la vidéo,
+  # lien court, Shorts, intégration. L'identifiant fait 11 caractères.
+  YOUTUBE_ID_PATTERN = %r{
+    \Ahttps?://(?:(?:www|m)\.)?
+    (?:youtube\.com/(?:watch\?(?:[^#]*&)?v=|shorts/|embed/|live/)|youtu\.be/)
+    ([\w-]{11})(?:[?&#/].*)?\z
+  }x
 
   belongs_to :event_category
   # Le pôle qui porte l'événement (epic #245, décision 2).
@@ -97,6 +106,9 @@ class Event < ApplicationRecord
             presence: { message: "Veuillez spécifier une date de fin" }
   validates :summary,
             length: { maximum: SUMMARY_MAX_LENGTH }
+  validates :video_url,
+            format: { with: YOUTUBE_ID_PATTERN, message: "doit être un lien YouTube (youtube.com/watch?v=… ou youtu.be/…)" },
+            allow_blank: true
   validate :image_must_be_an_image
 
   attr_accessor :starts_at_date, :starts_at_time, :ends_at_date, :ends_at_time
@@ -105,6 +117,7 @@ class Event < ApplicationRecord
   attr_accessor :duplicate_of_id
 
   before_validation :rehydrate_form_dates
+  normalizes :video_url, with: ->(value) { value.strip.presence }
 
   # --- Recettes réelles (epic #245, phase 2) ---
 
@@ -178,6 +191,11 @@ class Event < ApplicationRecord
     month = I18n.l(starts_at.to_date, format: "%B", locale: :fr).parameterize
     year = starts_at.year.to_s
     [title, (month unless parts.include?(month)), (year unless parts.include?(year))].compact.join("-")
+  end
+
+  # L'identifiant YouTube de la vidéo publique, ou nil.
+  def youtube_video_id
+    video_url.to_s[YOUTUBE_ID_PATTERN, 1]
   end
 
   def public_path_prefix

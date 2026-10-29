@@ -133,6 +133,11 @@ hr
                    hint: "Ex. « Prix libre », « 15 € / personne, gratuit pour les enfants »",
                    class: "md:w-1/2 lg:w-2/3"
 
+    = f.url_field :video_url,
+                  label: "Vidéo (lien YouTube)",
+                  hint: "Bande-annonce, captation… Ex. « https://www.youtube.com/watch?v=… ». Le site l'affiche sous la description.",
+                  class: "md:w-1/2 lg:w-2/3"
+
     .flex.space-x-4
       - if f.object.image.attached?
         = image_tag url_for(f.object.image),

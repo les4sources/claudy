@@ -26,6 +26,7 @@ module Events
         location: source.location,
         price_text: source.price_text,
         url: source.url,
+        video_url: source.video_url,
         event_category_id: source.event_category_id,
         duplicate_of_id: source.id
       )

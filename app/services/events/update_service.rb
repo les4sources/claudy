@@ -53,6 +53,7 @@ module Events
           :status,
           :summary,
           :url,
+          :video_url,
           :team_id,
           :organizer_share_percent
         )

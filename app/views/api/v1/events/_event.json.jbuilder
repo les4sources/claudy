@@ -12,6 +12,7 @@ json.price_text event.price_text
 # nommée comme dans l'API publique. `url` reste, comme partout dans cette API,
 # l'adresse de la ressource elle-même.
 json.registration_url event.url
+json.video_url event.video_url
 json.status event.status
 json.public_description event.public_description.to_s.presence
 json.event_category_id event.event_category_id
