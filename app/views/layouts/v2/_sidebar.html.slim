@@ -22,6 +22,11 @@ nav.ui-side(aria-label="Navigation principale" data-controller="ui-side" data-ac
     button.ui-side-toggle(type="button" data-action="ui-side#toggle" data-ui-side-target="toggle" aria-expanded=(collapsed ? "false" : "true") aria-label=(collapsed ? "Déplier la barre" : "Replier la barre") data-tip=(collapsed ? "Déplier la barre" : "Replier la barre") data-tip-always="")
       span.ui-ico-fold = ui_icon(:fold, size: 18)
       span.ui-ico-unfold = ui_icon(:unfold, size: 18)
+  / La palette ⌘K : un bouton qui a l'air d'un champ, comme dans la maquette.
+  button.ui-side-search(type="button" data-action="command-palette#open" data-tip="Chercher (⌘K)")
+    = ui_icon(:search, size: 18)
+    span.ui-nav-t Chercher…
+    kbd.ui-nav-t ⌘K
   .ui-nav
     - interface_nav_groups.each do |label, entries|
       .ui-nav-g

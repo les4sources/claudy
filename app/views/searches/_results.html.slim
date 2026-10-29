@@ -1,0 +1,80 @@
+/ Les résultats de la palette ⌘K, regroupés : séjours, personnes, écrans, Guide,
+  actions. Chaque ligne est un lien `role="option"` que `command-palette`
+  parcourt au clavier. Un groupe vide ne s'affiche pas.
+- q = search.query
+- stays = search.stays
+- customers = search.customers
+- humans = search.humans
+- pages = search.guide_pages
+- screens = command_screens(q)
+- actions = command_actions(q, customer: customers.first)
+- index = 0
+- option = ->(path) { index += 1; { "href" => path, "role" => "option", "id" => "cmd-opt-#{index}", "class" => "ui-cmd-i", "data-command-item" => "", "aria-selected" => "false" } }
+
+- if stays.any?
+  .ui-cmd-g(role="group" aria-label="Séjours")
+    p.ui-cmd-gl Séjours
+    - stays.each do |stay|
+      - decorated = stay.decorate
+      a *option.(stay_path(stay))
+        span.ui-cmd-ic = ui_icon(:bed, size: 18)
+        span.ui-cmd-t
+          b
+            = command_highlight(decorated.display_name || "Séjour", q)
+            span.ui-cmd-id = " · ##{stay.id}"
+          small = command_stay_line(stay)
+        = command_stay_status(stay)
+
+- if customers.any? || humans.any?
+  .ui-cmd-g(role="group" aria-label="Personnes")
+    p.ui-cmd-gl Personnes
+    - customers.each do |customer|
+      - count = customer.stays_count.to_i
+      a *option.(customer_path(customer))
+        span.ui-cmd-ic = ui_avatar(customer.name, small: true)
+        span.ui-cmd-t
+          b = command_highlight(customer.name, q)
+          small = ["client·e", (count.positive? ? "#{count} séjour#{'s' if count > 1}" : "aucun séjour"), customer.email.presence].compact.join(" · ")
+    - humans.each do |human|
+      a *option.(human_path(human))
+        span.ui-cmd-ic = ui_avatar(human.name, small: true, human: human)
+        span.ui-cmd-t
+          b = command_highlight(human.name, q)
+          small = ["membre des 4 Sources", human.summary.presence].compact.join(" · ")
+
+- if screens.any?
+  .ui-cmd-g(role="group" aria-label="Écrans")
+    p.ui-cmd-gl = q.present? ? "Écrans" : "Aller à"
+    - screens.each do |screen|
+      a *option.(screen[:path])
+        span.ui-cmd-ic = ui_icon(screen[:icon], size: 18)
+        span.ui-cmd-t
+          b = command_highlight(screen[:label], q)
+          - if screen[:hint]
+            small = screen[:hint]
+
+- if pages.any?
+  .ui-cmd-g(role="group" aria-label="Guide")
+    p.ui-cmd-gl Guide des 4 Sources
+    - pages.each do |page|
+      a *option.(guide_page_path(page))
+        span.ui-cmd-ic = ui_icon(:guide, size: 18)
+        span.ui-cmd-t
+          b = command_highlight(page.title, q)
+          small = page.chapter&.title
+
+- if actions.any?
+  .ui-cmd-g(role="group" aria-label="Actions")
+    p.ui-cmd-gl Actions
+    - actions.each do |action|
+      a *option.(action[:path])
+        span.ui-cmd-ic = ui_icon(action[:icon], size: 18)
+        span.ui-cmd-t
+          b = command_highlight(action[:label], q)
+
+- if index.zero?
+  p.ui-cmd-empty
+    - if search.searching?
+      = "Rien trouvé pour « #{q} ». Essaie un nom de client, un numéro de séjour (#718) ou un écran."
+    - else
+      | Tape au moins deux lettres.

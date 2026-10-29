@@ -1,0 +1,23 @@
+/ La palette ⌘K (redesign, Michael 2026-10-29) : un seul champ pour retrouver
+  un séjour, une personne, un écran ou une page du Guide, et lancer les gestes
+  fréquents. ⌘K ou Ctrl+K partout, « Chercher… » dans la barre latérale, la
+  loupe en haut sur téléphone. Les résultats viennent de `searches#show`.
+dialog.ui-cmd(data-command-palette-target="dialog" aria-label="Chercher dans Claudy" data-action="click->command-palette#backdrop close->command-palette#closed")
+  .ui-cmd-box
+    .ui-cmd-q
+      = ui_icon(:search, size: 20)
+      input(type="search" data-command-palette-target="input" data-action="input->command-palette#search keydown->command-palette#key" placeholder="Séjour, client, écran, page du Guide…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="cmd-results" aria-autocomplete="list" aria-label="Chercher")
+      button.ui-cmd-esc(type="button" data-action="command-palette#close" aria-label="Fermer")
+        span.ui-hide-m Échap
+        span.ui-cmd-esc-m Fermer
+    .ui-cmd-r#cmd-results(role="listbox" aria-label="Résultats" data-command-palette-target="results" data-url=command_search_path)
+    .ui-cmd-f(aria-hidden="true")
+      span
+        kbd ↑↓
+        |  choisir
+      span
+        kbd ↵
+        |  ouvrir
+      span.ui-hide-m
+        kbd ⌘↵
+        |  dans un nouvel onglet
