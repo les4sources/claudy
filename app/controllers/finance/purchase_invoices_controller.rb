@@ -13,7 +13,12 @@ module Finance
 
     def index
       @scope = filtered
-      @invoices = @scope.ordered.includes(:third_party, :legal_entity, :purchase_invoice_lines)
+      @sort = params[:sort] == "due_on" ? "due_on" : "issued_on"
+      @invoices = (@sort == "due_on" ? @scope.by_due_date : @scope.ordered)
+                  .includes(:third_party, :legal_entity, :purchase_invoice_lines)
+      # Les échues du filtre courant : c'est ce qu'il faut voir en premier.
+      @today = Date.current
+      @overdue = @invoices.select { |invoice| invoice.overdue?(@today) }
       # Les totaux par statut portent sur TOUTES les factures, pas sur le filtre :
       # c'est une boussole, et une boussole qui suit le filtre ne sert à rien.
       @totals = PurchaseInvoice::STATUSES.index_with do |status|
@@ -331,9 +336,9 @@ module Finance
     def invoice_params
       params.require(:purchase_invoice).permit(
         :legal_entity_id, :third_party_id, :number, :issued_on, :due_on, :total_euros, :payment_reference,
-        :requires_validation, :validation_team_id, :notes,
+        :requires_validation, :validation_team_id, :notes, :amounts_include_vat,
         purchase_invoice_lines_attributes: %i[id general_account_id team_id analytic_account_id
-                                              amount_euros net_euros vat_rate label position _destroy]
+                                              amount_euros net_euros entered_euros vat_rate label position _destroy]
       ).tap do |permitted|
         euros = permitted.delete(:total_euros)
         permitted[:total_cents] = to_cents(euros) if euros.present?
@@ -341,13 +346,17 @@ module Finance
         lines = permitted[:purchase_invoice_lines_attributes]
         next if lines.blank?
 
-        # Le formulaire tape le HTVA et son taux : la facture en tire la TVA
-        # et le TVAC (`PurchaseInvoice#compute_vat`).
+        # Le formulaire tape le HTVA et son taux, ou le TVAC et son taux quand
+        # la facture est saisie « TVA comprise » : la facture en tire le reste
+        # (`PurchaseInvoice#compute_vat`).
+        tvac = ActiveModel::Type::Boolean.new.cast(permitted[:amounts_include_vat])
         lines.each_value do |line|
           montant = line.delete(:amount_euros)
           line[:amount_cents] = to_cents(montant) if montant.present?
           net = line.delete(:net_euros)
           line[:net_cents] = to_cents(net) if net.present?
+          saisi = line.delete(:entered_euros)
+          line[tvac ? :gross_cents : :net_cents] = to_cents(saisi) if saisi.present?
         end
       end
     end

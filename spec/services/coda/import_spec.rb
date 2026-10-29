@@ -221,5 +221,74 @@ RSpec.describe Coda::Import do
       expect(second_account.cash_entries.count).to eq(1)
       expect(second_account.cash_entries.first.amount_cents).to eq(-7_550)
     end
+
+    # L'export Triodos du compte à vue ET de l'épargne : un fichier CODA complet
+    # par compte et par période, mis bout à bout. L'ancien import le refusait en
+    # bloc (« il suit l'enregistrement de fin »).
+    describe "un export qui concatène plusieurs fichiers" do
+      it "importe chaque relevé sur le compte de son IBAN" do
+        report = import("triodos_multi_comptes")
+
+        expect(report.status).to eq("imported")
+        expect(report.statements).to eq(4)
+        expect(report.entries_created).to eq(6)
+        expect(cash_account.cash_entries.order(:entry_date, :amount_cents).pluck(:amount_cents))
+          .to eq([13_000, -4_500, 7_550, 2_000])
+        expect(second_account.cash_entries.order(:entry_date).pluck(:amount_cents)).to eq([-7_550, 5_000])
+      end
+
+      it "garde un relevé par fichier, numéroté sans heurter l'unicité, et retient le dernier" do
+        import("triodos_multi_comptes")
+
+        expect(CodaImport.count).to eq(1)
+        expect(CodaStatement.where(cash_account: cash_account).order(:id).pluck(:sequence_number))
+          .to eq(%w[000 000-02])
+        expect(CodaStatement.last_for(cash_account).new_balance_cents).to eq(118_050)
+        expect(CodaStatement.last_for(second_account).new_balance_cents).to eq(27_450)
+      end
+
+      # Un export plus ancien d'un seul compte est déjà là : le dépôt
+      # multi-comptes le recouvre et n'en rejoue rien.
+      it "se raccorde par recouvrement à ce qui est déjà importé" do
+        import("triodos_1")
+
+        report = import("triodos_multi_comptes")
+
+        expect(report.entries_skipped).to eq(3)
+        expect(report.entries_created).to eq(3)
+        expect(cash_account.cash_entries.count).to eq(4)
+        expect(cash_account.cash_entries.sum(:amount_cents)).to eq(18_050)
+      end
+
+      it "vérifie les totaux de chaque fichier, et dit lequel ne colle pas" do
+        lignes = fixture("triodos_multi_comptes").lines
+        fins = lignes.each_index.select { |i| lignes[i].start_with?("9") }
+        fin = lignes[fins[1]].dup
+        fin[22, 15] = "000000000099000"
+        lignes[fins[1]] = fin
+
+        expect {
+          expect {
+            described_class.new(content: lignes.join, filename: "altere.cod").run!
+          }.to raise_error(described_class::Rejected, /fichier n°2 \(sur 4/)
+        }.not_to change { CashEntry.count }
+      end
+
+      it "refuse un fichier dont le chaînage casse d'un relevé à l'autre du même compte" do
+        lignes = fixture("triodos_multi_comptes").lines
+        # Le troisième relevé (compte à vue, du 05/08) repart de 10 000 € au
+        # lieu de 1 085 € : il se referme sur lui-même, mais ne suit pas le
+        # premier.
+        ouverture = lignes.each_index.select { |i| lignes[i].start_with?("1") }[2]
+        cloture = lignes.each_index.select { |i| lignes[i].start_with?("8") }[2]
+        lignes[ouverture] = lignes[ouverture].dup.tap { |l| l[43, 15] = "000000010000000" }
+        lignes[cloture] = lignes[cloture].dup.tap { |l| l[42, 15] = "000000010095500" }
+
+        expect {
+          described_class.new(content: lignes.join, filename: "rupture.cod").run!
+        }.to raise_error(described_class::Rejected, /ne suit pas/)
+        expect(CashEntry.count).to eq(0)
+      end
+    end
   end
 end

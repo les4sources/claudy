@@ -31,7 +31,9 @@ module Finance
       if report.status == "already_imported"
         redirect_to finance_coda_imports_path, alert: report.to_text
       else
-        redirect_to finance_coda_import_path(report.coda_import), notice: report.to_text
+        # Le bandeau ne garde que le bilan : le détail relevé par relevé est
+        # sur la page du dépôt, et un export multi-comptes en compte une dizaine.
+        redirect_to finance_coda_import_path(report.coda_import), notice: report.messages.first
       end
     rescue Coda::Import::Rejected, Coda::ParseError, Beobank::Import::Rejected, Beobank::ParseError => e
       # Le motif est affiché tel quel : il porte le relevé et l'écart chiffré,

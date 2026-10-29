@@ -87,6 +87,9 @@ class PurchaseInvoice < ApplicationRecord
   # voudrait dire réécrire le grand livre.
   FROZEN_STATUSES = %w[to_pay paid].freeze
 
+  # Les statuts d'une facture réglée : elle n'est plus jamais échue.
+  SETTLED_STATUSES = %w[paid member_paid].freeze
+
   include Commentable
   # Ce que la maison doit (epic #240, phase 4) : `cash_allocations`, le calcul de
   # ce qui reste dû et la notion de retard viennent de là — pour que la file
@@ -124,6 +127,11 @@ class PurchaseInvoice < ApplicationRecord
 
   accepts_nested_attributes_for :purchase_invoice_lines, allow_destroy: true
 
+  # Comment le formulaire tape la ventilation : HTVA (défaut, comme une facture
+  # classique) ou TVA comprise, pour toute la facture (ticket de caisse en TTC).
+  # Pas stocké : ça ne change que la saisie, la ligne garde HTVA, TVA et TVAC.
+  attribute :amounts_include_vat, :boolean, default: false
+
   before_validation :flag_quality
   before_validation :compute_vat
   before_validation :normalize_payment_reference
@@ -142,6 +150,9 @@ class PurchaseInvoice < ApplicationRecord
                              if: :disputed?
 
   scope :ordered, -> { order(issued_on: :desc, id: :desc) }
+  # L'échéance la plus proche (ou la plus dépassée) d'abord ; sans échéance, en
+  # fin de liste : elles n'ont pas de promesse à tenir.
+  scope :by_due_date, -> { order(Arel.sql("purchase_invoices.due_on ASC NULLS LAST"), issued_on: :desc, id: :desc) }
   scope :with_status, ->(status) { where(status: status) }
   scope :payable, -> { where(status: "to_pay") }
   # Ce que le pôle doit trancher (phase 3) : le callout de sa page s'en sert.
@@ -162,6 +173,12 @@ class PurchaseInvoice < ApplicationRecord
   def locked_for_edit? = frozen_content? || member_paid?
   def double_signature? = total_cents >= DOUBLE_SIGNATURE_CENTS
   def reference = [third_party&.name, number].compact_blank.join(" · ")
+
+  # Échue = l'échéance est passée et la facture n'est pas réglée. Lu sur le
+  # statut, pas sur les affectations (`payable_overdue?`) : la liste en affiche
+  # des dizaines, une requête par ligne pour la même réponse serait du gâchis.
+  def overdue?(on = Date.current) = due_on.present? && due_on < on && !SETTLED_STATUSES.include?(status)
+  def days_overdue(on = Date.current) = overdue?(on) ? (on - due_on).to_i : 0
 
   # Les notes de frais qui remboursent cette facture, rejetées et supprimées
   # exclues : une note rejetée ne rembourse personne.
@@ -279,14 +296,28 @@ class PurchaseInvoice < ApplicationRecord
   # sur 1 189,11 » s'arrondit une fois sur la base du taux, pas ligne par ligne.
   # L'arrondi se répartit ensuite sur les lignes, l'écart d'un cent allant à la
   # plus grosse, pour que la somme des lignes retombe sur le TVAC de la facture.
+  #
+  # Une ligne tapée TVA comprise garde son montant tel quel (c'est celui de la
+  # pièce) : on en extrait la TVA, 127,78 € à 6 % = 7,23 € de TVA sur 120,55 €
+  # HTVA, avec le même arrondi taux par taux.
   def compute_vat
-    typed = purchase_invoice_lines.reject(&:marked_for_destruction?).select { |line| line.net_cents }
-    typed.group_by { |line| line.vat_rate.to_i }.each do |rate, lines|
-      expected = (lines.sum(&:net_cents) * rate).quo(100).round
-      lines.each { |line| line.vat_cents = (line.net_cents * rate).quo(100).round }
-      lines.max_by { |line| line.net_cents.abs }.vat_cents += expected - lines.sum(&:vat_cents)
-      lines.each { |line| line.amount_cents = line.net_cents + line.vat_cents }
+    lines = purchase_invoice_lines.reject(&:marked_for_destruction?)
+
+    lines.select(&:net_cents).group_by { |line| line.vat_rate.to_i }.each do |rate, typed|
+      spread_vat(typed, :net_cents) { |cents| (cents * rate).quo(100).round }
+      typed.each { |line| line.amount_cents = line.net_cents + line.vat_cents }
     end
+
+    lines.select { |line| line.gross_cents && !line.net_cents }.group_by { |line| line.vat_rate.to_i }.each do |rate, typed|
+      spread_vat(typed, :gross_cents) { |cents| (cents * rate).quo(100 + rate).round }
+      typed.each { |line| line.amount_cents = line.gross_cents }
+    end
+  end
+
+  def spread_vat(lines, base)
+    expected = yield(lines.sum(&base))
+    lines.each { |line| line.vat_cents = yield(line.public_send(base)) }
+    lines.max_by { |line| line.public_send(base).abs }.vat_cents += expected - lines.sum(&:vat_cents)
   end
 
   # Une facture dont l'écriture est passée ne se retouche pas : on contre-passe.

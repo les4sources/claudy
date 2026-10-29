@@ -5,6 +5,7 @@ require Rails.root.join("spec/support/finance_builders")
 RSpec.describe "Comptabilité > Achats", type: :request do
   include Devise::Test::IntegrationHelpers
   include FinanceBuilders
+  include ActiveSupport::Testing::TimeHelpers
 
   let(:user) { User.create!(email: "compta@les4sources.be", password: "password123") }
   let!(:entity) { build_legal_entity(name: "Fondation Les 4 Sources") }
@@ -66,6 +67,39 @@ RSpec.describe "Comptabilité > Achats", type: :request do
       expect(response.body).to include("Aucune facture ne correspond")
     end
 
+    it "trie par échéance, la plus pressante d'abord, et signale les échues" do
+      travel_to Date.new(2026, 10, 29) do
+        echue = cree_facture(number: "ECHUE")
+        echue.update_column(:due_on, Date.new(2026, 10, 1))
+        proche = cree_facture(tiers: luminus, number: "PROCHE")
+        proche.update_column(:due_on, Date.new(2026, 11, 3))
+        payee = cree_facture(number: "PAYEE", status: "paid")
+        payee.update_column(:due_on, Date.new(2026, 9, 1))
+        cree_facture(number: "SANS")
+
+        get finance_purchase_invoices_path(sort: "due_on")
+
+        body = response.body
+        expect(body.index("PAYEE")).to be < body.index("ECHUE")
+        expect(body.index("ECHUE")).to be < body.index("PROCHE")
+        expect(body.index("PROCHE")).to be < body.index("SANS")
+        expect(body).to include("1 facture(s) dont l&#39;échéance est passée")
+        expect(body).to include("en retard de 28 j", "dans 5 j")
+        expect(body).not_to include("en retard de 58 j")
+      end
+    end
+
+    it "garde le tri par date par défaut et propose le tri par échéance" do
+      travel_to Date.new(2026, 10, 29) do
+        cree_facture.update_column(:due_on, Date.new(2026, 10, 1))
+
+        get finance_purchase_invoices_path(status: "to_process")
+
+        expect(response.body).to include("Trier par échéance")
+        expect(response.body).to include("sort=due_on")
+      end
+    end
+
     it "ne tombe pas sur une date illisible" do
       cree_facture
 
@@ -122,6 +156,55 @@ RSpec.describe "Comptabilité > Achats", type: :request do
       facture = PurchaseInvoice.last
       expect(facture.purchase_invoice_lines.first.vat_cents).to eq(24_971)
       expect(facture).to be_balanced
+    end
+
+    it "prend les montants tapés TVA comprise quand la ventilation est en TVAC" do
+      post finance_purchase_invoices_path,
+           params: { purchase_invoice: {
+             legal_entity_id: entity.id, third_party_id: antargaz.id, number: "20113915",
+             issued_on: "2026-10-28", total_euros: "349,09", amounts_include_vat: "true",
+             purchase_invoice_lines_attributes: {
+               "0" => { general_account_id: charges.id, entered_euros: "127,78", vat_rate: "6", label: "reBEL sel de mer" },
+               "1" => { general_account_id: charges.id, entered_euros: "160,51", vat_rate: "6", label: "Bionina" },
+               "2" => { general_account_id: charges.id, entered_euros: "60,80", vat_rate: "21", label: "Vinaigre ménager" }
+             }
+           } }
+
+      facture = PurchaseInvoice.last
+      expect(facture.purchase_invoice_lines.map(&:amount_cents)).to eq([12_778, 16_051, 6_080])
+      # 288,29 € à 6 % : 16,32 € de TVA ; 60,80 € à 21 % : 10,55 €.
+      expect(facture.lines_vat_cents).to eq(1_632 + 1_055)
+      expect(facture).to be_balanced
+    end
+
+    it "tape la ventilation HTVA par défaut" do
+      post finance_purchase_invoices_path,
+           params: { purchase_invoice: {
+             legal_entity_id: entity.id, third_party_id: antargaz.id, number: "2026-015",
+             issued_on: "2026-10-15", total_euros: "121,00", amounts_include_vat: "false",
+             purchase_invoice_lines_attributes: {
+               "0" => { general_account_id: charges.id, entered_euros: "100", vat_rate: "21" }
+             }
+           } }
+
+      expect(PurchaseInvoice.last.purchase_invoice_lines.first).to have_attributes(amount_cents: 12_100, vat_cents: 2_100)
+    end
+
+    it "garde le choix TVA comprise et les montants tapés quand le formulaire revient en erreur" do
+      cree_facture
+
+      post finance_purchase_invoices_path,
+           params: { purchase_invoice: {
+             legal_entity_id: entity.id, third_party_id: antargaz.id, number: "F-2026-1",
+             issued_on: "2026-10-28", total_euros: "127,78", amounts_include_vat: "true",
+             purchase_invoice_lines_attributes: {
+               "0" => { general_account_id: charges.id, entered_euros: "127,78", vat_rate: "6" }
+             }
+           } }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to match(/value="true"[^>]*checked|checked[^>]*value="true"/)
+      expect(response.body).to include('value="127.78"', "Montant TVAC (€)")
     end
 
     it "refuse un numéro déjà vu chez le même fournisseur, en montrant l'existante" do

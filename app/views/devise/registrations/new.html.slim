@@ -21,7 +21,7 @@
       - if @minimum_password_length
         p.mt-2.text-xs.text-gray-500 #{@minimum_password_length} caractères minimum.
     div
-      = f.label :password_confirmation, "Confirmez le mot de passe", class: "block text-sm font-medium leading-6 text-gray-900"
+      = f.label :password_confirmation, "Confirme le mot de passe", class: "block text-sm font-medium leading-6 text-gray-900"
       .mt-2
         = f.password_field :password_confirmation,
                            required: true,

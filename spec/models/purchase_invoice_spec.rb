@@ -65,6 +65,27 @@ RSpec.describe PurchaseInvoice do
       expect(invoice).to be_balanced
     end
 
+    it "extrait la TVA d'une ligne tapée TVA comprise, sans toucher à son montant (ticket des 3 Petits Pois)" do
+      invoice = build_invoice(total_cents: 12_778)
+      invoice.purchase_invoice_lines.build(general_account: charges, gross_cents: 12_778, vat_rate: 6, label: "reBEL sel de mer")
+      invoice.save!
+
+      line = invoice.purchase_invoice_lines.first
+      expect([line.amount_cents, line.vat_cents, line.net_amount_cents]).to eq([12_778, 723, 12_055])
+      expect(invoice).to be_balanced
+    end
+
+    it "extrait la TVA taux par taux sur la somme des montants TVAC" do
+      # 2 × 0,10 € TVAC à 21 % : ligne à ligne 0,02 + 0,02 ; sur 0,20 €, 0,03 €.
+      invoice = build_invoice(total_cents: 20 + 16_051)
+      2.times { invoice.purchase_invoice_lines.build(general_account: charges, gross_cents: 10, vat_rate: 21) }
+      invoice.purchase_invoice_lines.build(general_account: charges, gross_cents: 16_051, vat_rate: 6)
+      invoice.save!
+
+      expect(invoice.lines_vat_cents).to eq(3 + 909)
+      expect(invoice.lines_total_cents).to eq(invoice.total_cents)
+    end
+
     it "laisse tel quel un montant donné sans HTVA (outil MCP, pièce lue d'un mail)" do
       invoice = build_invoice
       invoice.purchase_invoice_lines.build(general_account: charges, amount_cents: 12_000)

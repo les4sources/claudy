@@ -120,6 +120,35 @@ RSpec.describe Coda::Parser do
       expect { described_class.call(double) }.to raise_error(Coda::ParseError, /séparément/)
     end
 
+    describe ".call_all" do
+      let(:files) { described_class.call_all(fixture("triodos_multi_comptes")) }
+
+      it "rend chaque fichier mis bout à bout, avec ses relevés et ses totaux" do
+        expect(files.size).to eq(4)
+        expect(files.map { |f| f.statements.first.account_number })
+          .to eq(%w[BE55068000000000 BE77068011111111 BE55068000000000 BE77068011111111])
+        expect(files.map(&:credit_total_cents)).to eq([13_000, 0, 9_550, 5_000])
+        expect(files.flat_map(&:statements).map(&:sequence_number).uniq).to eq(["000"])
+      end
+
+      it "lit un fichier simple comme un seul" do
+        expect(described_class.call_all(fixture("nominal")).size).to eq(1)
+      end
+
+      it "refuse un enregistrement qui suit la fin sans rouvrir de fichier" do
+        lignes = fixture("nominal").lines
+        bancal = lignes.join + lignes.find { |l| l.start_with?("21") }
+
+        expect { described_class.call_all(bancal) }.to raise_error(Coda::ParseError, /sans ouvrir un nouveau fichier/)
+      end
+
+      it "refuse un dernier fichier sans enregistrement de fin" do
+        tronque = fixture("triodos_multi_comptes").lines[0..-2].join
+
+        expect { described_class.call_all(tronque) }.to raise_error(Coda::ParseError, /type 9/)
+      end
+    end
+
     # `to_i` transformerait « ABCD » en 0 — et 0, c'est le détail du mouvement
     # principal : une donnée douteuse serait importée comme une vraie ligne.
     it "refuse un numéro de séquence qui n'est pas numérique" do

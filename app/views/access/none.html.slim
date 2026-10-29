@@ -11,9 +11,9 @@
         | Pas encore d'accès
       p.mt-4.text-sm.text-gray-600
         - if current_user.access_roles.empty?
-          | Votre compte (#{current_user.email}) n'a encore aucun rôle dans Claudy. Un Sourcier peut vous en donner un dans Paramètres › Accès.
+          | Ton compte (#{current_user.email}) n'a encore aucun rôle dans Claudy. Un Sourcier peut t'en donner un dans Paramètres › Accès.
         - else
-          | Votre compte (#{current_user.email}) est #{current_user.access_roles.map { |role| Access.label(role) }.join(", ")} : ce rôle n'ouvre encore aucune section de Claudy.
+          | Ton compte (#{current_user.email}) est #{current_user.access_roles.map { |role| Access.label(role) }.join(", ")} : ce rôle n'ouvre encore aucune section de Claudy.
       .mt-8
         = button_to "Me déconnecter",
                     destroy_user_session_path, method: :delete,

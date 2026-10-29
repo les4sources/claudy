@@ -1,6 +1,6 @@
 = render layout: "devise/shared/shell",
          locals: { title: "Mot de passe oublié ?",
-                   intro: "Entrez votre adresse : nous vous envoyons un lien pour choisir un nouveau mot de passe." } do
+                   intro: "Entre ton adresse : on t'envoie un lien pour choisir un nouveau mot de passe." } do
   = form_for(resource, as: resource_name, url: password_path(resource_name), builder: ActionView::Helpers::FormBuilder, html: { method: :post, class: "space-y-6" }) do |f|
     = render "devise/shared/error_messages", resource: resource
     div

@@ -23,7 +23,8 @@ module Mcp
              title: "Déposer un fichier bancaire (CODA ou Excel Beobank)",
              description: "Importe un relevé bancaire dans le journal de trésorerie, comme l'écran CODA. Un CODA " \
                           "(.cod, .txt) : `contenu` = le texte COMPLET du fichier, sans rien retirer ni reformater " \
-                          "(lignes de 128 caractères, de l'enregistrement 0 au 9). L'export Excel de Beobank (.xlsx, " \
+                          "(lignes de 128 caractères, de l'enregistrement 0 au 9 ; un export qui en réunit plusieurs, un par " \
+                          "compte, passe tel quel). L'export Excel de Beobank (.xlsx, " \
                           "« Vos comptes ») : `contenu_base64` = le fichier encodé en base64, octet pour octet. L'aperçu " \
                           "dit combien de lignes seraient créées ou ignorées (déjà présentes), ou pourquoi le fichier " \
                           "serait refusé (solde qui ne retombe pas, relevé manquant, trou après la dernière ligne " \

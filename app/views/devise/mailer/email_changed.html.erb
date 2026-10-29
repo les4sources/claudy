@@ -1,11 +1,11 @@
 <p>Bonjour,</p>
 
 <% if @resource.try(:unconfirmed_email?) %>
-  <p>L'adresse de votre compte Claudy est en train de passer à <%= @resource.unconfirmed_email %>.</p>
+  <p>L'adresse de ton compte Claudy est en train de passer à <%= @resource.unconfirmed_email %>.</p>
 <% else %>
-  <p>L'adresse de votre compte Claudy est désormais <%= @resource.email %>.</p>
+  <p>L'adresse de ton compte Claudy est désormais <%= @resource.email %>.</p>
 <% end %>
 
-<p>Si ce n'est pas vous, répondez à cet email pour nous prévenir.</p>
+<p>Si ce n'est pas toi, réponds à cet email pour nous prévenir.</p>
 
 <p>Les 4 Sources</p>

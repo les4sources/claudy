@@ -8,7 +8,7 @@ RSpec.describe UserMailer, type: :mailer do
 
   it "part à la bonne adresse avec le bon sujet" do
     expect(mail.to).to eq([ "steph@les4sources.be" ])
-    expect(mail.subject).to eq("Votre lien de connexion — Claudy")
+    expect(mail.subject).to eq("Ton lien de connexion — Claudy")
   end
 
   it "porte une URL ABSOLUE comportant le jeton" do
