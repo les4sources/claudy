@@ -106,6 +106,16 @@ RSpec.describe "Api::Public::V1::Events", type: :request do
       expect(image["alt"]).to eq("Pizza party de septembre")
     end
 
+    it "omet la vidéo quand il n'y en a pas et donne son lien YouTube quand elle existe" do
+      get "/api/public/v1/events"
+      expect(json["events"].first).not_to have_key("video_url")
+
+      published.update!(video_url: "https://www.youtube.com/watch?v=JbHeySEwIvg")
+      get "/api/public/v1/events"
+
+      expect(json["events"].first["video_url"]).to eq("https://www.youtube.com/watch?v=JbHeySEwIvg")
+    end
+
     it "filtre sur from / to" do
       get "/api/public/v1/events", params: { from: 3.years.ago.to_date.iso8601 }
       expect(json["events"].map { |event| event["title"] }).to contain_exactly("Pizza party de septembre", "Vieil événement")

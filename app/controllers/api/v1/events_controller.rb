@@ -148,7 +148,7 @@ module Api
 
       def event_params
         params.require(:event).permit(
-          :name, :summary, :starts_at, :ends_at, :location, :price_text, :registration_url, :status,
+          :name, :summary, :starts_at, :ends_at, :location, :price_text, :registration_url, :video_url, :status,
           :public_description, :event_category_id, :category, :team_id, :slug, :published,
           :image, :image_url, :remove_image
         )

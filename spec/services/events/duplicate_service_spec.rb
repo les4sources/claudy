@@ -7,7 +7,7 @@ RSpec.describe Events::DuplicateService do
       name: "Pizza party", event_category: category,
       starts_at: Time.zone.parse("2026-09-18 18:30"), ends_at: Time.zone.parse("2026-09-18 22:00"),
       summary: "Le four est chaud.", location: "La grange", price_text: "Prix libre",
-      url: "https://example.org/inscription", attendees: 40, sales_amount_cents: 10_000,
+      url: "https://example.org/inscription", video_url: "https://youtu.be/JbHeySEwIvg", attendees: 40, sales_amount_cents: 10_000,
       notes: "<div>Note interne</div>", public_description: "<div>Amenez vos ami·es.</div>",
       published_at: Time.current
     )
@@ -22,6 +22,7 @@ RSpec.describe Events::DuplicateService do
     expect(copy.location).to eq("La grange")
     expect(copy.price_text).to eq("Prix libre")
     expect(copy.url).to eq("https://example.org/inscription")
+    expect(copy.video_url).to eq("https://youtu.be/JbHeySEwIvg")
     expect(copy.event_category).to eq(category)
     expect(copy.public_description.to_plain_text).to eq("Amenez vos ami·es.")
     expect(copy.duplicate_of_id).to eq(source.id)

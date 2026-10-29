@@ -3598,6 +3598,7 @@ components:
         location: { type: string, nullable: true }
         price_text: { type: string, nullable: true }
         registration_url: { type: string, nullable: true, description: "Lien d'inscription (billetterie, formulaire)." }
+        video_url: { type: string, nullable: true, description: "Vidéo publique (lien YouTube), affichée sur la fiche du site." }
         status: { type: string, nullable: true }
         public_description: { type: string, nullable: true, description: "Description publique (HTML ActionText)." }
         event_category_id: { type: integer }
@@ -3630,6 +3631,7 @@ components:
         location: { type: string }
         price_text: { type: string }
         registration_url: { type: string }
+        video_url: { type: string, description: "Lien YouTube (youtube.com/watch?v=…, youtu.be/…) ; vide pour retirer." }
         status: { type: string }
         public_description: { type: string, description: "HTML." }
         category: { type: string, description: "Slug de catégorie (GET /event_categories)." }

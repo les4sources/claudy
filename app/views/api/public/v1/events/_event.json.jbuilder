@@ -18,6 +18,8 @@ end
 json.location event.location.presence
 json.price_text event.price_text.presence
 json.registration_url event.url.presence
+# Lien YouTube (validé par le modèle) : le site en tire l'identifiant et la vignette.
+json.video_url event.video_url.presence
 if event.image.attached?
   json.image do
     json.partial! "api/public/v1/shared/attached_image", attachment: event.image, alt: event.name
