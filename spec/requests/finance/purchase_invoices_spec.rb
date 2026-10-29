@@ -158,6 +158,55 @@ RSpec.describe "Comptabilité > Achats", type: :request do
       expect(facture).to be_balanced
     end
 
+    it "prend les montants tapés TVA comprise quand la ventilation est en TVAC" do
+      post finance_purchase_invoices_path,
+           params: { purchase_invoice: {
+             legal_entity_id: entity.id, third_party_id: antargaz.id, number: "20113915",
+             issued_on: "2026-10-28", total_euros: "349,09", amounts_include_vat: "true",
+             purchase_invoice_lines_attributes: {
+               "0" => { general_account_id: charges.id, entered_euros: "127,78", vat_rate: "6", label: "reBEL sel de mer" },
+               "1" => { general_account_id: charges.id, entered_euros: "160,51", vat_rate: "6", label: "Bionina" },
+               "2" => { general_account_id: charges.id, entered_euros: "60,80", vat_rate: "21", label: "Vinaigre ménager" }
+             }
+           } }
+
+      facture = PurchaseInvoice.last
+      expect(facture.purchase_invoice_lines.map(&:amount_cents)).to eq([12_778, 16_051, 6_080])
+      # 288,29 € à 6 % : 16,32 € de TVA ; 60,80 € à 21 % : 10,55 €.
+      expect(facture.lines_vat_cents).to eq(1_632 + 1_055)
+      expect(facture).to be_balanced
+    end
+
+    it "tape la ventilation HTVA par défaut" do
+      post finance_purchase_invoices_path,
+           params: { purchase_invoice: {
+             legal_entity_id: entity.id, third_party_id: antargaz.id, number: "2026-015",
+             issued_on: "2026-10-15", total_euros: "121,00", amounts_include_vat: "false",
+             purchase_invoice_lines_attributes: {
+               "0" => { general_account_id: charges.id, entered_euros: "100", vat_rate: "21" }
+             }
+           } }
+
+      expect(PurchaseInvoice.last.purchase_invoice_lines.first).to have_attributes(amount_cents: 12_100, vat_cents: 2_100)
+    end
+
+    it "garde le choix TVA comprise et les montants tapés quand le formulaire revient en erreur" do
+      cree_facture
+
+      post finance_purchase_invoices_path,
+           params: { purchase_invoice: {
+             legal_entity_id: entity.id, third_party_id: antargaz.id, number: "F-2026-1",
+             issued_on: "2026-10-28", total_euros: "127,78", amounts_include_vat: "true",
+             purchase_invoice_lines_attributes: {
+               "0" => { general_account_id: charges.id, entered_euros: "127,78", vat_rate: "6" }
+             }
+           } }
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to match(/value="true"[^>]*checked|checked[^>]*value="true"/)
+      expect(response.body).to include('value="127.78"', "Montant TVAC (€)")
+    end
+
     it "refuse un numéro déjà vu chez le même fournisseur, en montrant l'existante" do
       existante = cree_facture
 

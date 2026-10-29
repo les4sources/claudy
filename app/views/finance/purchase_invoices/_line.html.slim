@@ -3,12 +3,14 @@
   centaines de lignes. Une ligne ajoutée depuis le <template> s'équipe toute
   seule, Stimulus branche les contrôleurs à l'insertion.
 
-  Le montant se tape HTVA avec son taux, comme sur la pièce : la TVA s'ajoute
-  au calcul du reste à ventiler. Une ligne vide part à 21 % ; une ligne qui a
-  déjà un montant (enregistrée, ou lue d'un mail en TVAC) garde son taux.
+  Le montant se tape HTVA avec son taux, comme sur la pièce, ou TVA comprise
+  si la facture est saisie ainsi (`tvac`, le choix de la ventilation) : la TVA
+  s'ajoute ou s'extrait au calcul du reste à ventiler. Une ligne vide part à
+  21 % ; une ligne qui a déjà un montant (enregistrée, ou lue d'un mail en
+  TVAC) garde son taux.
 - line = lf.object
 - vat_rate = line.persisted? || line.amount_cents.to_i.nonzero? ? line.vat_rate : PurchaseInvoiceLine::DEFAULT_VAT_RATE
-- net_cents = line.net_cents || line.net_amount_cents
+- entered_cents = tvac ? (line.gross_cents || line.amount_cents.to_i) : (line.net_cents || line.net_amount_cents)
 .rounded-xl.bg-gray-50.px-3.py-3(data-purchase-invoice-form-target="row")
   = lf.hidden_field :id
   = lf.hidden_field :_destroy, value: "0"
@@ -25,8 +27,8 @@
       label.block.text-xs.font-medium.text-gray-500 Libellé
       = lf.text_field :label, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
     .sm:col-span-3
-      label.block.text-xs.font-medium.text-gray-500 Montant HTVA (€)
-      = text_field_tag "#{lf.object_name}[net_euros]", (net_cents.nonzero? ? format("%.2f", net_cents / 100.0) : nil),
+      label.block.text-xs.font-medium.text-gray-500(data-role="amount-label")= tvac ? "Montant TVAC (€)" : "Montant HTVA (€)"
+      = text_field_tag "#{lf.object_name}[entered_euros]", (entered_cents.nonzero? ? format("%.2f", entered_cents / 100.0) : nil),
                        inputmode: "decimal", placeholder: "0,00",
                        class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
                        data: { role: "amount", action: "input->purchase-invoice-form#refresh" }
@@ -34,5 +36,8 @@
       label.block.text-xs.font-medium.text-gray-500 TVA
       = lf.select :vat_rate, PurchaseInvoiceLine::VAT_RATES.map { |rate| ["#{rate} %", rate] }, { selected: vat_rate }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { role: "vat-rate", searchable_select_target: "select", action: "change->purchase-invoice-form#refresh" }
       = render "shared/searchable_select_search", label: "Chercher un taux"
-  .mt-2.text-right
+  .mt-2.flex.items-center.justify-between.gap-3
+    / Ce que le montant tapé donne de l'autre côté (« 120,55 € HTVA + 7,23 €
+      de TVA ») : on vérifie la ligne contre la pièce sans calculer.
+    p.text-xs.text-gray-500(data-role="counterpart")
     button.text-xs.text-gray-400(type="button" data-action="purchase-invoice-form#remove") Retirer cette ligne

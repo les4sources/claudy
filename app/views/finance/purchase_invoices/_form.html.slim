@@ -50,22 +50,34 @@
             = f.text_field :payment_reference, label: false, placeholder: "+++000/0000/00097+++ ou vide = n° de facture", autocomplete: "off", class: "mt-1 w-full rounded-md border-gray-300 font-mono text-sm shadow-sm"
 
       .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
-        .flex.items-center.justify-between.mb-3
+        .flex.flex-wrap.items-center.justify-between.gap-2.mb-3
           h3.text-xs.uppercase.tracking-wide.text-gray-400 Ventilation
           button.text-sm.text-blue-500(type="button" data-action="purchase-invoice-form#add") ➕ Ajouter une ligne
+
+        / Une facture donne ses lignes HTVA, un ticket de caisse TVA comprise :
+          le choix vaut pour toutes les lignes. Le changer convertit les
+          montants déjà tapés, la ventilation ne bouge pas.
+        .mb-3.flex.flex-wrap.items-center.gap-2.text-sm
+          span.text-gray-500 Montants tapés
+          .inline-flex.rounded-lg.bg-gray-100.p-1
+            - [[false, "HTVA"], [true, "TVA comprise"]].each do |value, label|
+              label.cursor-pointer
+                = f.radio_button :amounts_include_vat, value, class: "peer sr-only", data: { purchase_invoice_form_target: "mode", action: "change->purchase-invoice-form#switchMode" }
+                span.block.rounded-md.px-3.py-1.text-gray-600(class="peer-checked:bg-white peer-checked:text-gray-900 peer-checked:shadow-sm peer-focus-visible:ring-2 peer-focus-visible:ring-4s-main")= label
 
         #lignes.space-y-3(data-purchase-invoice-form-target="rows")
           - invoice.purchase_invoice_lines.each_with_index do |line, index|
             = f.fields_for :purchase_invoice_lines, line, child_index: index do |lf|
-              = render "finance/purchase_invoices/line", lf: lf, general_accounts: general_accounts, teams: teams
+              = render "finance/purchase_invoices/line", lf: lf, general_accounts: general_accounts, teams: teams, tvac: invoice.amounts_include_vat
 
         template(data-purchase-invoice-form-target="template")
           = f.fields_for :purchase_invoice_lines, PurchaseInvoiceLine.new, child_index: "NEW_RECORD" do |lf|
-            = render "finance/purchase_invoices/line", lf: lf, general_accounts: general_accounts, teams: teams
+            = render "finance/purchase_invoices/line", lf: lf, general_accounts: general_accounts, teams: teams, tvac: invoice.amounts_include_vat
 
         .mt-4.border-t.border-gray-100.pt-3.space-y-1
           / Le reste à ventiler compare le TOTAL TVAC aux lignes TVA comprise :
-            les lignes se tapent HTVA, la TVA de chaque taux s'y ajoute.
+            tapées HTVA, la TVA de chaque taux s'y ajoute ; tapées TVAC, elle
+            s'en extrait.
           .flex.items-center.justify-between.text-sm
             span.text-gray-500 Ventilé HTVA
             span.font-medium.text-gray-900(data-purchase-invoice-form-target="allocated") —

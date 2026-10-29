@@ -4,8 +4,9 @@
 # de bricolage peut se répartir entre le pôle Technique et le pôle Accueil, et
 # c'est la seule façon de savoir plus tard ce que chaque pôle a vraiment dépensé.
 #
-# Le montant se tape HTVA avec son taux, comme sur la pièce ; `amount_cents`
-# garde ce que la ligne coûte TVA comprise (c'est lui qui couvre le total) et
+# Le montant se tape HTVA avec son taux, comme sur la pièce, ou TVA comprise
+# quand la pièce ne donne que du TVAC (ticket de caisse) ; `amount_cents` garde
+# ce que la ligne coûte TVA comprise (c'est lui qui couvre le total) et
 # `vat_cents` sa part de TVA. La TVA se calcule à l'échelle de la facture, taux
 # par taux (`PurchaseInvoice#compute_vat`), comme le fournisseur l'a calculée.
 class PurchaseInvoiceLine < ApplicationRecord
@@ -30,6 +31,14 @@ class PurchaseInvoiceLine < ApplicationRecord
 
   def net_cents=(value)
     @net_cents = value.nil? ? nil : value.to_i
+  end
+
+  # Le TVAC tapé dans le formulaire en mode « TVA comprise » : la facture en
+  # extrait la TVA et le HTVA, le montant de la ligne reste celui de la pièce.
+  attr_reader :gross_cents
+
+  def gross_cents=(value)
+    @gross_cents = value.nil? ? nil : value.to_i
   end
 
   def net_amount_cents = amount_cents.to_i - vat_cents.to_i
