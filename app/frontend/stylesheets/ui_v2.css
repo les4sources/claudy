@@ -1220,3 +1220,31 @@ a.ui-kt-who:hover { text-decoration: underline; text-decoration-color: var(--ui-
   .ui-acc-dl li { grid-template-columns: 58px minmax(0, 1fr); }
   .ui-acc-dl-s { grid-column: 2; }
 }
+
+/* --- Claudy installable (redesign, Michael 2026-10-29) ------------------------
+   Le bandeau « Hors ligne » et l'invitation à installer, tous deux cachés
+   tant que leur contrôleur ne les montre pas. */
+.ui-offline[hidden], .ui-install[hidden], .ui-install [hidden] { display: none !important; }
+.ui-offline {
+  display: flex; align-items: flex-start; gap: 10px; margin: 16px 44px 0; padding: 12px 16px;
+  border: 1.5px dashed var(--ui-control); border-radius: 14px; background: #fff; color: var(--ui-ink2); font-size: 14px; line-height: 1.45;
+}
+.ui-offline svg { flex: none; margin-top: 1px; color: var(--ui-ink); }
+.ui-offline b { color: var(--ui-ink); }
+@media (max-width: 1280px) { .ui-offline { margin-left: 32px; margin-right: 32px; } }
+
+.ui-install {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 22px; padding: 14px 16px;
+  border: 1.5px solid var(--ui-line); border-radius: 18px; background: #fff;
+}
+.ui-install-i { flex: none; width: 44px; height: 44px; border-radius: 12px; }
+.ui-install-t { flex: 1; min-width: 0; }
+.ui-install-t b { font-size: 15px; }
+.ui-install-t p { margin-top: 2px; font-size: 13.5px; color: var(--ui-ink3); }
+.ui-install-a { display: flex; gap: 8px; flex: none; }
+
+@media (max-width: 760px) {
+  .ui-offline { margin: 12px 16px 0; }
+  .ui-install { flex-wrap: wrap; }
+  .ui-install-a { width: 100%; padding-left: 58px; }
+}

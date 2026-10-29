@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- Servie par le service worker quand le réseau manque et que la page demandée
+     n'a pas de copie sur le téléphone (redesign, Michael 2026-10-29). Statique et
+     autonome : elle doit s'afficher sans rien demander au serveur. -->
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#faf6f0">
+  <title>Hors ligne · Claudy</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+      padding: calc(env(safe-area-inset-top) + 24px) 20px calc(env(safe-area-inset-bottom) + 24px);
+      background: #faf6f0; color: #224246;
+      font: 400 16px/1.5 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    }
+    main { width: 100%; max-width: 420px; text-align: center; }
+    img { width: 72px; height: 72px; border-radius: 18px; }
+    h1 { margin: 22px 0 8px; font: 700 28px/1.2 'Averia Serif Libre', Georgia, serif; }
+    p { margin: 0 0 12px; color: #4b6265; }
+    .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
+    a {
+      display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 20px;
+      border-radius: 999px; border: 1.5px solid #7a8d8f; background: #fff; color: #224246;
+      font-weight: 600; text-decoration: none;
+    }
+    a.primary { background: #224246; border-color: #224246; color: #fff; }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/icons/claudy-192.png" alt="">
+    <h1>Pas de réseau pour l’instant</h1>
+    <p>Cette page n’a pas encore de copie sur ce téléphone.</p>
+    <p>Aujourd’hui, l’Agenda et la Cuisine se relisent sans réseau, dès qu’on les a ouverts une fois avec du réseau.</p>
+    <div class="actions">
+      <a class="primary" href="">Réessayer</a>
+      <a href="/aujourdhui">Ouvrir Aujourd’hui</a>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,12 @@
+/ L'invitation à installer Claudy (redesign, Michael 2026-10-29), cachée
+  par défaut : `pwa-install` ne la montre que là où l'installation est
+  possible, jamais dans l'app installée, plus du tout après « Plus tard ».
+.ui-install(data-controller="pwa-install" hidden)
+  img.ui-install-i(src="/icons/claudy-96.png" alt="" width="44" height="44")
+  .ui-install-t
+    b Claudy sur ton téléphone
+    p(data-pwa-install-target="install") Une icône sur l’écran d’accueil, qui s’ouvre en une seconde et se relit sans réseau.
+    p(data-pwa-install-target="ios" hidden) Dans Safari, touche Partager puis « Sur l’écran d’accueil ».
+  .ui-install-a
+    button.ui-btn.ui-btn-s.ui-btn-p(type="button" data-pwa-install-target="install" data-action="pwa-install#install") Installer
+    button.ui-btn.ui-btn-s(type="button" data-action="pwa-install#dismiss") Plus tard
