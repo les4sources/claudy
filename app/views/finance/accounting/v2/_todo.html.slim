@@ -1,0 +1,38 @@
+/ « À faire, dans cet ordre » (nouvelle interface) : les mêmes files que
+  `finance/accounting/_todo` (`Finance::AccountingTodo`), avec la barre
+  d'avancement de la maquette. La première file à faire porte « Commencer » ;
+  une file qui attend quelqu'un d'autre est montrée sans compter.
+- actionable = todo.items.reject(&:waiting?)
+- current = todo.items.find(&:todo?)
+section.ui-card.ui-acc-todo(data-accounting-todo="")
+  .ui-card-h
+    h2.ui-h3
+      = ui_icon(:list, size: 18)
+      | À faire, dans cet ordre
+    span.ui-muted.ui-small = "#{actionable.count(&:done?)} sur #{actionable.size}"
+  .ui-acc-todo-bar(aria-hidden="true")
+    - todo.items.each do |item|
+      - bar = if item.done? then "is-done" elsif item.equal?(current) then "is-now" elsif item.waiting? then "is-wait" end
+      span(class=bar)
+  ol.ui-acc-todo-l
+    - todo.items.each_with_index do |item, index|
+      - now = item.equal?(current)
+      li(data-todo-state=item.state class=("is-now" if now))
+        = link_to item.path, class: "ui-acc-todo-i" do
+          - if item.done?
+            span.ui-acc-todo-n.is-done = ui_icon(:check, size: 15)
+          - elsif item.waiting?
+            span.ui-acc-todo-n.is-wait(title="Attend quelqu’un d’autre") = ui_icon(:clock, size: 15)
+          - else
+            span.ui-acc-todo-n(class=("is-now" if now)) = index + 1
+          span.ui-acc-todo-t
+            b = item.label
+            small = item.detail
+          - if now
+            span.ui-btn.ui-btn-s.ui-btn-p Commencer
+          - else
+            - if item.count&.positive? && !item.done?
+              span.ui-acc-todo-c = item.count
+            = ui_icon(:right, size: 16, css: "ui-acc-todo-go")
+  p.ui-acc-todo-f
+    = link_to "Comment s’y prendre ?", finance_guide_path, class: "ui-card-link"
