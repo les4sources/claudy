@@ -295,3 +295,41 @@ doublons_suite = [
 File.write(File.join(DIR, "doublons_jour_suite.cod"), doublons_suite.join("\n") + "\n")
 
 puts Dir[File.join(DIR, "*.cod")].map { |f| "#{File.basename(f)}: #{File.readlines(f).map(&:chomp).map(&:length).uniq.inspect}" }
+
+# 12 — export Triodos du compte à vue ET de l'épargne : plusieurs fichiers CODA
+# complets (0 … 9) mis bout à bout, qui alternent les comptes, chaque relevé
+# numéroté 000. Le 05/08 ferme le premier relevé de chaque compte et ouvre le
+# second : la date de bascule porte des mouvements des deux côtés.
+multi_comptes = [
+  [
+    header(reference: "TRIODOSMC1"),
+    old_balance(iban: IBAN, sequence: "000", balance: 1000.0, date: "310726"),
+    triodos_movement(seq: "0001", amount_eur: 130.0, date: "010826", communication: "VIREMENT DUPONT"),
+    triodos_movement(seq: "0002", amount_eur: -45.0, date: "050826", communication: "FACTURE BRICO YVOIR"),
+    new_balance(iban: IBAN, balance: 1085.0, date: "050826"),
+    trailer(records: 5, debit: 45.0, credit: 130.0)
+  ],
+  [
+    header(reference: "TRIODOSMC1"),
+    old_balance(iban: IBAN2, sequence: "000", balance: 300.0, date: "310726", paper: "002"),
+    triodos_movement(seq: "0001", amount_eur: -75.5, date: "050826", communication: "VERS COMPTE A VUE"),
+    new_balance(iban: IBAN2, balance: 224.5, date: "050826", paper: "002"),
+    trailer(records: 4, debit: 75.5, credit: 0.0)
+  ],
+  [
+    header(reference: "TRIODOSMC1"),
+    old_balance(iban: IBAN, sequence: "000", balance: 1085.0, date: "050826"),
+    triodos_movement(seq: "0001", amount_eur: 75.5, date: "050826", communication: "DEPUIS EPARGNE"),
+    triodos_movement(seq: "0002", amount_eur: 20.0, date: "100826", communication: "DON ANONYME"),
+    new_balance(iban: IBAN, balance: 1180.5, date: "100826"),
+    trailer(records: 5, debit: 0.0, credit: 95.5)
+  ],
+  [
+    header(reference: "TRIODOSMC1"),
+    old_balance(iban: IBAN2, sequence: "000", balance: 224.5, date: "050826", paper: "002"),
+    triodos_movement(seq: "0001", amount_eur: 50.0, date: "100826", communication: "EPARGNE MENSUELLE"),
+    new_balance(iban: IBAN2, balance: 274.5, date: "100826", paper: "002"),
+    trailer(records: 4, debit: 0.0, credit: 50.0)
+  ]
+].flatten
+File.write(File.join(DIR, "triodos_multi_comptes.cod"), multi_comptes.join("\n") + "\n")

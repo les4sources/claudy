@@ -48,10 +48,13 @@ class CodaStatement < ApplicationRecord
   # année faisait passer le second export pour un doublon du premier.
   validates :sequence_number, uniqueness: { scope: [:coda_import_id, :cash_account_id] }
 
-  scope :ordered, -> { order(:new_balance_date, :sequence_number) }
+  # À date égale, c'est l'ordre de dépôt (l'id) qui fait foi, pas le numéro :
+  # Triodos numérote tout `000`, et les relevés d'un dépôt sont créés dans
+  # l'ordre du fichier. C'est aussi l'ordre que suit l'ancrage de la trésorerie.
+  scope :ordered, -> { order(:new_balance_date, :id) }
 
   def self.last_for(cash_account)
-    where(cash_account_id: cash_account.id).order(:new_balance_date, :sequence_number).last
+    where(cash_account_id: cash_account.id).order(:new_balance_date, :id).last
   end
 
   # Un export Excel Beobank n'a pas de numéro de relevé (`Beobank::Import`).
