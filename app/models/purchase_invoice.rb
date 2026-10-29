@@ -127,6 +127,11 @@ class PurchaseInvoice < ApplicationRecord
 
   accepts_nested_attributes_for :purchase_invoice_lines, allow_destroy: true
 
+  # Comment le formulaire tape la ventilation : HTVA (défaut, comme une facture
+  # classique) ou TVA comprise, pour toute la facture (ticket de caisse en TTC).
+  # Pas stocké : ça ne change que la saisie, la ligne garde HTVA, TVA et TVAC.
+  attribute :amounts_include_vat, :boolean, default: false
+
   before_validation :flag_quality
   before_validation :compute_vat
   before_validation :normalize_payment_reference
@@ -291,14 +296,28 @@ class PurchaseInvoice < ApplicationRecord
   # sur 1 189,11 » s'arrondit une fois sur la base du taux, pas ligne par ligne.
   # L'arrondi se répartit ensuite sur les lignes, l'écart d'un cent allant à la
   # plus grosse, pour que la somme des lignes retombe sur le TVAC de la facture.
+  #
+  # Une ligne tapée TVA comprise garde son montant tel quel (c'est celui de la
+  # pièce) : on en extrait la TVA, 127,78 € à 6 % = 7,23 € de TVA sur 120,55 €
+  # HTVA, avec le même arrondi taux par taux.
   def compute_vat
-    typed = purchase_invoice_lines.reject(&:marked_for_destruction?).select { |line| line.net_cents }
-    typed.group_by { |line| line.vat_rate.to_i }.each do |rate, lines|
-      expected = (lines.sum(&:net_cents) * rate).quo(100).round
-      lines.each { |line| line.vat_cents = (line.net_cents * rate).quo(100).round }
-      lines.max_by { |line| line.net_cents.abs }.vat_cents += expected - lines.sum(&:vat_cents)
-      lines.each { |line| line.amount_cents = line.net_cents + line.vat_cents }
+    lines = purchase_invoice_lines.reject(&:marked_for_destruction?)
+
+    lines.select(&:net_cents).group_by { |line| line.vat_rate.to_i }.each do |rate, typed|
+      spread_vat(typed, :net_cents) { |cents| (cents * rate).quo(100).round }
+      typed.each { |line| line.amount_cents = line.net_cents + line.vat_cents }
     end
+
+    lines.select { |line| line.gross_cents && !line.net_cents }.group_by { |line| line.vat_rate.to_i }.each do |rate, typed|
+      spread_vat(typed, :gross_cents) { |cents| (cents * rate).quo(100 + rate).round }
+      typed.each { |line| line.amount_cents = line.gross_cents }
+    end
+  end
+
+  def spread_vat(lines, base)
+    expected = yield(lines.sum(&base))
+    lines.each { |line| line.vat_cents = yield(line.public_send(base)) }
+    lines.max_by { |line| line.public_send(base).abs }.vat_cents += expected - lines.sum(&:vat_cents)
   end
 
   # Une facture dont l'écriture est passée ne se retouche pas : on contre-passe.
