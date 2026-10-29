@@ -1,0 +1,9 @@
+/ « Hors ligne » (redesign, Michael 2026-10-29) : caché tant que le réseau
+  répond ; `offline-banner` le montre sur une copie servie par le service
+  worker, ou quand le réseau tombe pendant la lecture.
+.ui-offline(data-controller="offline-banner" role="status" hidden)
+  = ui_icon(:offline, size: 18)
+  p
+    b Hors ligne
+    |  · 
+    span(data-offline-banner-target="text")

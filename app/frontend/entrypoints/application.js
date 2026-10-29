@@ -40,5 +40,6 @@ import * as ActiveStorage from '@rails/activestorage';
 ActiveStorage.start();
 
 import '../utils/setupStimulus';
+import '../utils/pwa';
 
 import '../stylesheets/application.css';

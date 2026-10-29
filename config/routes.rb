@@ -14,6 +14,11 @@ Rails.application.routes.draw do
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
+  # Claudy installable sur le téléphone (redesign, Michael 2026-10-29) : le
+  # manifeste, servi sans connexion comme le navigateur le demande. Le service
+  # worker et la page hors ligne sont des fichiers de `public/`.
+  get "manifest.json", to: "pwa#manifest", as: :pwa_manifest, defaults: { format: :json }
+
   if Rails.env.development?
     mount Lookbook::Engine, at: "/lookbook"
   end
