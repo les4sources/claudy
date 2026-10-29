@@ -41,6 +41,35 @@ RSpec.describe "Comptabilité > Boite de réception", type: :request do
     expect(response.body).to include("Boite de réception", "Proximus", "Votre facture", "Facture · Proximus · 84,12")
   end
 
+  it "cherche dans l'expéditeur, son adresse et le sujet, sans casse ni accents" do
+    imap = MailIntakeHelpers::FakeImap.new({
+                                             1 => raw_mail(message_id: "a@proximus.be", subject: "Votre facture de septembre"),
+                                             2 => raw_mail(message_id: "b@ores.be", subject: "Décompte annuel",
+                                                           from: "Énergie ORES <noreply@ores.be>"),
+                                             3 => raw_mail(message_id: "c@gaelle.be", subject: "Re: Rappel",
+                                                           from: "Gaëlle <gaelle@example.be>")
+                                           })
+    proximus_mail, ores_mail, gaelle_mail = MailIntake::Sync.new(mail_account: account, imap: imap).run!
+    ores_mail.ignore!(user)
+
+    get finance_mail_messages_path(q: "PROXIMUS septembre")
+    expect(response.body).to include("Votre facture de septembre")
+    expect(response.body).not_to include("Re: Rappel")
+
+    get finance_mail_messages_path(q: "gaelle@example")
+    expect(response.body).to include("Re: Rappel")
+    expect(response.body).not_to include("Votre facture de septembre")
+
+    # Le mail ignoré n'est pas dans l'onglet « À traiter », mais son compteur le signale.
+    get finance_mail_messages_path(q: "decompte")
+    expect(response.body).to include("Aucun mail ne correspond à « decompte » ici.")
+    expect(response.body).to match(%r{inbox\?q=decompte&amp;status=ignored"[^>]*>Ignoré<span class="ml-1 opacity-70">1</span>})
+
+    get finance_mail_messages_path(q: "energie", status: "ignored")
+    expect(response.body).to include("Décompte annuel")
+    expect([proximus_mail, gaelle_mail].map(&:status)).to eq(%w[pending pending])
+  end
+
   it "montre la proposition, le PDF et l'action « Créer la facture »" do
     attachment
 

@@ -12,9 +12,13 @@ module Finance
 
     def index
       @status = MailMessage::STATUSES.include?(params[:status]) ? params[:status] : "pending"
-      @messages = MailMessage.where(status: @status).recent_first
-                             .includes(:mail_account, mail_attachments: :purchase_invoice).limit(200)
-      @counts = MailMessage.group(:status).count
+      @query = params[:q].to_s.strip
+      # Les compteurs des onglets suivent la recherche : un mail cherché dans
+      # « À traiter » qu'on a déjà ignoré se voit dans le compteur d'à côté.
+      searched = MailMessage.matching(@query)
+      @messages = searched.where(status: @status).recent_first
+                          .includes(:mail_account, mail_attachments: :purchase_invoice).limit(200)
+      @counts = searched.group(:status).count
       @accounts = MailAccount.actives.order(:address)
       @third_parties = ThirdParty.where(id: proposed_ids("third_party_id")).index_by(&:id)
     end
