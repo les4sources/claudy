@@ -9,8 +9,9 @@ module Finance
   # **Il ne crée RIEN** (invariant B4) : il propose, il motive, un humain
   # clique. Même patron que `MatchPurchaseInvoices` et `MatchStripePayouts`.
   #
-  # Trois indices. Le NUMÉRO dans la communication d'abord (« 2026-047 ») :
-  # c'est le client qui désigne la facture (Michael, 2026-10-30). Le montant
+  # Trois indices. La communication d'abord : la communication structurée de
+  # la facture (« +++123/4567/89012+++ », reprise d'OkiOki) ou son NUMÉRO
+  # (« 2026-047 ») — c'est le client qui désigne la facture (Michael, 2026-10-30). Le montant
   # exact ensuite — ce qui reste dû, pour la seconde moitié d'une facture
   # payée en deux fois. L'IBAN enfin : celui que `customer_bank_accounts` a
   # appris à la ventilation d'un séjour, ou celui du tiers de la facture.
@@ -49,7 +50,10 @@ module Finance
 
     def match_for(entry, invoice, clients, texte)
       du = remaining_for(invoice)
-      if numero_cite?(texte, invoice.number)
+      if self.class.reference_cited?(texte, invoice.payment_reference)
+        Match.new(invoice: invoice, confidence: CONFIDENCE_NUMBER,
+                  reason: "La communication structurée est celle de la facture #{invoice.number}")
+      elsif numero_cite?(texte, invoice.number)
         Match.new(invoice: invoice, confidence: CONFIDENCE_NUMBER,
                   reason: "La communication cite la facture #{invoice.number}")
       elsif du == entry.remaining_cents
@@ -75,6 +79,15 @@ module Finance
     # Le numéro entier, pas un morceau d'un autre : « 2026-04 » ne doit pas se
     # lire dans « 2026-047 », ni « 047 » dans un montant.
     def numero_cite?(texte, numero) = self.class.cites?(texte, numero)
+
+    # La communication structurée belge : ses 12 chiffres, où qu'ils soient
+    # dans la communication, avec ou sans « +++ », barres ou espaces.
+    def self.reference_cited?(texte, reference)
+      chiffres = reference.to_s.gsub(/\D/, "")
+      return false if texte.blank? || chiffres.length < 10
+
+      texte.gsub(/\D/, "").include?(chiffres)
+    end
 
     def self.cites?(texte, numero)
       return false if texte.blank? || numero.to_s.length < 4

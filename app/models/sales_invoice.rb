@@ -33,6 +33,7 @@
 #  notes               :text
 #  number              :string           not null
 #  paid_on             :date
+#  payment_reference   :string
 #  posted_at           :datetime
 #  posting_mode        :string           default("on_payment"), not null
 #  status              :string           default("issued"), not null

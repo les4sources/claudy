@@ -109,6 +109,7 @@ module Mcp
       Tools::Finances::ImportsCoda,
       Tools::Finances::ImporterCoda,
       Tools::Finances::ReprendrePieces,
+      Tools::Finances::ImporterFacturesVente,
       Tools::Finances::ComptagesCaisse,
       Tools::Finances::CompterCaisse,
       Tools::Finances::MotifCaisse,
@@ -231,7 +232,8 @@ module Mcp
       comptes_stripe, cout_encaissement.
       Les factures fournisseurs arrivent par mail (boite_compta) : on encode
       une pièce avec enregistrer_facture_achat `piece_mail`. Les ventes
-      (factures émises dans OkiOki) : factures_vente, facture_vente. Les
+      (factures émises dans OkiOki) : factures_vente, facture_vente ; un lot
+      d'OkiOki (JSON /api/me/invoices) : importer_factures_vente. Les
       reversements : relevés des porteurs d'activité (releves_porteurs,
       releve_porteur), dépôt-vente des artisans (depot_vente,
       releve_depot_vente), partages de revenus d'un hébergement

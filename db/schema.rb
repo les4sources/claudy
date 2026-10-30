@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_30_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_30_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2365,6 +2365,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_170000) do
     t.text "notes"
     t.string "number", null: false
     t.date "paid_on"
+    t.string "payment_reference"
     t.datetime "posted_at"
     t.string "posting_mode", default: "on_payment", null: false
     t.string "status", default: "issued", null: false

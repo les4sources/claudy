@@ -22,7 +22,7 @@ module SalesInvoices
     attr_reader :invoice, :linked_allocations, :warnings
 
     # `attributes` : number, issued_on, third_party_id, kind,
-    # credited_invoice_id, notes, et éventuellement
+    # credited_invoice_id, notes, payment_reference, et éventuellement
     # sales_invoice_lines_attributes (sinon lues sur l'écriture).
     def initialize(journal_entry:, attributes: {}, document: nil, link_payments: true, whodunnit: nil)
       @entry = journal_entry
@@ -229,7 +229,10 @@ module SalesInvoices
       reste = @invoice.remaining_cents
 
       cites = candidats.select do |a|
-        [a.label, a.cash_entry.label, a.cash_entry.try(:communication)].any? { |t| Finance::MatchSalesInvoices.cites?(t, @invoice.number) }
+        [a.label, a.cash_entry.label, a.cash_entry.try(:communication)].any? do |t|
+          Finance::MatchSalesInvoices.cites?(t, @invoice.number) ||
+            Finance::MatchSalesInvoices.reference_cited?(t, @invoice.payment_reference)
+        end
       end
       cites.each do |allocation|
         break unless reste.positive?
