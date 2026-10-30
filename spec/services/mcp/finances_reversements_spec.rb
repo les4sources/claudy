@@ -102,6 +102,27 @@ RSpec.describe Mcp::Server, "finances : reversements" do
       expect([premier.reload, second.reload]).to all(be_posted)
     end
 
+    # Steph (octobre 2026) : payée via la SPRL après l'émission de son relevé.
+    it "repasse un relevé émis au nom du tiers qui paie désormais le porteur" do
+      held_booking(on: Date.current - 30)
+      releve = CarrierStatements::Generate.new(human: carrier, period_from: Date.current - 60, period_to: Date.current).run!
+      CarrierStatements::Issue.new(statement: releve).run!
+      arguments = { "geste" => "repasser", "releve" => releve.reference }
+
+      expect(texte(outil("releve_porteur", arguments))).to include("déjà adressé à Sébastien")
+
+      srl = ThirdParty.create!(name: "SPRL Domaine d'Ahinvaux", code: "DOMAINEDAH", kind: "supplier")
+      carrier.update!(carrier_payee: srl)
+      ActionMailer::Base.deliveries.clear
+
+      expect(texte(outil("releve_porteur", arguments))).to include("il le sera à SPRL Domaine d'Ahinvaux", "Aucun email ne part")
+      expect(releve.reload.third_party).to be_nil
+
+      expect(confirme("releve_porteur", arguments)).to include("Relevé repassé", "adressé à SPRL Domaine d'Ahinvaux")
+      expect(releve.reload.third_party).to eq(srl)
+      expect(ActionMailer::Base.deliveries).to be_empty
+    end
+
     it "supprime un brouillon et libère ses prestations" do
       held_booking(on: Date.current - 30)
       releve = CarrierStatements::Generate.new(human: carrier, period_from: Date.current - 60, period_to: Date.current).run!

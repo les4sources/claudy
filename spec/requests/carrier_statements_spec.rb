@@ -355,6 +355,93 @@ RSpec.describe "Porteurs — relevé de rémunération (epic #244, phase 3)", ty
     end
   end
 
+  # Le porteur payé via un tiers depuis l'émission (Steph, octobre 2026 : payée
+  # via la SPRL comme Olivier, Seb et Magali). La dette était au nom du porteur.
+  describe "repasser au nom du tiers qui paie le porteur" do
+    let(:srl) { ThirdParty.create!(name: "SPRL Domaine d'Ahinvaux", code: "DOMAINEDAH", kind: "supplier") }
+    # Émis AVANT que la fiche du porteur ne change : c'est tout le cas.
+    let!(:statement) do
+      held_booking
+      s = CarrierStatements::Generate.new(human: carrier, period_from: Date.current - 60, period_to: Date.current).run!
+      CarrierStatements::Issue.new(statement: s).run!
+      s.reload
+    end
+
+    def credit_line(entry) = entry.journal_lines.find { |l| l.credit_cents.to_i.positive? }
+
+    it "n'a rien à faire tant que la fiche du porteur ne change pas" do
+      expect(CarrierStatements::Repost.new(statement: statement)).not_to be_needed
+      expect {
+        CarrierStatements::Repost.new(statement: statement).run!
+      }.to raise_error(CarrierStatements::Repost::Refused, /déjà adressé/)
+    end
+
+    it "contre-passe l'écriture et la repasse avec la dette au nom du tiers, sans email" do
+      old_entry = JournalEntry.find_by(source: statement, journal: "purchases")
+      carrier.update!(carrier_payee: srl)
+      ActionMailer::Base.deliveries.clear
+
+      service = CarrierStatements::Repost.new(statement: statement.reload)
+      expect(service).to be_needed
+      repasse = service.run!
+
+      mirror = JournalEntry.find_by(reversal_of_id: old_entry.id)
+      dette_annulee = mirror.journal_lines.find { |l| l.general_account == supplier_account }
+      expect(dette_annulee.debit_cents).to eq(statement.total_fee_cents)
+      expect(dette_annulee.third_party).to eq(ThirdParty.find_by(human: carrier))
+      expect(old_entry.reload.source).to be_nil
+
+      entry = JournalEntry.find_by(source: repasse, journal: "purchases")
+      expect(entry).not_to eq(old_entry)
+      expect(entry.legal_entity).to eq(entity)
+      expect(credit_line(entry).third_party).to eq(srl)
+      expect(credit_line(entry).credit_cents).to eq(statement.total_fee_cents)
+      expect(entry.journal_lines.select { |l| l.debit_cents.to_i.positive? }.map(&:team)).to eq([team])
+
+      expect(repasse.third_party).to eq(srl)
+      expect(repasse.payable_third_party).to eq(srl)
+      expect(repasse).to be_issued
+      expect(ActionMailer::Base.deliveries).to be_empty
+      expect(CarrierStatements::Repost.new(statement: repasse)).not_to be_needed
+    end
+
+    it "laisse ensuite payer la SPRL, lettrée sur le même tiers" do
+      carrier.update!(carrier_payee: srl)
+      repasse = CarrierStatements::Repost.new(statement: statement).run!
+      ligne = build_cash_entry(cash_account, amount_cents: -repasse.total_fee_cents, label: "SPRL", entry_date: Date.current)
+
+      Finance::RecordCarrierStatementPayment.new(carrier_statement: repasse, cash_entry: ligne).run!
+
+      expect(ligne.reload.cash_allocations.sole.third_party).to eq(srl)
+      expect(repasse.reload).to be_paid
+    end
+
+    it "refuse quand un virement est déjà rapproché" do
+      ligne = build_cash_entry(cash_account, amount_cents: -1_000, label: "Acompte", entry_date: Date.current)
+      Finance::RecordCarrierStatementPayment.new(carrier_statement: statement, cash_entry: ligne, amount_cents: 1_000).run!
+      carrier.update!(carrier_payee: srl)
+
+      expect {
+        CarrierStatements::Repost.new(statement: statement.reload).run!
+      }.to raise_error(CarrierStatements::Repost::Refused, /virement/)
+    end
+
+    it "se fait depuis la page du relevé" do
+      carrier.update!(carrier_payee: srl)
+
+      get finance_carrier_statement_path(statement)
+      expect(response.body).to include("Repasser au nom de SPRL Domaine d&#39;Ahinvaux")
+
+      post repost_finance_carrier_statement_path(statement)
+
+      expect(response).to redirect_to(finance_carrier_statement_path(statement))
+      expect(statement.reload.third_party).to eq(srl)
+      follow_redirect!
+      expect(response.body).to include("Adressé à SPRL Domaine d&#39;Ahinvaux")
+      expect(response.body).not_to include("Repasser au nom de")
+    end
+  end
+
   describe "les écrans" do
     it "liste les porteurs et ce qu'on leur doit" do
       held_booking

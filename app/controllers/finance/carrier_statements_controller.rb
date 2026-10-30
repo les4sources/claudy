@@ -5,7 +5,7 @@ module Finance
   # ÉMETTRE en fait un document — figé, comptabilisé, envoyé. Le second est
   # irréversible, d'où le premier. Même forme que les relevés de reversement.
   class CarrierStatementsController < Finance::AccountingBaseController
-    before_action :get_statement, only: %i[show issue pay destroy]
+    before_action :get_statement, only: %i[show issue pay repost destroy]
 
     breadcrumb "Porteurs", :finance_carrier_statements_path, match: :exact
 
@@ -25,6 +25,7 @@ module Finance
       @lines = @statement.carrier_statement_lines.chronological.includes(experience_booking: :experience_availability)
       @payments = @statement.cash_allocations.includes(:cash_entry).order(:id)
       @candidate_entries = candidate_entries if @statement.issued? && @statement.remaining_cents.positive?
+      @repost = CarrierStatements::Repost.new(statement: @statement)
     end
 
     # Solder le relevé par une ligne bancaire sortante déjà passée (epic #244,
@@ -49,6 +50,20 @@ module Finance
            Finance::RecordCarrierStatementPayment::WrongDirection,
            Finance::RecordCarrierStatementPayment::MissingAccount,
            Accounting::PostCashEntry::NotFullyAllocated,
+           ActiveRecord::RecordInvalid => e
+      redirect_to finance_carrier_statement_path(@statement), alert: e.message
+    end
+
+    # Le porteur est payé par un autre tiers depuis l'émission (Steph, payée
+    # via la SPRL comme Olivier, Seb et Magali) : contre-passer et repasser.
+    def repost
+      @statement = CarrierStatements::Repost.new(statement: @statement, whodunnit: current_user&.email).run!
+      redirect_to finance_carrier_statement_path(@statement),
+                  notice: "Relevé repassé au nom de #{@statement.payee_name}."
+    rescue CarrierStatements::Repost::Refused,
+           Accounting::PostCarrierStatement::MissingAccount,
+           Accounting::PostCarrierStatement::NothingToPost,
+           Accounting::PostDocument::MissingFiscalYear,
            ActiveRecord::RecordInvalid => e
       redirect_to finance_carrier_statement_path(@statement), alert: e.message
     end
