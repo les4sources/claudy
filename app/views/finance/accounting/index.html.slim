@@ -125,28 +125,3 @@
     p.mt-1.text-2xl.font-semibold.text-gray-900= @open_years.size
     p.mt-2
       = link_to "Gérer les exercices", finance_fiscal_years_path, class: "text-blue-500 text-sm border-b-2 border-blue-200 hover:text-blue-700"
-
-h3.mb-3.text-lg.font-semibold.text-gray-900 Entités juridiques
-- if @entities.blank?
-  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
-    p Aucune entité — lance <code>rake accounting:seed_reference</code>.
-- else
-  .overflow-x-auto.relative.mb-4
-    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
-      thead.text-xs.text-gray-700.uppercase.bg-gray-50
-        tr
-          th.py-3.px-6[scope="col"] Entité
-          th.py-3.px-6[scope="col"] Forme
-          th.py-3.px-6[scope="col"] TVA
-          th.py-3.px-6[scope="col"] Exercices
-      tbody
-        - @entities.each do |entity|
-          tr.border-b.bg-white
-            td.py-4.px-6.font-medium.text-gray-900= entity.name
-            td.py-4.px-6= entity.form_label
-            td.py-4.px-6
-              = entity.vat_regime_label
-              - if entity.vat_number.present?
-                .text-xs.text-gray-400= entity.vat_number
-            td.py-4.px-6= entity.fiscal_years.size
-= link_to "Gérer les entités", finance_legal_entities_path, class: "text-blue-500 text-sm border-b-2 border-blue-200 hover:text-blue-700"

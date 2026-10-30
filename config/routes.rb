@@ -138,6 +138,14 @@ Rails.application.routes.draw do
   # Paramètres > Notifications : qui reçoit les notifications comptables.
   resource :notification_settings, only: %i[show update], path: "parametres/notifications"
 
+  # Paramètres > Entités juridiques (Michael, 2026-10-30) : sorties de la
+  # Comptabilité, elles gardent leur contrôleur `Finance::` et leurs noms de
+  # route. L'ancienne adresse renvoie ici.
+  scope module: :finance, as: :finance do
+    resources :legal_entities, path: "parametres/entites-juridiques", except: [:show]
+  end
+  get "finance/entities", to: redirect("/parametres/entites-juridiques")
+
   # Paramètres > Dépôt-vente (epic #248) : le carnet des artisans déposants.
   # Pas de `show` — la fiche vit sur les relevés mensuels (phase 2).
   resources :consignors, except: [:show] do
@@ -517,7 +525,6 @@ Rails.application.routes.draw do
     resources :sales_invoices, path: "sales", only: %i[index show new create edit update destroy]
 
     resources :general_accounts, path: "chart_of_accounts", except: [:show]
-    resources :legal_entities, path: "entities", except: [:show]
     # Les comptes de trésorerie à l'écran (Michael, 2026-10-19) : l'IBAN seul s'y
     # corrige. La création, l'entité et le compte général restent à l'API et au
     # connecteur (`compte_tresorerie`), qui gardent leurs garde-fous.

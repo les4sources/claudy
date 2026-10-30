@@ -1,7 +1,7 @@
 module Mcp
   module Tools
     module Finances
-      # Comptabilité > Vue d'ensemble > Plan comptable, Entités, Exercices
+      # Comptabilité > Plan comptable, Exercices et Paramètres > Entités juridiques
       # (GeneralAccountsController, LegalEntitiesController et
       # FiscalYearsController #index), désactivés compris.
       class ParametrageCompta < Base

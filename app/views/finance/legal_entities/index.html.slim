@@ -3,6 +3,10 @@
            title: "Entités juridiques",
            links: [link_to("➕ Nouvelle entité", new_finance_legal_entity_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
 
+/ L'aide de l'écran, que le layout ne pose que dans la Comptabilité : la
+  page vit dans Paramètres depuis le 2026-10-30, elle la pose elle-même.
+= render "finance/shared/page_guide"
+
 .overflow-x-auto.relative
   table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
     thead.text-xs.text-gray-700.uppercase.bg-gray-50

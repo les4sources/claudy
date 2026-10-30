@@ -153,6 +153,13 @@
               = link_to "Pôles",
                         teams_path,
                         class: "px-3 py-1.5 rounded-md transition-colors #{controller_name == 'teams' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          / Entités juridiques (Michael, 2026-10-30) : sorties de la vue
+            d'ensemble de la Comptabilité, elles se règlent ici.
+          - if section_readable?(:accounting)
+            li
+              = link_to "Entités juridiques",
+                        finance_legal_entities_path,
+                        class: "px-3 py-1.5 rounded-md transition-colors #{controller_path == 'finance/legal_entities' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           - if section_readable?(:full)
             li
               = link_to "Dépôt-vente",
