@@ -44,18 +44,19 @@ RSpec.describe "Comptabilité > Achats — validation par le pôle", type: :requ
   end
 
   describe "l'envoi en validation" do
-    it "arrête la facture à « À valider » et prévient les membres du pôle" do
+    it "arrête la facture à « À valider », sans email : le pôle l'aura dans le récapitulatif du lundi" do
       invoice = facture
+      sourcier_user # un compte : la cloche s'allume, mais sans copie par email
       sign_in compta
 
       post submit_finance_purchase_invoice_path(invoice)
 
-      expect(ActionMailer::Base.deliveries.map { |m| m.to }.flatten).to eq(["martin@les4sources.be"])
-      expect(ActionMailer::Base.deliveries.last.subject).to include("À valider", "Antargaz")
+      expect(ActionMailer::Base.deliveries).to be_empty
+      expect(sourcier_user.notifications.where(kind: "purchase_invoice_to_validate").count).to eq(1)
       expect(invoice.reload.status).to eq("to_validate")
       # L'écriture ne naît PAS ici : une facture qui attend un aval n'est pas une dette.
       expect(JournalEntry.find_by(source: invoice, journal: "purchases")).to be_nil
-      expect(flash[:notice]).to include("1 membre")
+      expect(flash[:notice]).to include("1 membre", "récapitulatif de lundi")
     end
 
     it "le dit franchement quand le pôle n'a aucune adresse" do

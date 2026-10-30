@@ -161,7 +161,6 @@ module Finance
 
     def submit
       invoice = PurchaseInvoices::Advance.new(purchase_invoice: @invoice, whodunnit: current_user&.email).submit!
-      notify_validation_team(invoice)
       redirect_to finance_purchase_invoice_path(invoice), notice: notice_for(invoice)
     rescue PurchaseInvoices::Advance::NotBalanced, PurchaseInvoices::Advance::AlreadyPayable,
            Accounting::PostPurchaseInvoice::NotBalanced,
@@ -194,30 +193,15 @@ module Finance
 
     private
 
-    # L'email de demande de validation part À CE MOMENT-LÀ, pas dans un callback
-    # du modèle : c'est le geste d'envoyer au paiement qui sollicite le pôle, et
-    # un `after_commit` aurait aussi tiré sur les imports et les corrections.
-    def notify_validation_team(invoice)
-      return unless invoice.to_validate?
-
-      recipients = invoice.validation_recipients
-      if recipients.empty?
-        Rails.logger.info("[PurchaseInvoices] aucune adresse dans le pôle ##{invoice.validation_team_id} " \
-                          "pour la facture ##{invoice.id}")
-        return
-      end
-
-      recipients.each do |human|
-        PurchaseInvoiceMailer.validation_requested(invoice, human.email).deliver_later
-      end
-    end
-
     def notice_for(invoice)
       if invoice.to_validate?
         recipients = invoice.validation_recipients
         return "Facture envoyée en validation — mais le pôle n'a aucune adresse : préviens-le à la main." if recipients.empty?
 
-        "Facture envoyée en validation — #{recipients.size} membre(s) du pôle viennent d'être prévenus."
+        # Plus d'email à l'envoi : le pôle la retrouve dans le récapitulatif
+        # du lundi (`PurchaseInvoices::ValidationDigest`).
+        "Facture envoyée en validation — #{recipients.size} membre(s) du pôle la retrouveront " \
+          "dans le récapitulatif de lundi matin."
       else
         "Facture prête à payer, écriture générée au journal des achats."
       end

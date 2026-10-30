@@ -8,7 +8,7 @@ module Mcp
         include Commun
 
         GESTES = {
-          "soumettre" => "envoyer au paiement : « à valider » si un pôle doit dire oui (ses membres reçoivent un email), " \
+          "soumettre" => "envoyer au paiement : « à valider » si un pôle doit dire oui (ses membres la reçoivent dans le récapitulatif email du lundi), " \
                          "sinon « à payer » avec l'écriture d'achat",
           "valider" => "l'aval du pôle (réservé à ses membres et aux comptes sans membre) : la facture passe « à payer »",
           "contester" => "bloquer la facture avec un motif (motif obligatoire) ; si elle attendait la validation, c'est le " \
@@ -75,8 +75,7 @@ module Mcp
             case d[:geste]
             when "soumettre"
               facture = ::PurchaseInvoices::Advance.new(purchase_invoice: facture, whodunnit: whodunnit).submit!
-              prevenus = prevenir_pole(facture)
-              "#{ligne_facture(facture)}#{"\nEmail de validation envoyé à #{prevenus.join(', ')}." if prevenus.any?}"
+              "#{ligne_facture(facture)}#{"\nLe pôle la retrouvera dans le récapitulatif de lundi matin." if facture.to_validate?}"
             when "valider"
               Validation.new(signature: whodunnit, purchase_invoice: facture, user: user).approve!
               "Facture validée : #{ligne_facture(facture.reload)}"
@@ -105,17 +104,6 @@ module Mcp
           end
         end
 
-        # Le controller prévient le pôle au geste d'envoyer, pas sur un
-        # callback : on fait de même.
-        def prevenir_pole(facture)
-          return [] unless facture.to_validate?
-
-          facture.validation_recipients.map do |human|
-            PurchaseInvoiceMailer.validation_requested(facture, human.email).deliver_later
-            human.email
-          end
-        end
-
         def plan_soumettre(facture, _arguments)
           raise Error, "Cette facture est déjà #{facture.status_label.downcase}." if facture.frozen_content?
           raise Error, "Elle attend déjà la validation du pôle." if facture.to_validate?
@@ -127,7 +115,7 @@ module Mcp
           if facture.next_status == "to_validate"
             destinataires = facture.validation_recipients.map(&:email)
             ["→ À VALIDER par le pôle #{facture.validation_team&.name}. " +
-             (destinataires.any? ? "Email de demande de validation à : #{destinataires.join(', ')}." : "Le pôle n'a aucune adresse : à prévenir à la main."), {}]
+             (destinataires.any? ? "Elle sera dans le récapitulatif des factures à valider de lundi matin, envoyé à : #{destinataires.join(', ')}." : "Le pôle n'a aucune adresse : à prévenir à la main."), {}]
           else
             ["→ À PAYER : l'écriture d'achat est passée au journal.", {}]
           end

@@ -4,13 +4,20 @@
 # doit dire oui, et la coordination comptable quand ça coince. C'est pourquoi
 # ils ne sont pas journalisés dans `SentEmail`, réservé aux emails clients.
 class PurchaseInvoiceMailer < ApplicationMailer
-  # Une facture attend l'aval du pôle. Le lien porte un jeton à portée unique :
-  # répondre ne demande pas de compte, parce qu'un sourcier qui devrait d'abord
-  # se souvenir d'un mot de passe ne répond pas — et le blocage redevient
-  # invisible, ce que toute cette phase cherche à éviter.
-  def validation_requested(invoice, recipient)
-    prepare(invoice, recipient)
-    mail(to: recipient, subject: "À valider — #{subject_tail}")
+  # Le récapitulatif du lundi (`PurchaseInvoices::ValidationDigest`) : toutes
+  # les factures qui attendent l'aval des pôles de ce membre, en un email.
+  # Chaque facture porte son lien à jeton : répondre ne demande pas de compte,
+  # parce qu'un sourcier qui devrait d'abord se souvenir d'un mot de passe ne
+  # répond pas — et le blocage redevient invisible.
+  def validation_digest(human, invoices)
+    @human     = human
+    @invoices  = invoices
+    @link_host = ENV.fetch("APPLICATION_HOST", "app.les4sources.be")
+    @total     = Money.new(invoices.sum(&:total_cents), "EUR")
+    @list_url  = finance_purchase_invoices_url(status: "to_validate", host: @link_host)
+    count = invoices.size
+    mail(to: human.email,
+         subject: "#{count} facture#{'s' if count > 1} à valider — #{@total.format}")
   end
 
   # Le pôle a refusé. Ça part à la coordination comptable, pour qu'elle reprenne

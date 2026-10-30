@@ -229,10 +229,12 @@ RSpec.describe Mcp::Server, "finances" do
                                       requires_validation: true, validation_team: technique)
     facture.purchase_invoice_lines.create!(general_account: fournitures, amount_cents: 3_000)
 
-    expect(texte(outil("geste_facture_achat", { "facture" => facture.id, "geste" => "soumettre" }))).to include("seb@example.com")
+    expect(texte(outil("geste_facture_achat", { "facture" => facture.id, "geste" => "soumettre" })))
+      .to include("récapitulatif", "seb@example.com")
+    # Plus d'email à l'envoi : le pôle la reçoit dans le récapitulatif du lundi.
     expect do
       confirme("geste_facture_achat", { "facture" => facture.id, "geste" => "soumettre" })
-    end.to change { ActionMailer::Base.deliveries.size }.by_at_least(1)
+    end.not_to(change { ActionMailer::Base.deliveries.size })
     expect(facture.reload).to be_to_validate
 
     expect(outil("geste_facture_achat", { "facture" => facture.id, "geste" => "valider" })[:isError]).to be(true)
