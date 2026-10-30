@@ -78,6 +78,6 @@ RSpec.describe "Comptabilité — nouvelle interface", type: :request do
     get finance_accounting_path
 
     expect(page.at_css(".ui-acc")).to be_nil
-    expect(response.body).to include("Entités juridiques")
+    expect(response.body).to include("Gérer les exercices")
   end
 end

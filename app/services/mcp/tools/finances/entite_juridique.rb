@@ -1,7 +1,7 @@
 module Mcp
   module Tools
     module Finances
-      # Comptabilité > Entités (LegalEntitiesController #create, #update et
+      # Paramètres > Entités juridiques (LegalEntitiesController #create, #update et
       # #destroy). Une entité qui porte des exercices, des comptes de
       # trésorerie ou des écritures ne se supprime pas : elle se désactive.
       class EntiteJuridique < Ecriture

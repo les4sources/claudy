@@ -2,9 +2,14 @@ module Finance
   # Les entités juridiques. La frontière entre elles n'est pas décorative : une
   # facture de travaux payée depuis le compte de la Fondation reste une charge de
   # la Société simple.
-  class LegalEntitiesController < Finance::AccountingBaseController
+  #
+  # Paramètres > Entités juridiques (Michael, 2026-10-30) : un référentiel qu'on
+  # règle une fois, pas un écran de travail. Il a quitté la vue d'ensemble de la
+  # Comptabilité, mais garde sa section d'accès : la trésorière le règle aussi.
+  class LegalEntitiesController < ::BaseController
+    access_section :accounting
     before_action :get_entity, only: [:edit, :update, :destroy]
-    breadcrumb "Entités", :finance_legal_entities_path, match: :exact
+    breadcrumb "Entités juridiques", :finance_legal_entities_path, match: :exact
 
     def index
       @entities = LegalEntity.ordered.includes(:fiscal_years, :cash_accounts)
@@ -50,6 +55,14 @@ module Finance
     end
 
     private
+
+    def set_presenters
+      @menu_presenter = Components::MenuPresenter.new(
+        active_primary: "settings",
+        active_secondary: "legal_entities"
+      )
+      @settings_view = true
+    end
 
     def get_entity = @entity = LegalEntity.find(params[:id])
 

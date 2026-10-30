@@ -78,11 +78,17 @@ RSpec.describe "Appartenance des contrôleurs Finance::", type: :model do
     cash_accounts cash_allocations cash_counts cash_entries cash_motifs cash_reallocations cash_sheet coda_imports
     collection_cost compliance_deadlines compliance_obligations
     consignment_reports cross_check expense_reports fiscal_years fixed_assets guide
-    general_accounts ledger legal_entities liabilities mail_messages monthly_close payables purchase_invoices
+    general_accounts ledger liabilities mail_messages monthly_close payables purchase_invoices
     recurring_expenses revenue_share_agreements
     revenue_share_statements sales_invoices stripe stripe_category_mappings stripe_fee_invoices
     third_parties treasury trial_balance
   ].freeze
+
+  # Les réglages de la compta qui vivent dans Paramètres (Michael, 2026-10-30) :
+  # même accès que la Comptabilité (`access_section :accounting`), mais la
+  # barre et le fil d'Ariane de Paramètres. Ils héritent donc du socle
+  # authentifié, pas de celui de la Comptabilité.
+  PARAMETRES = %w[legal_entities].freeze
 
   # Troisième camp, et il faut le nommer pour qu'il reste un choix : les canaux
   # à JETON. Ils ne demandent pas de connexion — c'est le lien signé de l'email
@@ -109,8 +115,19 @@ RSpec.describe "Appartenance des contrôleurs Finance::", type: :model do
     expect(classes.map(&:name).sort).to eq(attendus)
   end
 
+  it "range les réglages de la compta dans Paramètres, avec l'accès de la Comptabilité" do
+    classes = PARAMETRES.map { |n| "Finance::#{n.camelize}Controller".constantize }
+
+    expect(classes).to all(be < ::BaseController)
+    classes.each do |klass|
+      expect(klass).not_to be < Finance::AccountingBaseController
+      expect(klass.access_sections["*"]).to eq(:accounting)
+    end
+  end
+
   it "laisse tous les autres écrans aux sourciers" do
-    autres = controleurs.reject { |k| k < Finance::AccountingBaseController }
+    parametres = PARAMETRES.map { |n| "Finance::#{n.camelize}Controller" }
+    autres = controleurs.reject { |k| k < Finance::AccountingBaseController || parametres.include?(k.name) }
 
     expect(autres).to all(be < Finance::BaseController)
     expect(autres.map(&:name)).to include("Finance::AccountsController",

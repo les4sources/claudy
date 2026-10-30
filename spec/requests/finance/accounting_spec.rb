@@ -21,8 +21,7 @@ RSpec.describe "Finances > Comptabilité", type: :request do
       get finance_accounting_path
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include(entity.name)
-      expect(response.body).to include("Plan comptable")
+      expect(response.body).to include("Plan comptable", "Écritures passées", "Exercices ouverts")
     end
   end
 

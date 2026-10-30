@@ -3,7 +3,7 @@ require Rails.root.join("spec/support/finance_builders")
 
 # Issue #355 — le refus de supprimer une entité conseillait la désactivation
 # même quand un simple exercice vide bloquait, alors que le supprimer suffisait.
-RSpec.describe "Comptabilité > Entités", type: :request do
+RSpec.describe "Paramètres > Entités juridiques", type: :request do
   include Devise::Test::IntegrationHelpers
   include FinanceBuilders
 
@@ -11,7 +11,7 @@ RSpec.describe "Comptabilité > Entités", type: :request do
 
   before { sign_in user }
 
-  describe "DELETE /finance/entities/:id" do
+  describe "DELETE /parametres/entites-juridiques/:id" do
     it "supprime une entité qui ne porte rien" do
       entity = build_legal_entity(name: "Entité vide")
 
@@ -62,7 +62,7 @@ RSpec.describe "Comptabilité > Entités", type: :request do
     end
   end
 
-  describe "GET /finance/entities" do
+  describe "GET /parametres/entites-juridiques" do
     it "affiche ce que chaque entité porte, y compris zéro" do
       empty = build_legal_entity(name: "Entité vide")
       loaded = build_legal_entity(name: "Entité chargée")
@@ -82,6 +82,50 @@ RSpec.describe "Comptabilité > Entités", type: :request do
       expect(response.body).to include(finance_fiscal_years_path(legal_entity_id: empty.id))
       expect(counters_for(response.body, "Entité chargée")).to eq(["1", "1", "1"])
       expect(counters_for(response.body, "Entité vide")).to eq(["0", "0", "0"])
+    end
+  end
+
+  # Michael, 2026-10-30 : un référentiel qu'on règle une fois quitte la vue
+  # d'ensemble de la Comptabilité pour une section de Paramètres.
+  describe "dans Paramètres" do
+    it "s'ouvre sous la barre de Paramètres, son entrée allumée" do
+      get finance_legal_entities_path
+
+      expect(finance_legal_entities_path).to eq("/parametres/entites-juridiques")
+      nav = Nokogiri::HTML(response.body).at_css("#subnav-settings")
+      expect(nav).to be_present
+      lien = nav.css("a").find { |a| a.text.strip == "Entités juridiques" }
+      expect(lien["href"]).to eq(finance_legal_entities_path)
+      expect(lien["class"]).to include("bg-teal-100")
+    end
+
+    it "garde l'aide de l'écran" do
+      get finance_legal_entities_path
+
+      expect(response.body).to include('data-page-guide="finance/legal_entities"')
+    end
+
+    it "renvoie l'ancienne adresse vers la nouvelle" do
+      get "/finance/entities"
+
+      expect(response).to redirect_to("/parametres/entites-juridiques")
+    end
+
+    it "n'encombre plus la vue d'ensemble de la Comptabilité" do
+      build_legal_entity(name: "Fondation test")
+
+      get finance_accounting_path
+
+      expect(response.body).not_to include("Gérer les entités")
+      expect(response.body).not_to include("Fondation test")
+    end
+
+    it "reste ouverte au rôle Administratif, sans être Sourcier" do
+      user.update!(access_roles: ["administratif"])
+
+      get finance_legal_entities_path
+
+      expect(response).to have_http_status(:ok)
     end
   end
 

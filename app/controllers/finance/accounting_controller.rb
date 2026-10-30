@@ -5,7 +5,6 @@ module Finance
   class AccountingController < Finance::AccountingBaseController
 
     def index
-      @entities = LegalEntity.ordered.includes(:fiscal_years)
       @accounts_count = GeneralAccount.actives.count
       @entries_count = JournalEntry.count
       @open_years = FiscalYear.opened.includes(:legal_entity).ordered
