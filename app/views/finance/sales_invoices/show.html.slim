@@ -1,7 +1,7 @@
 / Fiche d'une facture de vente (epic #240, phase 6) : le PDF, ce qu'elle
   facture, et les lignes bancaires qui l'ont soldée.
 - content_for :page_header do
-  = render "layouts/components/page_header", title: "Facture #{@invoice.number}"
+  = render "layouts/components/page_header", title: @invoice.label
 
 .grid.grid-cols-1.gap-6(class="lg:grid-cols-3")
   .space-y-6(class="lg:col-span-2")
@@ -15,6 +15,28 @@
           = link_to "Télécharger le PDF", rails_blob_path(@invoice.document, disposition: "attachment"), class: "text-blue-500 hover:text-blue-700"
       - else
         p.text-sm.text-stone-400.italic Aucun PDF n'a été joint à cette facture.
+
+    - if @lines.any?
+      .rounded-xl.border.border-stone-200.bg-white.p-4
+        h3.mb-3.text-sm.font-semibold.text-stone-700 Les lignes
+        table.min-w-full.text-sm
+          thead
+            tr.text-left.text-xs.text-stone-400
+              th.py-1.font-medium Compte
+              th.py-1.font-medium Libellé
+              th.py-1.font-medium Pôle
+              th.py-1.text-right.font-medium HTVA
+              th.py-1.text-right.font-medium TVA
+              th.py-1.text-right.font-medium TTC
+          tbody.divide-y.divide-stone-100
+            - @lines.each do |line|
+              tr
+                td.py-2.pr-3.text-stone-600 = line.general_account&.code
+                td.py-2.pr-3.text-stone-800 = line.display_label
+                td.py-2.pr-3.text-stone-500 = line.team&.name || "—"
+                td.py-2.text-right.tabular-nums = humanized_money_with_symbol(Money.new(line.net_amount_cents, "EUR"))
+                td.py-2.text-right.tabular-nums.text-stone-500 = "#{humanized_money_with_symbol(Money.new(line.vat_cents, 'EUR'))} (#{line.vat_rate} %)"
+                td.py-2.text-right.tabular-nums.font-medium = humanized_money_with_symbol(Money.new(line.amount_cents, "EUR"))
 
     .rounded-xl.border.border-stone-200.bg-white.p-4
       h3.mb-3.text-sm.font-semibold.text-stone-700 Les lignes bancaires affectées
@@ -44,16 +66,43 @@
       div
         p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Statut
         - if @invoice.paid?
-          p.text-sm.font-medium.text-teal-700 = "Payée#{@invoice.paid_on ? " le #{l(@invoice.paid_on, format: :long)}" : ''}"
-          p class="mt-0.5 text-[0.65rem] text-stone-400" Le statut vient du rapprochement bancaire, jamais d'une case cochée.
+          p.text-sm.font-medium.text-teal-700 = "#{@invoice.status_label}#{@invoice.paid_on ? " le #{l(@invoice.paid_on, format: :long)}" : ''}"
+          p class="mt-0.5 text-[0.65rem] text-stone-400" Le statut vient du rapprochement bancaire et des notes de crédit, jamais d'une case cochée.
+        - elsif @invoice.credit_note?
+          p.text-sm.font-medium.text-amber-700 À imputer ou à rembourser
         - else
           p.text-sm.font-medium.text-amber-700 Émise — en attente d'encaissement
+          p.text-xs.text-stone-500 = "Reste dû : #{humanized_money_with_symbol(Money.new(@invoice.remaining_cents, 'EUR'))}"
+      div
+        p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Comptabilisation
+        - if @invoice.on_payment?
+          p.text-sm.text-stone-700 À l'encaissement
+          p class="mt-0.5 text-[0.65rem] text-stone-400" La recette arrive par la ventilation du séjour : pas d'écriture de vente.
+        - elsif @invoice.journal_entry
+          p.text-sm.text-stone-700 = "À l'émission · #{@invoice.journal_entry.reference}"
+        - else
+          p.text-sm.text-amber-700 À l'émission · pas encore passée
       div
         p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Émise le
         p.text-sm.text-stone-700 = l(@invoice.issued_on, format: :long)
       div
         p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Entité
         p.text-sm.text-stone-700 = @invoice.legal_entity.name
+      - if @invoice.third_party
+        div
+          p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Client (tiers)
+          p.text-sm.text-stone-700 = @invoice.third_party.name
+      - if @invoice.credited_invoice
+        div
+          p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Corrige la facture
+          p.text-sm = link_to @invoice.credited_invoice.number, finance_sales_invoice_path(@invoice.credited_invoice), class: "text-blue-600 hover:text-blue-800"
+      - if @credit_notes.any?
+        div
+          p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Notes de crédit
+          - @credit_notes.each do |note|
+            p.text-sm
+              = link_to note.number, finance_sales_invoice_path(note), class: "text-blue-600 hover:text-blue-800"
+              = " · #{humanized_money_with_symbol(Money.new(note.total_cents, 'EUR'))}"
       - if @invoice.customer
         div
           p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Client
@@ -63,22 +112,26 @@
           p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Notes
           p.text-sm.text-stone-600 = @invoice.notes
 
-    .rounded-xl.border.border-stone-200.bg-white.p-4
-      h3.mb-2.text-sm.font-semibold.text-stone-700 Ce qu'elle facture
-      - if @sources.empty?
-        p.text-sm.text-stone-400.italic Aucune réservation rattachée.
-      - else
-        ul.space-y-2
-          - @sources.each do |lien|
-            li.text-sm
-              - if lien.source.is_a?(Stay)
-                = link_to lien.source_label, stay_path(lien.source), class: "text-blue-600 hover:text-blue-800"
-              - else
-                = lien.source_label
-        p class="mt-2 text-[0.65rem] text-stone-400"
-          | Une réservation ne peut être rattachée qu'à UNE facture : c'est ce qui l'empêche d'être facturée deux fois.
+    - if @invoice.on_payment? || @sources.any?
+      .rounded-xl.border.border-stone-200.bg-white.p-4
+        h3.mb-2.text-sm.font-semibold.text-stone-700 Ce qu'elle facture
+        - if @sources.empty?
+          p.text-sm.text-stone-400.italic Aucune réservation rattachée.
+        - else
+          ul.space-y-2
+            - @sources.each do |lien|
+              li.text-sm
+                - if lien.source.is_a?(Stay)
+                  = link_to lien.source_label, stay_path(lien.source), class: "text-blue-600 hover:text-blue-800"
+                - else
+                  = lien.source_label
+          p class="mt-2 text-[0.65rem] text-stone-400"
+            | Une réservation ne peut être rattachée qu'à UNE facture : c'est ce qui l'empêche d'être facturée deux fois.
 
-    = link_to "Modifier la facture", edit_finance_sales_invoice_path(@invoice), class: "block w-full rounded-lg border border-stone-200 px-3 py-2 text-center text-sm text-stone-600 hover:text-stone-800 hover:border-stone-300"
+    - if @invoice.on_issue? && !@invoice.credit_note?
+      = link_to "Émettre une note de crédit", new_finance_sales_invoice_path(type: "credit_note", credited_invoice_id: @invoice.id), class: "block w-full rounded-lg border border-stone-200 px-3 py-2 text-center text-sm text-stone-600 hover:text-stone-800 hover:border-stone-300"
+
+    = link_to "Modifier", edit_finance_sales_invoice_path(@invoice), class: "block w-full rounded-lg border border-stone-200 px-3 py-2 text-center text-sm text-stone-600 hover:text-stone-800 hover:border-stone-300"
 
     - if @invoice.cash_allocations.empty?
-      = button_to "Retirer du registre", finance_sales_invoice_path(@invoice), method: :delete, data: { turbo_confirm: "Retirer la facture #{@invoice.number} du registre ?" }, class: "w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-500 hover:text-rose-600 hover:border-rose-200"
+      = button_to "Retirer du registre", finance_sales_invoice_path(@invoice), method: :delete, data: { turbo_confirm: "Retirer #{@invoice.label} du registre ?#{' Son écriture sera contre-passée.' if @invoice.posted?}" }, class: "w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-500 hover:text-rose-600 hover:border-rose-200"

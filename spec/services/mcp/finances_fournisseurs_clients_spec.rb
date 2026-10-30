@@ -145,5 +145,42 @@ RSpec.describe Mcp::Server, "finances : fournisseurs et clients" do
       confirme("facture_vente", { "geste" => "retirer", "facture" => "##{facture.id}" })
       expect(SalesInvoice.count).to eq(0)
     end
+
+    # Michael, 2026-10-30 : toute facture au registre, pas seulement celles
+    # d'une réservation.
+    it "enregistre une facture sans réservation, avec son écriture, sa note de crédit et son PDF" do
+      build_general_account(code: "400000", name: "Clients", klass: 4, nature: "asset")
+      build_general_account(code: "701002", name: "Location de salles", klass: 7, nature: "revenue")
+      ThirdParty.create!(name: "Commune de Saint-Gilles", kind: "customer")
+      pdf = Base64.strict_encode64("%PDF-1.4 facture de test")
+
+      sortie = confirme("facture_vente", { "geste" => "enregistrer", "tiers" => "Saint-Gilles", "numero" => "2026-061",
+                                           "date" => "#{Date.current.year}-01-15", "piece_pdf" => pdf,
+                                           "lignes" => [{ "compte" => "701002", "libelle" => "Salle du Moulin", "montant_ht" => "450" }] })
+      facture = SalesInvoice.find_by!(number: "2026-061")
+      expect(sortie).to include("journal Ventes", "Commune de Saint-Gilles", "450,00 €")
+      expect(facture).to have_attributes(total_cents: 45_000, posting_mode: "on_issue", legal_entity: entity)
+      expect(facture.document).to be_attached
+      expect(facture.journal_entry.journal_lines.map { |l| [l.general_account.code, l.debit_cents, l.credit_cents] })
+        .to contain_exactly(["400000", 45_000, 0], ["701002", 0, 45_000])
+
+      tva = outil("facture_vente", { "geste" => "enregistrer", "tiers" => "Saint-Gilles", "numero" => "2026-099",
+                                     "lignes" => [{ "compte" => "701002", "montant_ht" => "100", "taux" => 21 }] })
+      expect(texte(tva)).to include("pas assujettie")
+
+      confirme("facture_vente", { "geste" => "enregistrer", "type" => "note_de_credit", "tiers" => "Saint-Gilles",
+                                  "numero" => "2026-062", "facture_corrigee" => "2026-061", "date" => "#{Date.current.year}-01-20",
+                                  "lignes" => [{ "compte" => "701002", "montant_ht" => "50" }] })
+      expect(texte(outil("factures_vente", { "tiers" => "Saint-Gilles", "impayees" => true })))
+        .to include("n° 2026-061", "reste dû 400,00 €")
+      expect(texte(outil("factures_vente", { "type" => "note_de_credit" }))).to include("NC n° 2026-062", "corrige 2026-061")
+
+      confirme("facture_vente", { "geste" => "corriger", "facture" => "2026-062",
+                                  "lignes" => [{ "compte" => "701002", "montant_ht" => "40" }] })
+      expect(SalesInvoice.find_by!(number: "2026-062").total_cents).to eq(4_000)
+      expect(facture.reload.remaining_cents).to eq(41_000)
+
+      expect(texte(outil("facture_vente", { "geste" => "retirer", "facture" => "2026-061" }))).to include("note de crédit")
+    end
   end
 end

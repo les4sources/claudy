@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_29_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_30_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2322,6 +2322,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_170000) do
     t.datetime "updated_at", null: false
   end
 
+  create_table "sales_invoice_lines", force: :cascade do |t|
+    t.integer "amount_cents", default: 0, null: false
+    t.bigint "analytic_account_id"
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.bigint "general_account_id", null: false
+    t.string "label"
+    t.integer "position", default: 0, null: false
+    t.bigint "sales_invoice_id", null: false
+    t.bigint "team_id"
+    t.datetime "updated_at", null: false
+    t.integer "vat_cents", default: 0, null: false
+    t.integer "vat_rate", default: 0, null: false
+    t.index ["analytic_account_id"], name: "index_sales_invoice_lines_on_analytic_account_id"
+    t.index ["deleted_at"], name: "index_sales_invoice_lines_on_deleted_at"
+    t.index ["general_account_id"], name: "index_sales_invoice_lines_on_general_account_id"
+    t.index ["sales_invoice_id"], name: "index_sales_invoice_lines_on_sales_invoice_id"
+    t.index ["team_id"], name: "index_sales_invoice_lines_on_team_id"
+  end
+
   create_table "sales_invoice_sources", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "sales_invoice_id", null: false
@@ -2335,21 +2355,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_170000) do
 
   create_table "sales_invoices", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.bigint "credited_invoice_id"
     t.bigint "customer_id"
     t.datetime "deleted_at"
     t.date "issued_on", null: false
+    t.bigint "journal_entry_id"
+    t.string "kind", default: "invoice", null: false
     t.bigint "legal_entity_id", null: false
     t.text "notes"
     t.string "number", null: false
     t.date "paid_on"
+    t.datetime "posted_at"
+    t.string "posting_mode", default: "on_payment", null: false
     t.string "status", default: "issued", null: false
+    t.bigint "third_party_id"
     t.bigint "total_cents", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.index ["credited_invoice_id"], name: "index_sales_invoices_on_credited_invoice_id"
     t.index ["customer_id"], name: "index_sales_invoices_on_customer_id"
     t.index ["deleted_at"], name: "index_sales_invoices_on_deleted_at"
+    t.index ["journal_entry_id"], name: "index_sales_invoices_on_journal_entry_id"
     t.index ["legal_entity_id", "number"], name: "index_sales_invoices_on_legal_entity_id_and_number", unique: true
     t.index ["legal_entity_id"], name: "index_sales_invoices_on_legal_entity_id"
     t.index ["status"], name: "index_sales_invoices_on_status"
+    t.index ["third_party_id"], name: "index_sales_invoices_on_third_party_id"
   end
 
   create_table "sent_emails", force: :cascade do |t|
@@ -3091,9 +3120,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_29_170000) do
   add_foreign_key "revenue_share_statement_lines", "revenue_share_statement_lines", column: "origin_line_id"
   add_foreign_key "revenue_share_statement_lines", "revenue_share_statements"
   add_foreign_key "revenue_share_statements", "revenue_share_agreements"
+  add_foreign_key "sales_invoice_lines", "analytic_accounts"
+  add_foreign_key "sales_invoice_lines", "general_accounts"
+  add_foreign_key "sales_invoice_lines", "sales_invoices"
+  add_foreign_key "sales_invoice_lines", "teams"
   add_foreign_key "sales_invoice_sources", "sales_invoices"
   add_foreign_key "sales_invoices", "customers"
+  add_foreign_key "sales_invoices", "journal_entries"
   add_foreign_key "sales_invoices", "legal_entities"
+  add_foreign_key "sales_invoices", "sales_invoices", column: "credited_invoice_id"
+  add_foreign_key "sales_invoices", "third_parties"
   add_foreign_key "sent_emails", "customers"
   add_foreign_key "services", "general_accounts"
   add_foreign_key "services", "humans"

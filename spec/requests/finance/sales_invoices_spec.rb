@@ -297,4 +297,79 @@ RSpec.describe "Comptabilité — factures de vente (epic #240, phase 6)", type:
       expect(facture.paid_on).to be_nil
     end
   end
+
+  # Michael, 2026-10-30 : une facture sans réservation s'enregistre depuis
+  # l'écran Ventes, avec son tiers et ses lignes, et part au journal Ventes.
+  describe "une facture sans réservation" do
+    let!(:fiscal_year) { build_fiscal_year(entity) }
+    let!(:clients) { build_general_account(code: "400000", name: "Clients", klass: 4, nature: "asset") }
+    let!(:salles) { build_general_account(code: "701002", name: "Location de salles", klass: 7, nature: "revenue") }
+    let!(:croix_rouge) { ThirdParty.create!(name: "Croix-Rouge", kind: "customer") }
+
+    def poster(numero: "2026-112", montant: "290", ligne: "290")
+      post finance_sales_invoices_path, params: { sales_invoice: {
+        kind: "invoice", third_party_id: croix_rouge.id, legal_entity_id: entity.id, number: numero,
+        issued_on: "2026-10-05", total: montant,
+        sales_invoice_lines_attributes: { "0" => { general_account_id: salles.id, label: "Salle", entered_euros: ligne, vat_rate: "0" } }
+      } }
+    end
+
+    it "affiche le formulaire libre" do
+      get new_finance_sales_invoice_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Client (tiers)", "Compte de produit", "Croix-Rouge", "Enregistrer et comptabiliser")
+    end
+
+    it "enregistre la facture et passe son écriture" do
+      expect { poster }.to change(SalesInvoice, :count).by(1).and change(JournalEntry, :count).by(1)
+
+      facture = SalesInvoice.last
+      expect(response).to redirect_to(finance_sales_invoice_path(facture))
+      expect(facture).to have_attributes(third_party: croix_rouge, total_cents: 29_000, posting_mode: "on_issue")
+
+      get finance_sales_invoice_path(facture)
+      expect(response.body).to include("Croix-Rouge", "Salle", "Ventes 2026/1", "Émettre une note de crédit")
+
+      get finance_sales_invoices_path(third_party_id: croix_rouge.id)
+      expect(response.body).to include("2026-112", "Croix-Rouge")
+    end
+
+    it "refuse des lignes qui ne font pas le total, sans rien écrire" do
+      expect { poster(ligne: "200") }.not_to change(JournalEntry, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.body).to include("Les lignes font")
+    end
+
+    it "corrige la facture par contre-passation" do
+      poster
+      facture = SalesInvoice.last
+      ancienne = facture.journal_entry
+
+      get edit_finance_sales_invoice_path(facture)
+      expect(response.body).to include("est au journal Ventes")
+
+      patch finance_sales_invoice_path(facture), params: { sales_invoice: {
+        kind: "invoice", third_party_id: croix_rouge.id, legal_entity_id: entity.id, number: "2026-112",
+        issued_on: "2026-10-05", total: "300",
+        sales_invoice_lines_attributes: { "0" => { id: facture.sales_invoice_lines.first.id, general_account_id: salles.id,
+                                                   entered_euros: "300", vat_rate: "0" } }
+      } }
+
+      expect(response).to redirect_to(finance_sales_invoice_path(facture))
+      expect(facture.reload.total_cents).to eq(30_000)
+      expect(JournalEntry.where(reversal_of: ancienne)).to exist
+    end
+
+    it "retire la facture en contre-passant son écriture" do
+      poster
+      facture = SalesInvoice.last
+
+      delete finance_sales_invoice_path(facture)
+
+      expect(response).to redirect_to(finance_sales_invoices_path)
+      expect(JournalEntry.where(reversal_of: facture.journal_entry_id)).to exist
+    end
+  end
 end

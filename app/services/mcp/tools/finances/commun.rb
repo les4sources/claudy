@@ -22,7 +22,7 @@ module Mcp
         # Les erreurs métier des services de la compta : des refus qu'on
         # explique, pas des pannes. Elles reviennent à Claude telles quelles.
         ESPACES_METIER = %w[Finance:: Accounting:: PurchaseInvoices:: ExpenseReports:: Shop:: CarrierStatements:: Consignments::
-                            RevenueShares::].freeze
+                            RevenueShares:: SalesInvoices::].freeze
 
         module Garde
           def call(arguments)
