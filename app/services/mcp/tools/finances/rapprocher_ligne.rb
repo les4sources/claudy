@@ -24,7 +24,12 @@ module Mcp
                                      "`compte`, `montant` facultatif)",
           "sejour" => "ventiler le paiement d'un séjour selon son devis (ligne entrante ; `sejour`, `montant` facultatif : " \
                       "sans lui, tout ce que la ligne porte encore ; le reste s'affecte ensuite avec affecter_ligne)",
-          "facture_vente" => "encaisser une facture de vente émise (ligne entrante ; `facture_vente`)",
+          "facture_vente" => "encaisser une facture de vente du registre (ligne entrante ; `facture_vente`, `montant` " \
+                             "facultatif : sans lui, ce qui reste dû dans la limite de la ligne ; une facture payée en deux " \
+                             "virements se rapproche deux fois, un virement qui solde deux factures se rapproche de l'une puis " \
+                             "de l'autre). Facture passée au journal Ventes : la ligne s'impute sur le 400000 du tiers ; " \
+                             "facture de séjour : la recette est ventilée selon le séjour. Une note de crédit non imputée se " \
+                             "rembourse depuis une ligne sortante",
           "versement_stripe" => "rapprocher un versement Stripe de la banque (ligne entrante ; `versement_stripe`)"
         }.freeze
 
@@ -46,7 +51,7 @@ module Mcp
                  poste: POSTE.merge(description: "Pour reglement_membre : le poste payé. Défaut : celui que devine Claudy."),
                  montant: MONTANT.merge(description: "Montant à imputer, si ce n'est pas tout ce que la ligne peut porter."),
                  sejour: { type: %w[integer string], description: "Le séjour (#1234)." },
-                 facture_vente: { type: %w[integer string], description: "La facture de vente (#id)." },
+                 facture_vente: { type: %w[integer string], description: "La facture de vente (#id ou numéro)." },
                  versement_stripe: { type: %w[integer string], description: "Le versement Stripe (#id)." }
                },
                required: %w[ligne avec]
@@ -113,9 +118,9 @@ module Mcp
           when "facture_vente"
             raise Error, "Donne la facture de vente." if arguments["facture_vente"].blank?
 
-            facture = SalesInvoice.find_by(id: id!(arguments["facture_vente"], "facture de vente")) ||
-                      raise(Error, "Aucune facture de vente ##{arguments['facture_vente']}.")
-            [facture, "#{facture.label} · #{facture.customer_name} · #{euros(facture.total_cents)} · #{facture.status_label}"]
+            facture = facture_vente!(arguments["facture_vente"].is_a?(Integer) ? "##{arguments['facture_vente']}" : arguments["facture_vente"])
+            [facture, "#{facture.label} · #{facture.customer_name} · #{euros(facture.total_cents)} · #{facture.status_label} · " \
+                      "reste dû #{euros(facture.remaining_cents)}"]
           when "versement_stripe"
             raise Error, "Donne le versement Stripe." if arguments["versement_stripe"].blank?
 
@@ -167,9 +172,17 @@ module Mcp
               "#{ligne_tresorerie(entry.reload)}\nRelié à #{MemberAccount.find(d[:cible]).code}, sans nouveau règlement."
             when "sejour" then ventiler_sejour(entry, Stay.find(d[:cible]), d[:montant])
             when "facture_vente"
-              lignes = ::Finance::RecordSalesInvoicePayment.new(sales_invoice: SalesInvoice.find(d[:cible]), cash_entry: entry,
-                                                                whodunnit: whodunnit).run!
-              "#{ligne_tresorerie(entry.reload)}\n#{lignes.size} ligne(s) de recette ; l'IBAN est mémorisé pour ce client."
+              facture = SalesInvoice.find(d[:cible])
+              lignes = ::Finance::RecordSalesInvoicePayment.new(sales_invoice: facture, cash_entry: entry,
+                                                                amount_cents: d[:montant], whodunnit: whodunnit).run!
+              facture.reload
+              suite = if facture.on_issue?
+                        "Imputé sur le 400000 de #{facture.third_party&.name} · #{facture.label} : " \
+                          "#{facture.paid? ? facture.status_label.downcase : "reste dû #{euros(facture.remaining_cents)}"}"
+                      else
+                        "#{lignes.size} ligne(s) de recette ; l'IBAN est mémorisé pour ce client."
+                      end
+              "#{ligne_tresorerie(entry.reload)}\n#{suite}"
             when "versement_stripe"
               ::Finance::RecordStripePayoutReconciliation.new(stripe_payout: StripePayout.find(d[:cible]), cash_entry: entry,
                                                               whodunnit: whodunnit).run!

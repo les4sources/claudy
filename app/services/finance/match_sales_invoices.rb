@@ -9,14 +9,15 @@ module Finance
   # **Il ne crée RIEN** (invariant B4) : il propose, il motive, un humain
   # clique. Même patron que `MatchPurchaseInvoices` et `MatchStripePayouts`.
   #
-  # Deux indices. Le montant exact d'abord — une facture de vente est payée en
-  # une fois, à l'euro près, bien plus souvent qu'une facture d'achat. L'IBAN
-  # APPRIS ensuite : `customer_bank_accounts` mémorise, à chaque ventilation de
-  # séjour, le compte depuis lequel un client a payé. Le deuxième virement du
-  # même client se reconnaît donc tout seul.
+  # Trois indices. Le NUMÉRO dans la communication d'abord (« 2026-047 ») :
+  # c'est le client qui désigne la facture (Michael, 2026-10-30). Le montant
+  # exact ensuite — ce qui reste dû, pour la seconde moitié d'une facture
+  # payée en deux fois. L'IBAN enfin : celui que `customer_bank_accounts` a
+  # appris à la ventilation d'un séjour, ou celui du tiers de la facture.
   class MatchSalesInvoices
     Match = Struct.new(:invoice, :reason, :confidence, keyword_init: true)
 
+    CONFIDENCE_NUMBER = 95
     CONFIDENCE_AMOUNT = 80
     CONFIDENCE_IBAN = 70
 
@@ -24,13 +25,16 @@ module Finance
       @invoices = invoices
     end
 
+    # Une ligne déjà entamée se rapproche encore : un virement solde parfois
+    # deux factures, l'une après l'autre.
     def for_entry(entry)
       return [] unless entry.amount_cents.positive?
-      return [] if entry.cash_allocations.any?
+      return [] unless entry.remaining_cents.positive?
 
       clients = customers_for(entry)
+      texte = [entry.communication, entry.label].compact.join(" ")
 
-      candidates.filter_map { |invoice| match_for(entry, invoice, clients) }
+      candidates.filter_map { |invoice| match_for(entry, invoice, clients, texte) }
                 .sort_by { |match| [-match.confidence, match.invoice.number.to_s] }
     end
 
@@ -43,14 +47,37 @@ module Finance
 
     private
 
-    def match_for(entry, invoice, clients)
-      if invoice.total_cents == entry.amount_cents
+    def match_for(entry, invoice, clients, texte)
+      du = remaining_for(invoice)
+      if numero_cite?(texte, invoice.number)
+        Match.new(invoice: invoice, confidence: CONFIDENCE_NUMBER,
+                  reason: "La communication cite la facture #{invoice.number}")
+      elsif du == entry.remaining_cents
         Match.new(invoice: invoice, confidence: CONFIDENCE_AMOUNT,
-                  reason: "Le montant de la facture #{invoice.number} correspond exactement")
+                  reason: du == invoice.total_cents ? "Le montant de la facture #{invoice.number} correspond exactement" :
+                                                      "Le reste dû de la facture #{invoice.number} correspond exactement")
       elsif invoice.customer_id.present? && clients.include?(invoice.customer_id)
         Match.new(invoice: invoice, confidence: CONFIDENCE_IBAN,
                   reason: "Cet IBAN est celui d'un paiement déjà reçu de ce client")
+      elsif entry.counterparty_iban.present? && invoice.third_party&.iban == entry.counterparty_iban
+        Match.new(invoice: invoice, confidence: CONFIDENCE_IBAN,
+                  reason: "Cet IBAN est celui de #{invoice.third_party.name}")
       end
+    end
+
+    # Calculé une fois par facture pour toute la page : la file compare chaque
+    # ligne à chaque facture émise.
+    def remaining_for(invoice)
+      @remaining ||= {}
+      @remaining[invoice.id] ||= invoice.remaining_cents
+    end
+
+    # Le numéro entier, pas un morceau d'un autre : « 2026-04 » ne doit pas se
+    # lire dans « 2026-047 », ni « 047 » dans un montant.
+    def numero_cite?(texte, numero)
+      return false if texte.blank? || numero.to_s.length < 4
+
+      texte.match?(/(?<![\w-])#{Regexp.escape(numero)}(?![\w-])/i)
     end
 
     # Les clients connus pour l'IBAN de la ligne. Un compte joint peut en
@@ -66,9 +93,9 @@ module Finance
 
     # Les factures ÉMISES, chargées une fois pour la page. Une facture déjà
     # payée ne se propose plus : la proposer une seconde fois, c'est inviter à
-    # l'encaisser deux fois.
+    # l'encaisser deux fois. Une note de crédit ne s'encaisse pas.
     def candidates
-      @candidates ||= (@invoices || SalesInvoice.issued.includes(:customer, :legal_entity).ordered).to_a
+      @candidates ||= (@invoices || SalesInvoice.invoices.issued.includes(:customer, :third_party, :legal_entity).ordered).to_a
     end
   end
 end

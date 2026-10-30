@@ -182,5 +182,29 @@ RSpec.describe Mcp::Server, "finances : fournisseurs et clients" do
 
       expect(texte(outil("facture_vente", { "geste" => "retirer", "facture" => "2026-061" }))).to include("note de crédit")
     end
+
+    it "encaisse une facture du registre en deux virements avec rapprocher_ligne" do
+      build_general_account(code: "400000", name: "Clients", klass: 4, nature: "asset")
+      build_general_account(code: "701002", name: "Location de salles", klass: 7, nature: "revenue")
+      banque = build_general_account(code: "550000", name: "Banque")
+      compte = build_cash_account(entity, banque)
+      fabry = ThirdParty.create!(name: "Fabry", kind: "customer")
+      facture = SalesInvoices::Record.new(attributes: {
+                                            legal_entity_id: entity.id, third_party_id: fabry.id, number: "2026-047",
+                                            issued_on: Date.new(Date.current.year, 1, 10), total_cents: 100_000,
+                                            sales_invoice_lines_attributes: [{ general_account_id: GeneralAccount.find_by(code: "701002").id,
+                                                                               net_cents: 100_000, vat_rate: 0 }]
+                                          }).run!
+      premiere = build_cash_entry(compte, amount_cents: 40_000, entry_date: Date.new(Date.current.year, 1, 20))
+      premiere.update!(communication: "2026-047")
+      expect(texte(outil("fiche_ligne_tresorerie", { "ligne" => premiere.id }))).to include("facture_vente: #{facture.id}", "reste dû 1000,00 €")
+
+      sortie = confirme("rapprocher_ligne", { "ligne" => premiere.id, "avec" => "facture_vente", "facture_vente" => "2026-047" })
+      expect(sortie).to include("Imputé sur le 400000 de Fabry", "reste dû 600,00 €")
+
+      seconde = build_cash_entry(compte, amount_cents: 60_000, entry_date: Date.new(Date.current.year, 1, 25))
+      confirme("rapprocher_ligne", { "ligne" => seconde.id, "avec" => "facture_vente", "facture_vente" => facture.id, "montant" => "600" })
+      expect(facture.reload.status).to eq("paid")
+    end
   end
 end
