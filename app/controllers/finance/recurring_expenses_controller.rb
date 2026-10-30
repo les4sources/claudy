@@ -11,7 +11,10 @@ module Finance
     breadcrumb "Charges fixes", :finance_recurring_expenses_path, match: :exact
 
     def index
-      @recurring_expenses = RecurringExpense.ordered.includes(:third_party, :legal_entity).to_a
+      load_entity_filter
+      scope = RecurringExpense.ordered.includes(:third_party, :legal_entity)
+      scope = scope.where(legal_entity: @entity) if @entity
+      @recurring_expenses = scope.to_a
       @yearly_cents = @recurring_expenses.select(&:active?).sum(&:yearly_cents)
     end
 

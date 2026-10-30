@@ -13,10 +13,18 @@ module Finance
   # façon, dans `rows`, sans toucher aux vues : c'est tout l'intérêt du contrat
   # `Payable`.
   class PayableQueue
+    # `legal_entity` (2026-10-30) : la file d'UNE structure — le filtre
+    # « Structure » de l'écran. Sans elle, toutes les structures, comme avant :
+    # la trésorerie et « À faire » lisent la file entière.
+    def initialize(legal_entity: nil)
+      @legal_entity = legal_entity
+    end
+
     # Triées par ÉCHÉANCE, les sans-échéance en dernier : c'est l'ordre dans
     # lequel on paie, pas l'ordre de saisie.
     def rows
       @rows ||= (invoices + expense_reports + consignment_reports + event_settlement_lines + carrier_statements)
+                .then { |rows| @legal_entity ? rows.select { |row| row.payable_legal_entity == @legal_entity } : rows }
                 .sort_by { |row| [row.payable_due_on || Date.new(9999, 1, 1), row.class.name, row.id] }
     end
 
@@ -26,12 +34,13 @@ module Finance
     # restent donc hors du total, dans leur propre encart. Une fois la facture
     # encodée et liée, c'est elle qui entre dans la file, avec son échéance.
     def expected_payments
-      ComplianceDeadline.outstanding.payments
-                        .where(purchase_invoice_id: nil)
-                        .where(due_on: ..(Date.current + ComplianceDeadlinesController::SOON_DAYS * 2))
-                        .includes(compliance_obligation: :legal_entity)
-                        .ordered
-                        .to_a
+      deadlines = ComplianceDeadline.outstanding.payments
+      deadlines = deadlines.for_entity(@legal_entity.id) if @legal_entity
+      deadlines.where(purchase_invoice_id: nil)
+               .where(due_on: ..(Date.current + ComplianceDeadlinesController::SOON_DAYS * 2))
+               .includes(compliance_obligation: :legal_entity)
+               .ordered
+               .to_a
     end
 
     private

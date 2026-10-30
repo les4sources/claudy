@@ -12,7 +12,8 @@ module Finance
     breadcrumb "À payer", :finance_payables_path, match: :exact
 
     def index
-      queue = Finance::PayableQueue.new
+      load_entity_filter
+      queue = Finance::PayableQueue.new(legal_entity: @entity)
       @rows = queue.rows
       @total_cents = @rows.sum(&:payable_amount_cents)
       @overdue = @rows.select(&:payable_overdue?)

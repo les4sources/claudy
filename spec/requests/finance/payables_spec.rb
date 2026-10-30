@@ -113,4 +113,67 @@ end
 
     expect(response.body).to include(%(href="#{finance_payables_path}"))
   end
+
+  # Michael (2026-10-30) : « on ne comprend pas s'il s'agit de toutes les
+  # structures ou d'une seule ». Le filtre « Structure » en haut de page.
+  describe "filtre « Structure »" do
+    let!(:srl) { build_legal_entity(name: "Les 4 Sources SRL", form: "srl") }
+    let!(:srl_year) { build_fiscal_year(srl) }
+
+    before do
+      facture(number: "FONDATION-1", due_on: Date.current + 5)
+      f = PurchaseInvoice.create!(legal_entity: srl, third_party: antargaz, number: "SRL-1",
+                                  issued_on: Date.new(2026, 6, 1), due_on: Date.current + 3, total_cents: 5_000)
+      f.purchase_invoice_lines.create!(general_account: charges, amount_cents: 5_000)
+      PurchaseInvoices::Advance.new(purchase_invoice: f).submit!
+    end
+
+    it "montre toutes les structures par défaut, chaque ligne avec la sienne" do
+      get finance_payables_path
+
+      page = Nokogiri::HTML(response.body)
+      expect(page.at_css("select#legal_entity_id option[selected]")).to be_nil
+      expect(page.at_css("select#legal_entity_id option[value='']").text).to eq("Toutes les structures")
+      expect(response.body).to include("FONDATION-1", "SRL-1", "170 €")
+      expect(page.css("li span.rounded-full").map(&:text)).to include("Fondation Les 4 Sources", "Les 4 Sources SRL")
+    end
+
+    it "ne garde que la structure choisie, total compris" do
+      get finance_payables_path(legal_entity_id: srl.id)
+
+      expect(response.body).to include("SRL-1", "Seulement Les 4 Sources SRL")
+      expect(response.body).not_to include("FONDATION-1")
+      expect(response.body).to include("50 €")
+      expect(Nokogiri::HTML(response.body).at_css("select#legal_entity_id option[selected]")["value"]).to eq(srl.id.to_s)
+    end
+
+    it "dit son vide pour la structure choisie" do
+      vide = build_legal_entity(name: "SSI Ahinvaux", form: "simple_company")
+
+      get finance_payables_path(legal_entity_id: vide.id)
+
+      expect(response.body).to include("Rien à payer pour SSI Ahinvaux")
+    end
+  end
+
+  # Un relevé de porteur n'a pas de colonne d'entité : c'est l'écriture d'achat
+  # qui la porte.
+  describe "Payable#payable_legal_entity" do
+    it "lit la structure de l'écriture d'achat quand le document n'en a pas" do
+      build_general_account(code: GeneralAccount::CONTRIBUTOR_FEE_CODE, name: "Rémunérations", klass: 6, nature: "expense")
+      carrier = Human.create!(name: "Sébastien", email: "seb@les4sources.be")
+      experience = Experience.create!(name: "Vannerie", human: carrier, team: Team.create!(name: "Transmission"), duration_hours: 2)
+      customer = Customer.create!(email: "lea@example.com", first_name: "Léa", customer_type: "individual")
+      stay = Stay.create!(customer: customer, status: "confirmed", arrival_date: Date.current - 40, departure_date: Date.current - 38)
+      slot = ExperienceAvailability.create!(experience: experience, available_on: Date.current - 30, starts_at: "10:00", duration_minutes: 120)
+      ExperienceBooking.create!(experience_availability: slot, stay: stay, participants: 2, status: "confirmed")
+                       .update_columns(outcome: "held", outcome_recorded_at: Time.current)
+      releve = CarrierStatements::Generate.new(human: carrier, period_from: Date.current - 60, period_to: Date.current).run!
+      CarrierStatements::Issue.new(statement: releve).run!
+
+      expect(releve.reload.payable_legal_entity).to eq(entity)
+      expect(Finance::PayableQueue.new(legal_entity: entity).rows).to include(releve)
+      expect(Finance::PayableQueue.new(legal_entity: build_legal_entity(name: "Autre", form: "srl")).rows).to be_empty
+    end
+  end
 end

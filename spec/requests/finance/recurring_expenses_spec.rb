@@ -75,4 +75,25 @@ RSpec.describe "Comptabilité > Charges fixes", type: :request do
     expect(form.at_css("#recurring_expense_third_party_id option[selected]")["value"]).to eq(orange.id.to_s)
     expect(form.at_css("#recurring_expense_general_account_id option[selected]")["value"]).to eq(charges.id.to_s)
   end
+
+  # Michael (2026-10-30) : choisir la structure en haut de page.
+  it "filtre par structure, total compris, et préremplit la nouvelle charge" do
+    srl = build_legal_entity(name: "Les 4 Sources SRL", form: "srl")
+    RecurringExpense.create!(legal_entity: entity, label: "Assurance Fondation", amount_cents: 10_000,
+                             frequency: "monthly", first_due_on: Date.new(2026, 10, 1))
+    RecurringExpense.create!(legal_entity: srl, label: "Comptable SRL", amount_cents: 5_000,
+                             frequency: "monthly", first_due_on: Date.new(2026, 10, 1))
+
+    get finance_recurring_expenses_path
+    expect(response.body).to include("Assurance Fondation", "Comptable SRL", "1 800,00 €", "toutes structures")
+
+    get finance_recurring_expenses_path(legal_entity_id: srl.id)
+    page = Nokogiri::HTML(response.body)
+    expect(response.body).to include("Comptable SRL", "600,00 €", "Total des charges actives de Les 4 Sources SRL")
+    expect(response.body).not_to include("Assurance Fondation")
+    expect(page.at_css("select#legal_entity_id option[selected]")["value"]).to eq(srl.id.to_s)
+
+    get page.css("a").find { |a| a.text.include?("Nouvelle charge") }["href"]
+    expect(Nokogiri::HTML(response.body).at_css("#recurring_expense_legal_entity_id option[selected]")["value"]).to eq(srl.id.to_s)
+  end
 end

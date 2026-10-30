@@ -1,7 +1,7 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
            title: "Charges fixes",
-           links: [link_to("➕ Nouvelle charge", new_finance_recurring_expense_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+           links: [link_to("➕ Nouvelle charge", new_finance_recurring_expense_path(@entity ? { recurring_expense: { legal_entity_id: @entity.id } } : {}), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
 
 .mb-6.p-4.rounded-lg.border.border-teal-100(class="bg-teal-50/50")
   p.text-sm.text-gray-700
@@ -10,9 +10,11 @@
     =< link_to "trésorerie", finance_treasury_path, class: "text-blue-600 hover:text-blue-800"
     |  en projette les occurrences sur 90 jours. Ce n'est qu'une prévision — rien n'est comptabilisé. Quand la vraie facture du même tiers est encodée, elle remplace l'estimation pour sa période.
 
+= render "finance/shared/entity_filter", url: finance_recurring_expenses_path
+
 - if @recurring_expenses.empty?
   .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
-    p.font-medium.text-gray-700 Aucune charge fixe.
+    p.font-medium.text-gray-700= @entity ? "Aucune charge fixe pour #{@entity.name}." : "Aucune charge fixe."
     p.mt-1 Un abonnement internet, une assurance, un remboursement d'emprunt : tout ce qui revient à date fixe.
 - else
   .overflow-x-auto.relative
@@ -47,6 +49,6 @@
               = link_to "Modifier", edit_finance_recurring_expense_path(expense), class: "text-blue-500 hover:text-blue-700"
       tfoot
         tr.bg-gray-50.font-semibold.text-gray-900
-          td.py-3.px-6(colspan="4") Total des charges actives, sur un an
+          td.py-3.px-6(colspan="4")= @entity ? "Total des charges actives de #{@entity.name}, sur un an" : "Total des charges actives, toutes structures, sur un an"
           td.py-3.px-6.text-right.tabular-nums= number_to_currency(@yearly_cents / 100.0, unit: "€")
           td
