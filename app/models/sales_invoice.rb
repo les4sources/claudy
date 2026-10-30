@@ -134,6 +134,13 @@ class SalesInvoice < ApplicationRecord
   def on_payment? = posting_mode == "on_payment"
   def posted? = posted_at.present?
 
+  # Rattachée : l'écriture de vente existait avant la facture (reprise
+  # Winbooks, pièce passée à la main) et la facture la pointe sans l'avoir
+  # produite. Elle ne se contre-passe pas d'ici.
+  def attached?
+    journal_entry_id.present? && !(journal_entry&.source_type == "SalesInvoice" && journal_entry.source_id == id)
+  end
+
   def kind_label = KIND_LABELS.fetch(kind, kind)
 
   # « Payée » ne dit rien d'une note de crédit : elle est imputée sur la

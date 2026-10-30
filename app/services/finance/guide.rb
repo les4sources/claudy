@@ -351,9 +351,11 @@ module Finance
       ),
       "finance/sales_invoices" => Page.new(
         "Les factures émises dans OkiOki : ce qu'elles facturent et si elles sont payées.",
-        ["Une facture s'enregistre depuis ce qu'elle facture, sur la page Accueil › Facturation, avec son " \
-         "numéro OkiOki.",
-         "Son paiement se rapproche depuis « À affecter »."],
+        ["La facture d'un séjour s'enregistre depuis la page Accueil › Facturation, avec son numéro OkiOki. " \
+         "Toute autre facture, avec « Nouvelle facture » : son tiers et ses lignes, et l'écriture part au journal Ventes.",
+         "Une vente déjà au grand livre (reprise Winbooks, journal tenu à la main) se met au registre avec " \
+         "« Rattacher des écritures existantes » : aucune nouvelle écriture.",
+         "Son paiement se rapproche depuis « À affecter », en un ou plusieurs virements."],
         %w[facture-vente rapprocher]
       ),
       "finance/expense_reports" => Page.new(

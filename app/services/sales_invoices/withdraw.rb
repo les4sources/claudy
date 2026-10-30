@@ -7,6 +7,10 @@ module SalesInvoices
   #
   # Refusé tant qu'un encaissement y est rapproché ou qu'une note de crédit la
   # corrige : les retirer d'abord, sinon ils pointeraient une facture absente.
+  #
+  # Une facture RATTACHÉE à une écriture reprise (`AttachEntry`) se retire sans
+  # toucher au grand livre : l'écriture reste, ses encaissements redeviennent
+  # de simples imputations au 400000 du tiers, comme avant le rattachement.
   class Withdraw < ServiceBase
     class Refused < StandardError; end
 
@@ -21,6 +25,8 @@ module SalesInvoices
     private
 
     def withdraw
+      return detach if @invoice.attached?
+
       if @invoice.cash_allocations.any?
         raise Refused, "Cette facture porte des affectations bancaires — retire-les d'abord."
       end
@@ -34,6 +40,24 @@ module SalesInvoices
         ApplicationRecord.transaction do
           Unpost.new(sales_invoice: @invoice, whodunnit: @whodunnit).run!
           @invoice.destroy!
+          RefreshPayment.new(sales_invoice: corrigee).run! if corrigee
+        end
+      end
+
+      @invoice
+    end
+
+    def detach
+      if @invoice.credit_notes.any?
+        raise Refused, "Une note de crédit corrige cette facture (#{@invoice.credit_notes.map(&:number).join(', ')}) — retire-la d'abord."
+      end
+
+      corrigee = @invoice.credited_invoice
+
+      PaperTrail.request(whodunnit: @whodunnit || "sales_invoice") do
+        ApplicationRecord.transaction do
+          @invoice.cash_allocations.each { |allocation| allocation.relink_document!(nil) }
+          @invoice.reload.destroy!
           RefreshPayment.new(sales_invoice: corrigee).run! if corrigee
         end
       end

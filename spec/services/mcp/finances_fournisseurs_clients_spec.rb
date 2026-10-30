@@ -206,5 +206,37 @@ RSpec.describe Mcp::Server, "finances : fournisseurs et clients" do
       confirme("rapprocher_ligne", { "ligne" => seconde.id, "avec" => "facture_vente", "facture_vente" => facture.id, "montant" => "600" })
       expect(facture.reload.status).to eq("paid")
     end
+
+    it "rattache une écriture de vente reprise et relie son encaissement, sans nouvelle écriture" do
+      clients = build_general_account(code: "400000", name: "Clients", klass: 4, nature: "asset")
+      salles = build_general_account(code: "701002", name: "Location de salles", klass: 7, nature: "revenue")
+      banque = build_general_account(code: "550000", name: "Banque")
+      compte = build_cash_account(entity, banque)
+      ciep = ThirdParty.create!(name: "CIEP Namur", kind: "customer")
+      annee = Date.current.year
+      ecriture = Accounting::PostDocument.new(
+        legal_entity: entity, journal: "sales", entry_date: Date.new(annee, 1, 28), label: "#{annee}-094 CIEP Namur - ateliers",
+        lines: [{ account: clients, debit_cents: 75_000, credit_cents: 0, third_party: ciep },
+                { account: salles, debit_cents: 0, credit_cents: 75_000 }]
+      ).run!
+      virement = build_cash_entry(compte, amount_cents: 75_000, entry_date: Date.new(annee, 1, 29))
+      virement.update!(communication: "Paiement facture #{annee}-094")
+      virement.cash_allocations.create!(general_account: clients, legal_entity: entity, third_party: ciep, amount_cents: 75_000)
+      Accounting::PostCashEntry.new(cash_entry: virement.reload).run!
+
+      apercu = texte(outil("facture_vente", { "geste" => "enregistrer", "rattacher_ecriture" => ecriture.reference }))
+      expect(apercu).to include("aucune nouvelle écriture", "n° #{annee}-094", "CIEP Namur", "Paiement relié : ligne ##{virement.id}")
+      expect(SalesInvoice.count).to eq(0)
+
+      expect { confirme("facture_vente", { "geste" => "enregistrer", "rattacher_ecriture" => "#{annee}-094" }) }
+        .not_to change(JournalEntry, :count)
+      facture = SalesInvoice.find_by!(number: "#{annee}-094")
+      expect(facture).to have_attributes(journal_entry: ecriture, status: "paid", third_party: ciep)
+
+      expect(texte(outil("facture_vente", { "geste" => "corriger", "facture" => "#{annee}-094", "montant" => "700" })))
+        .to include("écriture reprise")
+      expect(confirme("facture_vente", { "geste" => "retirer", "facture" => "#{annee}-094" })).to include("retirée")
+      expect(virement.cash_allocations.sole.reload.document).to be_nil
+    end
   end
 end

@@ -8,6 +8,7 @@
 .mb-4.flex.flex-wrap.items-center.gap-2
   = link_to "Nouvelle facture", new_finance_sales_invoice_path, class: "inline-flex items-center rounded-lg bg-4s-main px-3 py-2 text-sm font-medium text-white hover:bg-teal-700"
   = link_to "Nouvelle note de crédit", new_finance_sales_invoice_path(type: "credit_note"), class: "inline-flex items-center rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 hover:border-stone-300"
+  = link_to "Rattacher des écritures existantes", attachable_finance_sales_invoices_path(legal_entity_id: params[:legal_entity_id]), class: "inline-flex items-center rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 hover:border-stone-300"
   = link_to "Factures de séjour : file Facturation", invoicing_path, class: "text-sm text-blue-500 hover:text-blue-700 ml-2"
 
 .mb-6.grid.grid-cols-1.gap-3(class="sm:grid-cols-3")

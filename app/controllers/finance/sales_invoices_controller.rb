@@ -141,7 +141,75 @@ module Finance
       redirect_to finance_sales_invoice_path(@invoice), alert: e.message
     end
 
+    # Reprise (Michael, 2026-10-30) : les écritures de vente déjà au grand
+    # livre (Winbooks, journal Ventes tenu à la main) qui attendent leur
+    # facture au registre. Le rattachement n'écrit rien au grand livre
+    # (`SalesInvoices::AttachEntry`).
+    def attachable
+      breadcrumb "Rattacher des écritures", attachable_finance_sales_invoices_path, match: :exact
+      load_attachable
+    end
+
+    def attach
+      entry = JournalEntry.find(params[:journal_entry_id])
+      service = SalesInvoices::AttachEntry.new(
+        journal_entry: entry,
+        attributes: { number: params[:number].to_s.strip, third_party_id: params[:third_party_id] },
+        whodunnit: current_user&.email
+      )
+      service.run!
+
+      redirect_to attachable_finance_sales_invoices_path(attachable_query(entry)),
+                  notice: attach_notice(service), status: :see_other
+    rescue SalesInvoices::AttachEntry::Refused, ActiveRecord::RecordInvalid => e
+      message = e.respond_to?(:record) ? e.record.errors.full_messages.to_sentence : e.message
+      redirect_to attachable_finance_sales_invoices_path(attachable_query(entry)), alert: message, status: :see_other
+    end
+
+    # Tout ce qui se lit sans aide (numéro en tête du libellé, tiers sur le
+    # 400000) se rattache d'un coup ; chaque écriture dans sa transaction, un
+    # refus n'arrête pas les suivantes.
+    def attach_all
+      load_attachable
+      faits = []
+      refus = []
+      @previews.select(&:ready?).each do |preview|
+        service = SalesInvoices::AttachEntry.new(journal_entry: preview.entry, whodunnit: current_user&.email)
+        service.run!
+        faits << service
+      rescue SalesInvoices::AttachEntry::Refused, ActiveRecord::RecordInvalid => e
+        refus << "#{preview.entry.reference} : #{e.respond_to?(:record) ? e.record.errors.full_messages.to_sentence : e.message}"
+      end
+
+      relies = faits.sum { |service| service.linked_allocations.size }
+      notice = "#{faits.size} facture(s) rattachée(s), #{relies} encaissement(s) relié(s)."
+      redirect_to attachable_finance_sales_invoices_path(legal_entity_id: @entity.id, year: @year),
+                  notice: notice, alert: refus.first(5).join(" · ").presence, status: :see_other
+    end
+
     private
+
+    def load_attachable
+      @entities = LegalEntity.actives.ordered
+      @entity = @entities.find_by(id: params[:legal_entity_id]) || @entities.first
+      @year = params[:year].to_i.between?(2000, 2100) ? params[:year].to_i : Date.current.year
+      entries = SalesInvoices::AttachEntry.attachable(legal_entity: @entity, from: Date.new(@year, 1, 1), to: Date.new(@year, 12, 31))
+                                          .includes(:fiscal_year, journal_lines: %i[general_account third_party])
+      @previews = entries.map { |entry| SalesInvoices::AttachEntry.new(journal_entry: entry).preview }
+      @third_parties = ThirdParty.actives.ordered
+    end
+
+    def attachable_query(entry)
+      { legal_entity_id: entry&.legal_entity_id, year: entry&.entry_date&.year }.compact
+    end
+
+    def attach_notice(service)
+      invoice = service.invoice
+      texte = "#{invoice.label} rattachée à #{invoice.journal_entry.reference}"
+      texte += " — #{service.linked_allocations.size} encaissement(s) relié(s)" if service.linked_allocations.any?
+      texte += ". #{service.warnings.join(' ')}" if service.warnings.any?
+      texte
+    end
 
     def get_invoice = @invoice = SalesInvoice.find(params[:id])
 

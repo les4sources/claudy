@@ -40,6 +40,11 @@ module SalesInvoices
             raise Refused, "Un encaissement est rapproché de cette facture : retire-le avant de changer de tiers ou d'entité."
           end
 
+          if repasser? && @invoice.attached?
+            raise Refused, "Cette facture pointe une écriture reprise (#{@invoice.journal_entry.reference}) : elle ne se " \
+                           "contre-passe pas d'ici. Retire-la du registre, puis rattache-la à nouveau."
+          end
+
           Unpost.new(sales_invoice: @invoice, whodunnit: @whodunnit).run! if repasser?
 
           @invoice.save!
