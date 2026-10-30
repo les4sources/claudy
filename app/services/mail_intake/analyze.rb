@@ -15,9 +15,10 @@ module MailIntake
     NONE = "aucun".freeze
     # Monte quand la lecture apprend quelque chose (v2 : de quoi créer le
     # fournisseur ; v3 : les factures électroniques UBL ; v4 : la communication
-    # de paiement). Le passage suivant du cron relit alors les mails encore à
-    # traiter — jamais ceux déjà classés ou ignorés.
-    VERSION = 4
+    # de paiement ; v5 : une facture d'une de nos structures à une autre est un
+    # achat, pas une vente). Le passage suivant du cron relit alors les mails
+    # encore à traiter — jamais ceux déjà classés ou ignorés.
+    VERSION = 5
     MAX_PDF_PAGES = 5
     MAX_TEXT = 8_000
     MAX_SUPPLIER_OPTIONS = 200
