@@ -170,7 +170,7 @@
             | Valider la fait passer « À payer » et génère l'écriture au journal des achats.
         - else
           p.text-sm.text-gray-600
-            | En attente du pôle #{@invoice.validation_team&.name || "concerné"}. Ses membres ont reçu un lien par email.
+            | En attente du pôle #{@invoice.validation_team&.name || "concerné"}. Ses membres la retrouvent dans le récapitulatif email du lundi matin.
       - elsif @invoice.member_paid?
         / La facture n'est plus qu'un justificatif : c'est la note qui
           rembourse le membre et qui porte la charge au grand livre.

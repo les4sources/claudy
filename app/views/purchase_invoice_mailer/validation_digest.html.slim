@@ -1,0 +1,52 @@
+- teams = @invoices.map(&:validation_team).compact.uniq.map(&:name)
+- many = @invoices.size > 1
+
+p Bonjour #{@human.name},
+
+p
+  - if many
+    | #{@invoices.size} factures d'achat attendent l'aval
+  - else
+    | Une facture d'achat attend l'aval
+  |  #{teams.size > 1 ? 'de tes pôles' : 'de ton pôle'} (#{teams.to_sentence}), pour
+    #{humanized_money_with_symbol(@total)} en tout. Tant que personne n'a répondu,
+    #{many ? 'elles ne sont pas payables' : "elle n'est pas payable"}.
+
+- @invoices.each do |invoice|
+  table style="width:100%;max-width:600px;border:1px solid #e5e7eb;border-radius:8px;margin:0 0 12px;border-collapse:separate" cellpadding="0" cellspacing="0"
+    tr
+      td style="padding:12px 16px"
+        p style="margin:0 0 4px;font-size:16px"
+          strong = invoice.third_party&.name.presence || "Fournisseur"
+          |  — #{humanized_money_with_symbol(Money.new(invoice.total_cents))}
+        p style="margin:0 0 4px;color:#4b5563;font-size:14px"
+          = [("N° #{invoice.number}" if invoice.number.present?),
+             "facture du #{l(invoice.issued_on, format: :long)}",
+             invoice.validation_team&.name,
+             invoice.legal_entity&.name].compact_blank.join(" · ")
+        - if invoice.due_on.present?
+          - if invoice.due_on < Date.current
+            p style="margin:0 0 4px;color:#b91c1c;font-size:14px"
+              strong Échue depuis le #{l(invoice.due_on, format: :long)}
+          - else
+            p style="margin:0 0 4px;color:#4b5563;font-size:14px"
+              | À payer avant le #{l(invoice.due_on, format: :long)}
+        - if invoice.notes.present?
+          p style="margin:0 0 4px;font-size:14px"
+            em = invoice.notes
+        - if invoice.double_signature?
+          p style="margin:0 0 4px;font-size:14px"
+            | Au-delà de 5 000 €, la banque exige deux signatures Triodos.
+        p style="margin:8px 0 0;font-size:14px"
+          = link_to "Valider ou refuser", finance_purchase_invoice_validation_url(invoice.validation_token, host: @link_host),
+                    style: "display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:6px 12px;border-radius:6px"
+          | &nbsp;&nbsp;
+          = link_to "Ouvrir dans Claudy", finance_purchase_invoice_url(invoice, host: @link_host), style: "color:#374151"
+
+p
+  | Le lien « Valider ou refuser » ouvre la facture sans connexion. Le refus
+    demande une connexion et un motif, pour que la comptabilité sache quoi dire
+    au fournisseur.
+
+p
+  = link_to "Toutes les factures à valider dans Claudy", @list_url

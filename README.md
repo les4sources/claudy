@@ -179,6 +179,7 @@ Claudy envoie plusieurs emails par des tâches rake idempotentes, lancées par l
 | `bundle exec rake kitchen:weekly_digest` | **vendredi 07:00** | Programme cuisine des 14 prochains jours, un email par responsable. |
 | `bundle exec rake kitchen:bread_reminders` | **quotidienne 07:00** | Rappel de commander le pain, 5 jours avant chaque prestation acceptée. |
 | `bundle exec rake finance:deadline_reminders` | **quotidienne 07:00** | Échéancier comptable : génère les échéances des 12 prochains mois, puis rappelle chaque échéance ouverte à J-14, J-3 et en retard (chaque semaine). Destinataire : le responsable de l'obligation, à défaut les destinataires comptables des réglages. |
+| `bundle exec rake finance:validation_digest` | **lundi 07:00** | Récapitulatif des factures d'achat « À valider » : un email par membre du pôle concerné, avec le lien de validation de chaque facture. Rien ne part si aucune facture n'attend. Remplace l'email envoyé à chaque facture. Garde-fou par semaine ISO (`FORCE=1` pour les essais). |
 | `APPLY=1 bundle exec rake stripe:prefill_fee_invoices` | quotidienne | Relève chez Stripe le total des frais de chaque mois terminé et le pose comme montant du justificatif (Comptabilité › Coût d'encaissement). Sans effet sur un mois déjà déclaré. Le PDF reste à déposer à la main. |
 | `bundle exec rake tranches_de_vie:sync_parties` | quotidienne | Répercute les annulations et remboursements des Pizza Party depuis Tranches de Vie. Sans effet si `TRANCHESDEVIE_API_KEY` est absente. |
 

@@ -10,6 +10,14 @@ namespace :finance do
     puts "[finance:deadline_reminders] #{generated} ; #{reminded} rappel(s) envoyé(s)"
   end
 
+  # Le récapitulatif des factures d'achat à valider, un email par membre du
+  # pôle. Lundi 07:00 (cron Hatchbox, Europe/Brussels) ; rien si rien n'attend.
+  desc "Récapitulatif du lundi des factures à valider (idempotent par semaine ISO ; FORCE=1 pour forcer)"
+  task validation_digest: :environment do
+    result = PurchaseInvoices::ValidationDigest.new(force: ENV["FORCE"].present?).run
+    puts "[finance:validation_digest] #{result}"
+  end
+
   desc "Sème les motifs de caisse avec le vocabulaire de la feuille papier (epic #243). Idempotent."
   task seed_cash_motifs: :environment do
     result = Finance::SeedCashMotifs.new.run

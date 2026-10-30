@@ -1,10 +1,10 @@
 module Notifications
   # « Une facture attend l'aval de ton pôle » (epic #242, phase 3).
   #
-  # Aux membres du pôle QUI ONT UN COMPTE. L'email à jeton (epic #240, phase 3)
-  # va, lui, à tous ceux qui ont une adresse : les deux ne visent pas la même
-  # population, et c'est voulu — on ne peut pas allumer une cloche chez quelqu'un
-  # qui n'a pas de compte.
+  # Aux membres du pôle QUI ONT UN COMPTE, et sans copie par email : l'email,
+  # c'est le récapitulatif du lundi (`PurchaseInvoices::ValidationDigest`), qui
+  # va à tous ceux qui ont une adresse. Une facture = un email, c'était trop
+  # (Michael, 2026-10-30).
   class PurchaseInvoiceToValidate
     def initialize(invoice)
       @invoice = invoice
@@ -22,7 +22,8 @@ module Notifications
         title: title,
         body: body,
         url: @invoice.comment_path,
-        notifiable: @invoice
+        notifiable: @invoice,
+        email: false
       )
     end
 

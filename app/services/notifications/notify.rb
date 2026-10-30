@@ -15,7 +15,9 @@ module Notifications
   class Notify < ServiceBase
     attr_reader :notification
 
-    def initialize(recipient:, kind:, title:, url:, body: nil, actor: nil, notifiable: nil)
+    # `email: false` : la cloche seule, quand un autre envoi porte déjà
+    # l'information (le récapitulatif du lundi des factures à valider).
+    def initialize(recipient:, kind:, title:, url:, body: nil, actor: nil, notifiable: nil, email: true)
       @recipient  = recipient
       @kind       = kind.to_s
       @title      = title
@@ -23,6 +25,7 @@ module Notifications
       @body       = body
       @actor      = actor
       @notifiable = notifiable
+      @email      = email
       @report_errors = true
     end
 
@@ -65,6 +68,7 @@ module Notifications
     # un destinataire sans adresse laissent le champ vide : c'est ce qui permet
     # de relire l'historique et de savoir ce qui a vraiment été envoyé.
     def deliver_email
+      return unless @email
       return unless @recipient.notify_by_email?
       return if @recipient.email.blank?
 

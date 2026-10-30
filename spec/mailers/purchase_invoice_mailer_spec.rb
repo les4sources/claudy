@@ -6,6 +6,7 @@ require Rails.root.join("spec/support/finance_builders")
 # comptable quand ça coince.
 RSpec.describe PurchaseInvoiceMailer do
   include FinanceBuilders
+  include ActiveSupport::Testing::TimeHelpers
 
   let!(:entity) { build_legal_entity(name: "Fondation Les 4 Sources") }
   let!(:charges) { build_general_account(code: "612000", name: "Énergie", klass: 6, nature: "expense") }
@@ -22,35 +23,45 @@ RSpec.describe PurchaseInvoiceMailer do
     facture.reload
   end
 
-  describe "validation_requested" do
-    subject(:mail) { described_class.validation_requested(invoice, "martin@les4sources.be") }
+  describe "validation_digest" do
+    let(:martin) { Human.create!(name: "Martin", email: "martin@les4sources.be", status: "active") }
+    let(:brico) do
+      autre = ThirdParty.create!(name: "Brico", kind: "supplier")
+      PurchaseInvoice.create!(legal_entity: entity, third_party: autre, issued_on: Date.new(2026, 6, 3),
+                              total_cents: 3_050, requires_validation: true, validation_team: technique)
+    end
 
-    it "nomme le fournisseur et le montant dans l'objet" do
+    subject(:mail) { described_class.validation_digest(martin, [invoice, brico]) }
+
+    it "compte les factures et leur total dans l'objet" do
       expect(mail.to).to eq(["martin@les4sources.be"])
-      expect(mail.subject).to eq("À valider — Antargaz — 120 €")
+      expect(mail.subject).to eq("2 factures à valider — 150,50 €")
     end
 
-    it "porte le lien signé de validation, et pas l'identifiant de la facture" do
-      body = mail.body.encoded
-
-      expect(body).to include("/achats/valider/")
-      # Le jeton, pas l'id : un lien devinable n'est pas un lien.
-      expect(body).not_to include("/achats/valider/#{invoice.id}")
+    it "accorde l'objet au singulier pour une seule facture" do
+      expect(described_class.validation_digest(martin, [invoice]).subject).to eq("1 facture à valider — 120 €")
     end
 
-    it "détaille la ventilation et renvoie aussi vers Claudy" do
+    it "liste chaque facture avec son lien signé, et pas l'identifiant" do
       body = CGI.unescapeHTML(mail.body.encoded)
 
-      expect(body).to include("Antargaz", "F-2026-42", "Pôle Technique", "Gaz mai")
-      expect(body).to include("Livraison du 28 mai")
-      expect(body).to include("/finance/purchases/#{invoice.id}")
+      expect(body).to include("Bonjour Martin", "Antargaz", "Brico", "F-2026-42", "Pôle Technique", "Livraison du 28 mai")
+      expect(body.scan("/achats/valider/").size).to eq(2)
+      # Le jeton, pas l'id : un lien devinable n'est pas un lien.
+      expect(body).not_to include("/achats/valider/#{invoice.id}\"")
+      expect(body).to include("/finance/purchases/#{invoice.id}", "/finance/purchases?status=to_validate")
+    end
+
+    it "signale une échéance dépassée" do
+      travel_to(Date.new(2026, 7, 2)) do
+        expect(CGI.unescapeHTML(mail.body.encoded)).to include("Échue depuis le 30 juin 2026")
+      end
     end
 
     it "annonce la double signature au-delà de 5 000 €" do
       invoice.update_columns(total_cents: 600_000)
-      invoice.purchase_invoice_lines.first.update_columns(amount_cents: 600_000)
 
-      body = CGI.unescapeHTML(described_class.validation_requested(invoice.reload, "martin@les4sources.be").body.encoded)
+      body = CGI.unescapeHTML(described_class.validation_digest(martin, [invoice.reload]).body.encoded)
 
       expect(body).to include("deux signatures Triodos")
     end
