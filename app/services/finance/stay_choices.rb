@@ -10,7 +10,11 @@ module Finance
   # Ce qu'une ligne bancaire a DÉJÀ ventilé sur chaque séjour est écrit dans le
   # libellé : c'est ce qui évite de compter deux fois la même recette.
   class StayChoices
-    Choice = Struct.new(:stay, :label, keyword_init: true)
+    # `amount_cents` : le montant proposé pour ce séjour (Michael, 2026-10-30).
+    # Ce qu'il attend encore des lignes bancaires (son total moins ce qu'elles
+    # y ont déjà ventilé) quand c'est moins que ce que la ligne porte : 74 €
+    # reçus pour un séjour de 70 € en proposent 70, le reste ira au bar.
+    Choice = Struct.new(:stay, :label, :amount_cents, keyword_init: true)
 
     def initialize(cash_entry:)
       @entry = cash_entry
@@ -26,7 +30,9 @@ module Finance
       deja = CashAllocation.where(document_type: "Stay", document_id: stays.map(&:id))
                            .group(:document_id).sum(:amount_cents)
 
-      stays.map { |stay| Choice.new(stay: stay, label: label(stay, deja[stay.id].to_i)) }
+      stays.map do |stay|
+        Choice.new(stay: stay, label: label(stay, deja[stay.id].to_i), amount_cents: montant(stay, deja[stay.id].to_i))
+      end
     end
 
     # Le séjour que la cascade aurait proposé, présélectionné dans la liste.
@@ -35,6 +41,12 @@ module Finance
     end
 
     private
+
+    def montant(stay, deja_cents)
+      reste_ligne = @entry.remaining_cents
+      attendu = stay.total_amount_cents.to_i - deja_cents
+      attendu.positive? && attendu < reste_ligne ? attendu : reste_ligne
+    end
 
     def label(stay, deja_cents)
       morceaux = ["##{stay.id}", stay.customer&.name || "sans client",

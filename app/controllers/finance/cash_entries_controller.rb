@@ -97,7 +97,6 @@ module Finance
     # file « À affecter » (Michael, 2026-10-19) : la liste des séjours pèse,
     # elle ne se calcule que pour la ligne qu'on ouvre.
     def stays
-      @allocations = @entry.cash_allocations.to_a
       charger_sejours
       render partial: "stay_frame", locals: { entry: @entry, stay_choices: @stay_choices,
                                               proposed_stay_id: @proposed_stay_id }
@@ -357,50 +356,27 @@ module Finance
     # Ventiler un séjour : les lignes viennent du devis reconstruit, la base est
     # l'argent reçu, et c'est un humain qui déclenche. L'IBAN du tiers est
     # mémorisé pour ce client — c'est ce qui fera que le prochain virement se
-    # rapprochera tout seul.
+    # rapprochera tout seul. Le montant est facultatif (Michael, 2026-10-30) :
+    # sans lui, tout ce que la ligne porte encore ; avec lui, le reste attend
+    # une affectation à la main (le bar payé avec la nuitée).
     def ventilate
       # Depuis la fiche, le séjour se choisit dans une liste (Michael,
       # 2026-10-19) : un envoi sans choix se refuse en mots, pas en 404.
       stay = Stay.find_by(id: params[:stay_id])
       return apres_affectation(@entry, finance_cash_entry_path(@entry), alert: "Choisis d'abord un séjour.") unless stay
 
-      entite = @entry.cash_account.legal_entity
-      lignes = []
-
-      # Tout dans la MÊME transaction : une ventilation créée sans son écriture
-      # comptable, ou sans l'IBAN appris, laisserait un état incohérent derrière
-      # une réponse d'échec.
-      ApplicationRecord.transaction do
-        @entry.lock!
-
-        # La ventilation se calcule APRÈS le verrou : calculée avant, elle
-        # totaliserait un montant que la ligne n'a peut-être plus.
-        lignes = Finance::VentilateStay.new(stay: stay, amount_cents: @entry.reload.amount_cents).run!
-
-        lignes.each do |ligne|
-          @entry.cash_allocations.create!(
-            general_account: ligne.general_account,
-            team: ligne.team,
-            legal_entity: entite,
-            amount_cents: ligne.amount_cents,
-            document: stay,
-            label: ligne.label
-          )
-        end
-
-        CustomerBankAccount.remember!(customer: stay.customer, iban: @entry.counterparty_iban,
-                                      holder_name: @entry.counterparty_name)
-
-        if @entry.reload.fully_allocated?
-          Accounting::PostCashEntry.new(cash_entry: @entry, whodunnit: current_user&.email).run!
-        end
-      end
+      montant = Monetize.parse(params[:amount].to_s).cents if params[:amount].present?
+      lignes = Finance::RecordStayVentilation.new(stay: stay, cash_entry: @entry, amount_cents: montant,
+                                                  whodunnit: current_user&.email).run!
 
       paiement = Stays::SyncBankPayments.summary(stay: stay.reload, cash_entry: @entry)
+      reste = @entry.reload.remaining_cents
       apres_affectation(@entry, finance_cash_entry_path(@entry),
                         notice: ["Séjour ##{stay.id} ventilé en #{lignes.size} ligne(s) — l'IBAN est mémorisé pour ce client.",
+                                 ("Reste #{Money.new(reste.abs, 'EUR').format} à affecter." unless reste.zero?),
                                  paiement].compact.join(" "))
-    rescue Finance::VentilateStay::EmptyQuote, Finance::VentilateStay::MissingMapping,
+    rescue Finance::RecordStayVentilation::InvalidAmount,
+           Finance::VentilateStay::EmptyQuote, Finance::VentilateStay::MissingMapping,
            Accounting::PostDocument::MissingFiscalYear => e
       apres_affectation(@entry, finance_cash_entry_path(@entry), alert: e.message)
     end
@@ -436,11 +412,12 @@ module Finance
 
     def get_entry = @entry = CashEntry.find(params[:id])
 
-    # Le choix d'un séjour à la main (Michael, 2026-10-19). Seulement sur une
-    # ligne entrante encore vierge : « Ventiler ce séjour » répartit le montant
-    # ENTIER de la ligne, il n'a pas de sens sur une ligne déjà entamée.
+    # Le choix d'un séjour à la main (Michael, 2026-10-19), sur une ligne
+    # entrante qui porte encore quelque chose : « Ventiler ce séjour » répartit
+    # le montant choisi, ce qui reste par défaut (Michael, 2026-10-30 : le bar
+    # peut être affecté avant ou après la nuitée).
     def charger_sejours
-      return unless @entry.incoming? && @entry.status == "pending" && @allocations.empty?
+      return unless @entry.incoming? && @entry.status == "pending" && @entry.remaining_cents.positive?
 
       choix = Finance::StayChoices.new(cash_entry: @entry)
       @stay_choices = choix.choices

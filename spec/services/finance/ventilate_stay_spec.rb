@@ -99,6 +99,36 @@ RSpec.describe Finance::VentilateStay do
     expect(lignes.map(&:amount_cents)).to eq([500, 500])
   end
 
+  # Séjour #1572 (Michael, 2026-10-30) : une chambre à 0 € et un prix imposé
+  # de 70 €. Aucune proportion, mais une seule nature de recette : elle prend
+  # tout.
+  it "range tout sur la seule nature de la composition quand rien ne porte de prix" do
+    stub_quote(lodging: 0)
+    booking = Booking.create!(firstname: "Anne-France", adults: 2, from_date: Date.new(2026, 8, 12),
+                              to_date: Date.new(2026, 8, 13))
+    booking.update_column(:price_cents, 0)
+    StayItem.create!(stay: stay, bookable: booking)
+
+    lignes = described_class.new(stay: stay, amount_cents: 7_000).run!
+
+    expect(lignes.map { |l| [l.category, l.general_account, l.amount_cents] }).to eq([["lodging", hebergement, 7_000]])
+  end
+
+  it "ne devine pas les parts de plusieurs natures sans prix" do
+    stub_quote(lodging: 0)
+    booking = Booking.create!(firstname: "Anne-France", adults: 2, from_date: Date.new(2026, 8, 12),
+                              to_date: Date.new(2026, 8, 13))
+    booking.update_column(:price_cents, 0)
+    StayItem.create!(stay: stay, bookable: booking)
+    repas = MealOrder.create!(stay: stay, kind: "repas", moment: "midi", date: Date.new(2026, 8, 12), people: 1,
+                              status: "confirmed", skip_notifications: true)
+    repas.update_column(:price_cents, 0)
+
+    expect {
+      described_class.new(stay: stay, amount_cents: 7_000).run!
+    }.to raise_error(described_class::EmptyQuote)
+  end
+
   it "refuse un devis vide quand la composition ne porte aucun prix non plus" do
     stub_quote(lodging: 0)
 

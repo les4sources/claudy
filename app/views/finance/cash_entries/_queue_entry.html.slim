@@ -262,16 +262,17 @@
         p.mb-3.text-xs.text-gray-400 Jev cherche une proposition…
 
     / Choisir le séjour à la main (Michael, 2026-10-19) quand la proposition
-      du dessus manque ou se trompe. Sur une ligne entrante encore vierge,
+      du dessus manque ou se trompe. Sur une ligne entrante qui porte encore
+      quelque chose (le bar peut passer avant la nuitée, Michael 2026-10-30),
       chargé seulement à l'ouverture de la ligne.
-    - if entry.incoming? && entry.cash_allocations.empty?
+    - if entry.incoming? && entry.remaining_cents.positive?
       = turbo_frame_tag dom_id(entry, :stays), src: stays_finance_cash_entry_path(entry), loading: :lazy, target: "_top"
         p.mb-3.text-xs.text-gray-400 Chargement des séjours…
 
     / Ce qui est déjà posé sur la ligne (epic #288, phase 6) : on complète
-      un découpage en voyant ses parts, pas à l'aveugle. Les aides du dessus
-      (séjour, règle) ne se proposent plus dès la première part — elles
-      raisonnent sur la ligne entière.
+      un découpage en voyant ses parts, pas à l'aveugle. La règle ne se
+      propose plus dès la première part (elle raisonne sur la ligne
+      entière) ; le choix d'un séjour, lui, ventile ce qui reste.
     - deja = entry.cash_allocations.to_a
     - if deja.any?
       .mb-3.rounded-lg.border.border-gray-100.bg-white.px-3.py-2

@@ -6,20 +6,31 @@
 .mb-4.p-4.bg-white.rounded-lg.border.border-gray-100
   h4.text-sm.font-semibold.text-gray-900 Rapprocher d'un séjour
   p.mt-1.mb-3.text-xs.text-gray-500
-    | Le montant de la ligne est ventilé selon le devis du séjour, puis la ligne est comptabilisée. Cherche par numéro ou par nom du client.
+    | Le montant est ventilé selon le devis du séjour ; s'il couvre toute la ligne, elle est comptabilisée, sinon le reste s'affecte ensuite à la main (le bar, par exemple). Cherche par numéro ou par nom du client.
     - if proposed_stay_id
       =< "Le séjour ##{proposed_stay_id} est proposé d'après la communication, l'IBAN, le nom ou le montant."
   - if stay_choices.empty?
     p.text-sm.text-gray-500 Aucun séjour non annulé autour de cette date.
   - else
-    = form_with url: ventilate_finance_cash_entry_path(entry), method: :post, class: "flex flex-wrap items-end gap-3" do
+    / Le montant suit le séjour choisi (Michael, 2026-10-30) : ce que le
+      séjour attend encore quand c'est moins que la ligne, sinon toute la ligne.
+    - montant = ->(cents) { number_with_precision(cents / 100.0, precision: 2, separator: ",") }
+    - propose = stay_choices.find { |choix| choix.stay.id == proposed_stay_id }
+    = form_with url: ventilate_finance_cash_entry_path(entry), method: :post, class: "flex flex-wrap items-end gap-3", data: { controller: "stay-amount", stay_amount_default_value: montant.call(entry.remaining_cents) } do
       div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un séjour…" class="relative w-full max-w-xl")
         = label_tag "stay_id_#{entry.id}", "Séjour", class: "block text-xs font-medium text-gray-500"
         = select_tag :stay_id,
-                     options_for_select(stay_choices.map { |choix| [choix.label, choix.stay.id] }, proposed_stay_id),
+                     options_for_select(stay_choices.map { |choix| [choix.label, choix.stay.id, { data: { amount: montant.call(choix.amount_cents) } }] }, proposed_stay_id),
                      id: "stay_id_#{entry.id}",
                      include_blank: "Choisir…",
                      class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
-                     data: { searchable_select_target: "select" }
+                     data: { searchable_select_target: "select", stay_amount_target: "select", action: "change->stay-amount#follow" }
         = render "shared/searchable_select_search", label: "Chercher un séjour"
+      div
+        = label_tag "stay_amount_#{entry.id}", "Montant (€)", class: "block text-xs font-medium text-gray-500"
+        = text_field_tag :amount, montant.call(propose&.amount_cents || entry.remaining_cents),
+                         id: "stay_amount_#{entry.id}",
+                         inputmode: "decimal",
+                         class: "mt-1 w-28 rounded-md border-gray-300 text-sm shadow-sm",
+                         data: { stay_amount_target: "amount" }
       button.inline-flex.items-center.rounded-md.border.border-transparent.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit") Ventiler ce séjour
