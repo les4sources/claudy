@@ -58,6 +58,19 @@ RSpec.describe Mcp::Server, "finances : états et paramétrage" do
 
       expect(texte(outil("vue_comptabilite", {}))).to include("Fondation Les 4 Sources", "exercice(s) ouvert(s) : #{annee}")
     end
+
+    it "lit la balance des tiers" do
+      fournisseurs = build_general_account(code: "440000", name: "Fournisseurs", klass: 4, nature: "liability")
+      proximus = ThirdParty.create!(name: "Proximus", kind: "supplier")
+      Accounting::PostDocument.new(
+        legal_entity: entity, journal: "purchases", entry_date: Date.new(annee, 3, 5), label: "Facture",
+        lines: [{ account: loyer, debit_cents: 7_500 }, { account: fournisseurs, credit_cents: 7_500, third_party: proximus }]
+      ).run!
+
+      tiers = texte(outil("balance_comptable", { "vue" => "tiers", "au" => "#{annee}-12-31" }))
+      expect(tiers).to include("Balance tiers · fournisseurs", "Proximus (440000)", "solde 75,00 €", "Nous devons 75,00 €")
+      expect(texte(outil("balance_comptable", { "vue" => "tiers", "cote" => "clients" }))).to include("aucun solde")
+    end
   end
 
   describe "l'échéancier" do

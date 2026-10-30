@@ -9,6 +9,10 @@
     = f.collection_select :general_account_id, @accounts, :id, :to_s, { include_blank: "Choisir un compte…", selected: @account&.id }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500", data: { searchable_select_target: "select" }
     = render "shared/searchable_select_search", label: "Chercher un compte"
   = hidden_field_tag :legal_entity_id, @entity.id if @entity
+  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Tous les tiers" data-searchable-select-clearable-value="true" class="relative w-56")
+    = f.label :third_party_id, "Tiers", class: "block text-sm font-medium text-gray-700"
+    = f.select :third_party_id, options_for_select([["(sans tiers)", "none"]] + @third_parties.map { |tp| [tp.name, tp.id] }, @without_third_party ? "none" : @third_party&.id), { include_blank: "Tous" }, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher un tiers"
   div
     = f.label :from, "Du", class: "block text-sm font-medium text-gray-700"
     = f.date_field :from, value: @from, label: false, class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
@@ -39,6 +43,7 @@
           th.py-3.px-6[scope="col"] Date
           th.py-3.px-6[scope="col"] Écriture
           th.py-3.px-6[scope="col"] Libellé
+          th.py-3.px-6[scope="col"] Tiers
           th.py-3.px-6[scope="col"] Pôle
           th.py-3.px-6.text-right[scope="col"] Débit
           th.py-3.px-6.text-right[scope="col"] Crédit
@@ -49,6 +54,7 @@
             td.py-4.px-6.whitespace-nowrap= l(line.journal_entry.entry_date, format: :short)
             td.py-4.px-6.whitespace-nowrap.text-gray-900= line.journal_entry.reference
             td.py-4.px-6= line.label.presence || line.journal_entry.label
+            td.py-4.px-6= line.third_party&.name || "—"
             td.py-4.px-6= line.team&.name || "—"
             td.py-4.px-6.text-right= line.debit_cents.positive? ? humanized_money_with_symbol(line.debit) : ""
             td.py-4.px-6.text-right= line.credit_cents.positive? ? humanized_money_with_symbol(line.credit) : ""

@@ -327,6 +327,9 @@ Rails.application.routes.draw do
     end
     post "immobilisations/dotations/:id/annuler", to: "fixed_assets#cancel_depreciation", as: :cancel_fixed_asset_depreciation
     get "trial_balance", to: "trial_balance#index"
+    # La balance des tiers (2026-10-30) : le solde de chaque fournisseur ou
+    # client à une date.
+    get "third_party_balance", to: "third_party_balance#index"
     # Journal de trésorerie (issue #179). `unallocated` est nommée AVANT la
     # ressource : sinon `/finance/cash_entries/unallocated` serait capté par
     # `show` avec `id = "unallocated"`.

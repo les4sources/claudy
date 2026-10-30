@@ -1,8 +1,9 @@
 module Mcp
   module Tools
     module Finances
-      # Comptabilité > États > Balance (TrialBalanceController#index) et
-      # Analytique (AnalyticBalanceController#index).
+      # Comptabilité > États > Balance (TrialBalanceController#index),
+      # Balance tiers (ThirdPartyBalanceController#index) et Analytique
+      # (AnalyticBalanceController#index).
       class BalanceComptable < Base
         include Commun
 
@@ -10,11 +11,14 @@ module Mcp
              title: "Balance générale ou analytique",
              description: "`generale` (défaut) : chaque compte mouvementé sur la période, total débit, total crédit et " \
                           "solde, et si la balance est équilibrée. `analytique` : par pôle, charges (classe 6), " \
-                          "produits (classe 7) et résultat, plus ce qui n'est ventilé sur aucun pôle. Défaut : " \
+                          "produits (classe 7) et résultat, plus ce qui n'est ventilé sur aucun pôle. `tiers` : au soir de " \
+                          "`au` (défaut aujourd'hui), le solde de chaque fournisseur (comptes 44, `cote` " \
+                          "fournisseurs) ou client (comptes 40, `cote` clients), plus gros d'abord. Défaut : " \
                           "l'année civile, toutes entités.",
              schema: {
                properties: {
-                 vue: { type: "string", enum: %w[generale analytique] },
+                 vue: { type: "string", enum: %w[generale analytique tiers] },
+                 cote: { type: "string", enum: %w[fournisseurs clients], description: "Pour la vue `tiers` (défaut fournisseurs)." },
                  entite: ENTITE.merge(description: "Facultatif : une seule entité."),
                  du: DATE, au: DATE,
                  classe: { type: "integer", description: "Pour la balance générale : une seule classe du plan (1 à 7)." }
@@ -23,6 +27,8 @@ module Mcp
 
         def call(arguments)
           entite = arguments["entite"].present? ? entite!(arguments["entite"]) : nil
+          return tiers(entite, arguments) if arguments["vue"] == "tiers"
+
           du, au = periode!(arguments)
           titre = "du #{du} au #{au}#{" · #{entite.name}" if entite}"
           scope = JournalLine.joins(:journal_entry).where(journal_entries: { entry_date: du..au })
@@ -49,6 +55,27 @@ module Mcp
            *lignes.map { |c, d, cr| "#{c} · débit #{euros(d)} · crédit #{euros(cr)} · solde #{solde_lisible(d - cr)}" },
            "Total · débit #{euros(debit)} · crédit #{euros(credit)} · " \
            "#{debit == credit ? 'équilibrée' : "ÉCART #{euros(debit - credit)}"}#{' (une classe seulement)' if classe.present?}"].join("\n")
+        end
+
+        def tiers(entite, arguments)
+          au = arguments["au"].present? ? date!(arguments["au"], "au") : Date.current
+          balance = Accounting::ThirdPartyBalance.new(
+            side: arguments["cote"] == "clients" ? "customers" : "suppliers", as_of: au,
+            entities: entite ? [entite] : LegalEntity.actives.ordered.to_a
+          )
+          titre = "Balance tiers · #{balance.label.downcase} au #{au}#{" · #{entite.name}" if entite}"
+          lignes = balance.open_rows
+          return "#{titre} : aucun solde." if lignes.empty?
+
+          fournisseurs = balance.side == "suppliers"
+          [titre,
+           *lignes.map do |row|
+             du = row.due_cents.negative? ? "#{euros(-row.due_cents)} d'avance" : euros(row.due_cents)
+             "#{row.name} (#{row.accounts.map(&:code).join(', ')}) · ouverture #{euros(row.opening_due_cents)} · " \
+               "débit #{euros(row.debit_cents)} · crédit #{euros(row.credit_cents)} · solde #{du}"
+           end,
+           "#{fournisseurs ? 'Nous devons' : 'On nous doit'} #{euros(balance.owed_cents)} · " \
+           "avances #{euros(balance.advances_cents)} · net #{euros(balance.total_due_cents)}"].join("\n")
         end
 
         def analytique(scope, titre)
