@@ -22,6 +22,8 @@
     .text-xs.uppercase.tracking-wide.text-amber-700 Reste à payer
     .mt-1.text-2xl.font-semibold.tabular-nums.text-amber-900 = expense_amount(@totals[:to_pay_cents])
 
+= render "finance/shared/entity_filter", url: finance_expense_reports_path, selected: params[:legal_entity_id]
+
 = form_with url: finance_expense_reports_path, method: :get, class: "mb-4 flex flex-wrap items-end gap-3" do
   div(data-controller="searchable-select" data-searchable-select-placeholder-value="Tous les statuts" data-searchable-select-clearable-value="true" class="relative w-40")
     = label_tag :status, "Statut", class: "block text-xs text-gray-500"
@@ -44,13 +46,7 @@
                  class: "mt-1 block w-full rounded-md border-gray-300 text-sm",
                  data: { searchable_select_target: "select" }
     = render "shared/searchable_select_search", label: "Chercher une personne"
-  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Toutes les entités" data-searchable-select-clearable-value="true" class="relative w-48")
-    = label_tag :legal_entity_id, "Entité", class: "block text-xs text-gray-500"
-    = select_tag :legal_entity_id,
-                 options_from_collection_for_select(@entities, :id, :name, params[:legal_entity_id]).then { |options| raw("<option value=\"\">Toutes</option>") + options },
-                 class: "mt-1 block w-full rounded-md border-gray-300 text-sm",
-                 data: { searchable_select_target: "select" }
-    = render "shared/searchable_select_search", label: "Chercher une entité"
+  = hidden_field_tag :legal_entity_id, params[:legal_entity_id] if params[:legal_entity_id].present?
   label.text-xs.text-gray-500
     | Du
     = date_field_tag :from, params[:from], class: "mt-1 block rounded-md border-gray-300 text-sm"

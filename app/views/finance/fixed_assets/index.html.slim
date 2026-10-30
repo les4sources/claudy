@@ -5,17 +5,18 @@
 
 - money = ->(cents) { cents.nil? ? "—" : humanized_money_with_symbol(Money.new(cents, "EUR")) }
 
-= form_with url: finance_fixed_assets_path, method: :get, class: "mb-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap items-end gap-4" do |f|
-  div(data-controller="searchable-select" class="relative w-64")
-    = f.label :legal_entity_id, "Entité", class: "block text-sm font-medium text-gray-700"
-    = f.select :legal_entity_id, options_from_collection_for_select(@entities, :id, :name, @entity&.id), {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
-    = render "shared/searchable_select_search", label: "Chercher une entité"
-  - if @years.any?
+/ Une structure à la fois : l'exercice choisi est le sien, on l'oublie en
+  changeant de structure.
+= render "finance/shared/entity_filter", url: finance_fixed_assets_path, all: false, drop: :fiscal_year_id
+
+- if @years.any?
+  = form_with url: finance_fixed_assets_path, method: :get, class: "mb-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap items-end gap-4" do |f|
+    = hidden_field_tag :legal_entity_id, @entity.id if @entity
     div(data-controller="searchable-select" class="relative w-40")
       = f.label :fiscal_year_id, "Exercice", class: "block text-sm font-medium text-gray-700"
       = f.select :fiscal_year_id, options_for_select(@years.map { |year| [year.label, year.id] }, @year&.id), {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
       = render "shared/searchable_select_search", label: "Chercher un exercice"
-  button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="submit" class="hover:bg-gray-50") Afficher
+    button.inline-flex.items-center.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="submit" class="hover:bg-gray-50") Afficher
 
 - if @year
   - due = @posting.rows

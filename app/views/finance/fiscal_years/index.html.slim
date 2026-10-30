@@ -7,11 +7,7 @@
   p.text-sm.text-gray-700
     | Clôturer un exercice affecte son résultat au résultat reporté, rend ses écritures définitives (elles ne se corrigent plus que par contre-passation) et pose l'à-nouveau de l'exercice suivant. On clôture dans l'ordre, et seul le dernier exercice clôturé d'une entité peut se rouvrir, motif à l'appui.
 
-- if @entity_filter
-  .mb-4.flex.items-center.gap-3.text-sm
-    span.px-2.py-1.rounded-full.bg-blue-50.text-blue-700
-      | Exercices de #{@entity_filter.name}
-    = link_to "Voir tous les exercices", finance_fiscal_years_path, class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+= render "finance/shared/entity_filter", url: finance_fiscal_years_path, entities: @entities, selected: @entity_filter
 
 .overflow-x-auto.relative
   table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
