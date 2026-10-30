@@ -368,6 +368,8 @@ Rails.application.routes.draw do
         # Le solder par une ligne bancaire déjà passée (un porteur payé sur
         # facture, en un ou plusieurs virements).
         post :pay
+        # Le repasser au nom de qui paie le porteur aujourd'hui.
+        post :repost
       end
     end
     get "collection_cost", to: "collection_cost#index"

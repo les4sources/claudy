@@ -57,6 +57,20 @@
           | Il apparaît dans
           = link_to " Comptabilité > À payer", finance_payables_path, class: "text-4s-main hover:underline"
           | , avec la communication #{@statement.reference}. Il se solde par rapprochement, pas à la main.
+        - if @statement.paid_through?
+          p.mt-1 = "Adressé à #{@statement.payee_name}, qui paie #{@human.name}."
+
+    / Le porteur est payé par un autre tiers depuis l'émission : la dette est
+      encore au nom de l'ancien. Contre-passer et repasser, sans email.
+    - if @repost.needed?
+      .px-4.py-4.border-t.border-amber-200.bg-amber-50
+        p.text-sm.text-amber-800
+          | La fiche de #{@human.name} dit de payer #{@repost.target_name}, mais ce relevé est encore adressé à #{@statement.payee_name}. « Repasser au nom de #{@repost.target_name} » contre-passe l'écriture et la repasse, même charge, avec la dette au nom de #{@repost.target_name}. Les deux écritures restent au grand livre, aucun email ne part.
+        = button_to "Repasser au nom de #{@repost.target_name}",
+                    repost_finance_carrier_statement_path(@statement),
+                    method: :post,
+                    form: { class: "mt-3", data: { turbo_confirm: "Repasser ce relevé au nom de #{@repost.target_name} ? L'écriture actuelle sera contre-passée." } },
+                    class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
 
   - if @payments.any?
     .bg-white.shadow.sm:rounded-lg.px-4.py-4
