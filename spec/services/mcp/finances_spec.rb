@@ -110,6 +110,33 @@ RSpec.describe Mcp::Server, "finances" do
     expect(entry.reload.cash_allocations.size).to eq(1)
   end
 
+  # Séjour #1572 (Michael, 2026-10-30) : une chambre à 0 €, 70 € imposés,
+  # 74 € reçus. 70 € vont au séjour, les 4 € restants au bar.
+  it "ventile une partie de la ligne sur un séjour au prix imposé, puis le reste au bar" do
+    hebergement = build_general_account(code: "700000", name: "Hébergement", klass: 7, nature: "revenue")
+    RevenueMapping.create!(category: "lodging", general_account: hebergement)
+    client = Customer.create!(first_name: "Anne-France", last_name: "Degeye", email: "af@example.org")
+    stay = Stay.create!(customer: client, arrival_date: jour, departure_date: jour + 1, price_override_cents: 7_000)
+    chambre = Booking.create!(firstname: "Anne-France", adults: 2, from_date: jour, to_date: jour + 1)
+    chambre.update_column(:price_cents, 0)
+    StayItem.create!(stay: stay, bookable: chambre)
+    allow(Stays::DraftReconstructor).to receive(:priced).and_return(:draft)
+    allow(PricingModel).to receive(:quote).and_return(
+      instance_double(PricingModel::Quote, lodging_only_cents: 0, spaces_cents: 0, meals_cents: 0, camping_cents: 0,
+                                           van_cents: 0, terrace_cents: 0, hamac_cents: 0, experiences_cents: 0)
+    )
+    entry = ligne(7_400, label: "Bar cafe et nuit 2 personnes")
+
+    confirme("rapprocher_ligne", { "ligne" => entry.id, "avec" => "sejour", "sejour" => stay.id, "montant" => "70" })
+    expect(entry.reload.cash_allocations.map { |a| [a.general_account, a.amount_cents, a.document] })
+      .to eq([[hebergement, 7_000, stay]])
+    expect(entry.remaining_cents).to eq(400)
+    expect(entry).not_to be_posted
+
+    confirme("affecter_ligne", { "ligne" => entry.id, "parts" => [{ "compte" => "700300", "montant" => "4" }] })
+    expect(entry.reload).to be_posted
+  end
+
   it "refuse des parts qui dépassent la ligne" do
     entry = ligne(5_000)
     resultat = outil("affecter_ligne", { "ligne" => entry.id, "parts" => [{ "compte" => "700300", "montant" => "40" },

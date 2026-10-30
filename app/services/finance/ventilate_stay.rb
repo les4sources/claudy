@@ -43,11 +43,17 @@ module Finance
       poids = recorded_weights if poids.values.sum <= 0
       # Les services annexes (Michael, 2026-10-23) ne sont pas dans le devis :
       # leur montant saisi s'ajoute aux poids, à côté du reste.
-      poids = poids.merge(service_weights)
+      services = service_weights
+      # Un séjour au prix imposé dont la composition est à 0 € (Michael,
+      # 2026-10-30 : séjour #1572, une chambre à 0 € et 70 € imposés) n'a
+      # aucune proportion à donner. S'il ne compte qu'une seule nature de
+      # recette, elle prend tout : il n'y a rien à répartir.
+      poids = single_nature_weights if poids.values.sum <= 0 && services.empty?
+      poids = poids.merge(services)
       if poids.values.sum <= 0
         raise EmptyQuote,
-              "Le devis reconstruit du séjour ##{@stay.id} est vide, et sa composition ne porte aucun prix : " \
-              "impossible d'en tirer une ventilation. Affecte la ligne à la main."
+              "Le devis reconstruit du séjour ##{@stay.id} est vide, et sa composition ne porte aucun prix " \
+              "ni une seule nature de recette : impossible d'en tirer une ventilation. Affecte la ligne à la main."
       end
 
       categories = poids.keys
@@ -99,18 +105,33 @@ module Finance
     def recorded_weights
       poids = Hash.new(0)
       @stay.stay_items.filter_map(&:bookable).each do |bookable|
-        categorie = case bookable
-                    when Booking then "lodging"
-                    when SpaceBooking then "spaces"
-                    when CampingBooking then bookable.kind == "terrasse" ? "terrace" : "camping"
-                    when VanBooking then "van"
-                    when HamacBooking then "hamac"
-                    end
+        categorie = categorie_de(bookable)
         poids[categorie] += bookable.try(:price_cents).to_i if categorie
       end
       poids["meals"] += @stay.meal_orders.active.sum(:price_cents).to_i
       poids["experiences"] += @stay.experience_bookings.active.sum { |activite| activite.price_cents.to_i }
       poids.reject { |_category, montant| montant <= 0 }
+    end
+
+    # Le dernier repli, quand rien ne porte de prix : les natures présentes
+    # dans la composition. Une seule, et elle prend tout ; plusieurs, et on ne
+    # devine pas leurs parts (la ventilation mentirait sur la nature).
+    def single_nature_weights
+      natures = @stay.stay_items.filter_map(&:bookable).filter_map { |bookable| categorie_de(bookable) }
+      natures << "meals" if @stay.meal_orders.active.exists?
+      natures << "experiences" if @stay.experience_bookings.active.any?
+      natures.uniq!
+      natures.one? ? { natures.first => 1 } : {}
+    end
+
+    def categorie_de(bookable)
+      case bookable
+      when Booking then "lodging"
+      when SpaceBooking then "spaces"
+      when CampingBooking then bookable.kind == "terrasse" ? "terrace" : "camping"
+      when VanBooking then "van"
+      when HamacBooking then "hamac"
+      end
     end
 
     # Les services annexes, regroupés par compte de recette : celui que la

@@ -22,7 +22,8 @@ module Mcp
           "reglement_deja_encode" => "relier au compte d'un habitant un virement dont le règlement est DÉJÀ au grand " \
                                      "livre (reprise) : affecte la ligne en 400000 sans second règlement (ligne entrante ; " \
                                      "`compte`, `montant` facultatif)",
-          "sejour" => "ventiler le paiement d'un séjour selon son devis (ligne entrante ; `sejour`)",
+          "sejour" => "ventiler le paiement d'un séjour selon son devis (ligne entrante ; `sejour`, `montant` facultatif : " \
+                      "sans lui, tout ce que la ligne porte encore ; le reste s'affecte ensuite avec affecter_ligne)",
           "facture_vente" => "encaisser une facture de vente émise (ligne entrante ; `facture_vente`)",
           "versement_stripe" => "rapprocher un versement Stripe de la banque (ligne entrante ; `versement_stripe`)"
         }.freeze
@@ -164,7 +165,7 @@ module Mcp
                                                     amount_cents: d[:montant], whodunnit: whodunnit,
                                                     already_recorded: true).run!
               "#{ligne_tresorerie(entry.reload)}\nRelié à #{MemberAccount.find(d[:cible]).code}, sans nouveau règlement."
-            when "sejour" then ventiler_sejour(entry, Stay.find(d[:cible]))
+            when "sejour" then ventiler_sejour(entry, Stay.find(d[:cible]), d[:montant])
             when "facture_vente"
               lignes = ::Finance::RecordSalesInvoicePayment.new(sales_invoice: SalesInvoice.find(d[:cible]), cash_entry: entry,
                                                                 whodunnit: whodunnit).run!
@@ -179,16 +180,9 @@ module Mcp
 
         # Le geste « Ventiler » de la file : les lignes viennent du devis du
         # séjour, la base est l'argent reçu, l'IBAN est appris pour ce client.
-        def ventiler_sejour(entry, stay)
-          entite = entry.cash_account.legal_entity
-          entry.lock!
-          lignes = ::Finance::VentilateStay.new(stay: stay, amount_cents: entry.reload.amount_cents).run!
-          lignes.each do |ligne|
-            entry.cash_allocations.create!(general_account: ligne.general_account, team: ligne.team, legal_entity: entite,
-                                           amount_cents: ligne.amount_cents, document: stay, label: ligne.label)
-          end
-          CustomerBankAccount.remember!(customer: stay.customer, iban: entry.counterparty_iban, holder_name: entry.counterparty_name)
-          ::Accounting::PostCashEntry.new(cash_entry: entry, whodunnit: whodunnit).run! if entry.reload.fully_allocated?
+        def ventiler_sejour(entry, stay, montant)
+          lignes = ::Finance::RecordStayVentilation.new(stay: stay, cash_entry: entry, amount_cents: montant,
+                                                        whodunnit: whodunnit).run!
 
           # L'outil écrit dans UNE transaction : le rapprochement du paiement,
           # qui tourne d'habitude au commit, est lancé ici pour que la réponse

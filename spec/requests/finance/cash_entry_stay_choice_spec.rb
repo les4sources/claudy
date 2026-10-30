@@ -65,7 +65,7 @@ RSpec.describe "Comptabilité — rapprocher une ligne d'un séjour choisi", typ
 
       get finance_cash_entry_path(entry)
 
-      expect(response.body).to match(/<option selected="selected" value="#{stay.id}">/)
+      expect(response.body).to match(/<option [^>]*selected="selected" value="#{stay.id}">/)
     end
 
     it "ne propose rien sur une ligne sortante" do
@@ -76,13 +76,37 @@ RSpec.describe "Comptabilité — rapprocher une ligne d'un séjour choisi", typ
       expect(response.body).not_to include("name=\"stay_id\"")
     end
 
-    it "ne propose rien sur une ligne déjà entamée" do
+    # Le bar peut être affecté avant la nuitée (Michael, 2026-10-30) : une
+    # ligne entamée propose encore un séjour, pour ce qui reste.
+    it "propose encore un séjour sur une ligne entamée, pour ce qui reste" do
       hebergement = build_general_account(code: "700000", name: "Hébergement", klass: 7, nature: "revenue")
       entry.cash_allocations.create!(general_account: hebergement, legal_entity: entity, amount_cents: 10_000)
 
       get finance_cash_entry_path(entry)
 
+      expect(response.body).to include("name=\"stay_id\"")
+      expect(response.body).to include("value=\"1200,00\"")
+    end
+
+    it "ne propose rien sur une ligne entièrement affectée" do
+      hebergement = build_general_account(code: "700000", name: "Hébergement", klass: 7, nature: "revenue")
+      entry.cash_allocations.create!(general_account: hebergement, legal_entity: entity, amount_cents: 130_000)
+
+      get finance_cash_entry_path(entry)
+
       expect(response.body).not_to include("name=\"stay_id\"")
+    end
+
+    # 74 € reçus pour un séjour au prix imposé de 70 € (Michael, 2026-10-30) :
+    # le séjour propose ce qu'il attend, pas toute la ligne.
+    it "propose pour chaque séjour ce qu'il attend encore, sans dépasser la ligne" do
+      entry.update!(amount_cents: 134_000, communication: "SEJOUR ##{stay.id}")
+
+      get finance_cash_entry_path(entry)
+
+      expect(response.body).to include("data-amount=\"1300,00\"")
+      expect(response.body).to include("id=\"stay_amount_#{entry.id}\"")
+      expect(response.body).to match(/value="1300,00"[^>]*id="stay_amount_#{entry.id}"|id="stay_amount_#{entry.id}"[^>]*value="1300,00"/)
     end
   end
 
@@ -126,6 +150,40 @@ RSpec.describe "Comptabilité — rapprocher une ligne d'un séjour choisi", typ
       expect(entry.cash_allocations.reload.map(&:document)).to all(eq(stay))
       expect(entry.reload).to be_fully_allocated
       expect(entry).to be_posted
+    end
+
+    it "ne ventile que le montant choisi et laisse le reste à affecter" do
+      stub_quote(lodging: 130_000)
+      entry.update!(amount_cents: 134_000)
+
+      post ventilate_finance_cash_entry_path(entry), params: { stay_id: stay.id, amount: "1300,00" }
+
+      expect(flash[:notice]).to include("Reste 40 € à affecter")
+      expect(entry.cash_allocations.reload.sum(:amount_cents)).to eq(130_000)
+      expect(entry.reload.remaining_cents).to eq(4_000)
+      expect(entry).not_to be_posted
+    end
+
+    it "ventile ce qui reste quand la ligne est déjà entamée" do
+      stub_quote(lodging: 130_000)
+      bar = build_general_account(code: "701001", name: "Bar", klass: 7, nature: "revenue")
+      entry.update!(amount_cents: 134_000)
+      entry.cash_allocations.create!(general_account: bar, legal_entity: entity, amount_cents: 4_000)
+
+      post ventilate_finance_cash_entry_path(entry), params: { stay_id: stay.id }
+
+      expect(entry.cash_allocations.reload.where(document: stay).sum(:amount_cents)).to eq(130_000)
+      expect(entry.reload).to be_fully_allocated
+      expect(entry).to be_posted
+    end
+
+    it "refuse un montant plus grand que ce que la ligne porte" do
+      stub_quote(lodging: 130_000)
+
+      post ventilate_finance_cash_entry_path(entry), params: { stay_id: stay.id, amount: "1400" }
+
+      expect(flash[:alert]).to include("ne porte plus que")
+      expect(entry.cash_allocations.reload).to be_empty
     end
 
     it "refuse en mots un envoi sans séjour" do
