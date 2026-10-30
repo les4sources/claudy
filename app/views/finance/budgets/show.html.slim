@@ -6,11 +6,10 @@
 - budget = @sheet.budget
 - reference = @sheet.reference
 
+= render "finance/shared/entity_filter", url: finance_budget_path, param: :entity_id, all: false
+
 = form_with url: finance_budget_path, method: :get, class: "mb-6 p-4 bg-white rounded-lg border border-gray-100 flex flex-wrap items-end gap-4" do |f|
-  div(data-controller="searchable-select" class="relative w-64")
-    = f.label :entity_id, "Entité", class: "block text-sm font-medium text-gray-700"
-    = f.select :entity_id, options_from_collection_for_select(@entities, :id, :name, @entity.id), {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
-    = render "shared/searchable_select_search", label: "Chercher une entité"
+  = hidden_field_tag :entity_id, @entity.id
   div(data-controller="searchable-select" class="relative w-32")
     = f.label :year, "Année", class: "block text-sm font-medium text-gray-700"
     = f.select :year, options_for_select(((Date.current.year - 1)..(Date.current.year + 1)).to_a, @year), {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }

@@ -7,14 +7,7 @@
            links: [link_to("Obligations", finance_compliance_obligations_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
                    link_to("Nouvelle obligation", new_finance_compliance_obligation_path, class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90")]
 
-/ Filtre par entité : trois pastilles et « Toutes ». Un lien, pas un
-  formulaire — le filtre se partage et se recharge.
-.mb-5.flex.flex-wrap.gap-2
-  = link_to "Toutes", finance_compliance_deadlines_path,
-            class: "rounded-full px-3 py-1 text-sm #{@entity_id ? 'bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50' : 'bg-gray-900 text-white'}"
-  - @entities.each do |entity|
-    = link_to entity.name, finance_compliance_deadlines_path(entity: entity.id),
-              class: "rounded-full px-3 py-1 text-sm #{@entity_id == entity.id ? 'bg-gray-900 text-white' : 'bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50'}"
+= render "finance/shared/entity_filter", url: finance_compliance_deadlines_path, param: :entity, selected: @entity_id
 
 - if [@overdue, @soon, @later, @recent].all?(&:empty?)
   .p-8.text-center.bg-white.rounded-lg.border.border-gray-100

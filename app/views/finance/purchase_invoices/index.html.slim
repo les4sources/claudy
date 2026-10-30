@@ -14,6 +14,8 @@
       p.mt-1.text-lg.font-semibold.text-gray-900= number_to_currency(donnees[:cents] / 100.0)
       p.text-xs.text-gray-400= "#{donnees[:count]} facture(s)"
 
+= render "finance/shared/entity_filter", url: finance_purchase_invoices_path, selected: params[:legal_entity_id]
+
 = form_with url: finance_purchase_invoices_path, method: :get, class: "mb-5 flex flex-wrap items-end gap-3" do
   = hidden_field_tag :status, params[:status] if params[:status].present?
   = hidden_field_tag :sort, @sort if @sort == "due_on"
@@ -21,10 +23,7 @@
     label.block.text-xs.font-medium.text-gray-500 Fournisseur
     = select_tag :third_party_id, options_from_collection_for_select(@third_parties, :id, :name, params[:third_party_id]), include_blank: "Tous", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
     = render "shared/searchable_select_search", label: "Chercher un fournisseur"
-  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Toutes les entités" data-searchable-select-clearable-value="true" class="relative w-48")
-    label.block.text-xs.font-medium.text-gray-500 Entité
-    = select_tag :legal_entity_id, options_from_collection_for_select(@entities, :id, :name, params[:legal_entity_id]), include_blank: "Toutes", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
-    = render "shared/searchable_select_search", label: "Chercher une entité"
+  = hidden_field_tag :legal_entity_id, params[:legal_entity_id] if params[:legal_entity_id].present?
   div(data-controller="searchable-select" data-searchable-select-placeholder-value="Tous les pôles" data-searchable-select-clearable-value="true" class="relative w-48")
     label.block.text-xs.font-medium.text-gray-500 Pôle
     = select_tag :team_id, options_from_collection_for_select(@teams, :id, :name, params[:team_id]), include_blank: "Tous", class: "mt-1 rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }

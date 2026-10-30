@@ -1,20 +1,27 @@
-/ Le filtre « Structure » en haut d'un écran de la Comptabilité (2026-10-30) :
-  sans lui, on ne sait pas si la liste parle de toutes les structures ou d'une
-  seule. Le choix EST la validation (auto-submit) ; « Toutes » = pas de filtre.
-  Le contrôleur pose `@entities` et `@entity` (`load_entity_filter`).
-  Locales : url (l'écran lui-même), hint (facultatif, ce que le filtre touche).
-= form_with url: url, method: :get, class: "mb-5 flex flex-wrap items-end gap-x-4 gap-y-2", data: { controller: "auto-submit" } do
-  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Toutes les structures" data-searchable-select-clearable-value="true" class="relative w-64")
-    label.block.text-xs.font-medium.text-gray-500(for="legal_entity_id") Structure
-    = select_tag :legal_entity_id, options_from_collection_for_select(@entities, :id, :name, @entity&.id),
-                 include_blank: "Toutes les structures", class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
-                 data: { searchable_select_target: "select", action: "change->auto-submit#submit" }
-    = render "shared/searchable_select_search", label: "Chercher une structure"
-  p.pb-2.text-sm.text-gray-500
-    - if @entity
-      = "Seulement #{@entity.name}. "
-      = link_to "Voir toutes les structures", url, class: "text-blue-500 hover:text-blue-700"
-    - else
-      = local_assigns[:hint] || "Toutes les structures confondues."
-  noscript
-    button.rounded-md.border.border-gray-300.bg-white.px-3.py-2.text-sm(type="submit") Filtrer
+/ Le filtre « Structure » d'un écran (Michael, 2026-10-30) : « Toutes » et une
+  pastille par structure, la choisie en noir, comme sur l'Échéancier. Des
+  liens, pas un formulaire : le filtre se partage, se recharge, et garde les
+  autres filtres de l'URL (dates, compte, statut…). Un formulaire voisin garde
+  la structure par un champ caché.
+  Locaux, tous facultatifs :
+  - url : l'écran (défaut : la page courante) ;
+  - param : le paramètre de l'URL (défaut `legal_entity_id`) ;
+  - entities / selected : défaut `@entities` / `@entity` (une structure ou un id) ;
+  - all : false quand l'écran exige une structure (pas de « Toutes ») ;
+  - drop : paramètres à oublier en changeant de structure (ex. l'exercice) ;
+  - hint : ce que le filtre touche, affiché quand « Toutes » est choisi.
+- param = local_assigns.fetch(:param, :legal_entity_id).to_s
+- base = local_assigns[:url] || request.path
+- entities = local_assigns.fetch(:entities, @entities)
+- chosen = local_assigns.key?(:selected) ? local_assigns[:selected] : @entity
+- chosen_id = chosen.respond_to?(:id) ? chosen.id : chosen.presence&.to_i
+- kept = request.query_parameters.except(param, "page", "commit", *Array(local_assigns[:drop]).map(&:to_s))
+- href = ->(id) { query = id ? kept.merge(param => id) : kept; query.empty? ? base : "#{base}?#{query.to_query}" }
+- pill = ->(active) { "rounded-full px-3 py-1 text-sm #{active ? 'bg-gray-900 text-white' : 'bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50'}" }
+nav.mb-5.flex.flex-wrap.items-center.gap-2(aria-label="Structure" data-entity-filter="")
+  - unless local_assigns[:all] == false
+    = link_to "Toutes", href.(nil), class: pill.(chosen_id.nil?), aria: { current: (chosen_id.nil? ? "page" : nil) }
+  - entities.each do |entity|
+    = link_to entity.name, href.(entity.id), class: pill.(chosen_id == entity.id), aria: { current: (chosen_id == entity.id ? "page" : nil) }
+  - if local_assigns[:hint].present? && chosen_id.nil?
+    span.ml-1.text-sm.text-gray-500= local_assigns[:hint]

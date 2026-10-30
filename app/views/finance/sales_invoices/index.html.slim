@@ -14,11 +14,10 @@
     p class="text-[0.65rem] font-semibold uppercase tracking-wide text-amber-700" Reste à encaisser
     p.font-averia.text-2xl.text-amber-800.tabular-nums = humanized_money_with_symbol(Money.new(@unpaid_cents, "EUR"))
 
+= render "finance/shared/entity_filter", url: finance_sales_invoices_path
+
 = form_with url: finance_sales_invoices_path, method: :get, class: "mb-6 flex flex-wrap items-end gap-3" do
-  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Toutes les entités" data-searchable-select-clearable-value="true" class="relative w-48")
-    label class="block text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Entité
-    = select_tag :legal_entity_id, options_from_collection_for_select(@entities, :id, :name, params[:legal_entity_id]), include_blank: "Toutes", class: "rounded-lg border-stone-200 text-sm", data: { searchable_select_target: "select" }
-    = render "shared/searchable_select_search", label: "Chercher une entité"
+  = hidden_field_tag :legal_entity_id, params[:legal_entity_id] if params[:legal_entity_id].present?
   div(data-controller="searchable-select" data-searchable-select-placeholder-value="Tous les statuts" data-searchable-select-clearable-value="true" class="relative w-44")
     label class="block text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Statut
     = select_tag :status, options_for_select(SalesInvoice::STATUSES.map { |s| [SalesInvoice::STATUS_LABELS[s], s] }, params[:status]), include_blank: "Tous", class: "rounded-lg border-stone-200 text-sm", data: { searchable_select_target: "select" }

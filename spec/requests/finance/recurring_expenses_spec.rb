@@ -91,7 +91,7 @@ RSpec.describe "Comptabilité > Charges fixes", type: :request do
     page = Nokogiri::HTML(response.body)
     expect(response.body).to include("Comptable SRL", "600,00 €", "Total des charges actives de Les 4 Sources SRL")
     expect(response.body).not_to include("Assurance Fondation")
-    expect(page.at_css("select#legal_entity_id option[selected]")["value"]).to eq(srl.id.to_s)
+    expect(page.at_css("nav[data-entity-filter] a[aria-current='page']").text).to eq("Les 4 Sources SRL")
 
     get page.css("a").find { |a| a.text.include?("Nouvelle charge") }["href"]
     expect(Nokogiri::HTML(response.body).at_css("#recurring_expense_legal_entity_id option[selected]")["value"]).to eq(srl.id.to_s)

@@ -138,8 +138,7 @@ end
       get finance_payables_path
 
       page = Nokogiri::HTML(response.body)
-      expect(page.at_css("select#legal_entity_id option[selected]")).to be_nil
-      expect(page.at_css("select#legal_entity_id option[value='']").text).to eq("Toutes les structures")
+      expect(page.at_css("nav[data-entity-filter] a[aria-current='page']").text).to eq("Toutes")
       expect(response.body).to include("FONDATION-1", "SRL-1", "170 €")
       expect(page.css("li span.rounded-full").map(&:text)).to include("Fondation Les 4 Sources", "Les 4 Sources SRL")
     end
@@ -147,10 +146,10 @@ end
     it "ne garde que la structure choisie, total compris" do
       get finance_payables_path(legal_entity_id: srl.id)
 
-      expect(response.body).to include("SRL-1", "Seulement Les 4 Sources SRL")
+      expect(response.body).to include("SRL-1")
       expect(response.body).not_to include("FONDATION-1")
       expect(response.body).to include("50 €")
-      expect(Nokogiri::HTML(response.body).at_css("select#legal_entity_id option[selected]")["value"]).to eq(srl.id.to_s)
+      expect(Nokogiri::HTML(response.body).at_css("nav[data-entity-filter] a[aria-current='page']").text).to eq("Les 4 Sources SRL")
     end
 
     it "dit son vide pour la structure choisie" do
