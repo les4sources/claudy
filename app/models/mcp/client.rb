@@ -2,8 +2,9 @@
 # (enregistrement dynamique, RFC 7591), ce qui ne lui donne AUCUN accès : il
 # faut encore qu'un humain autorisé se connecte à Claudy et accepte.
 #
-# Les adresses de retour sont limitées à Claude et à la machine locale (Claude
-# Code). Sans cette liste, n'importe quel site pourrait se faire enregistrer
+# Les adresses de retour sont limitées à Claude, à la machine locale (Claude
+# Code) et à l'adresse de retour exacte de SG Mail, dont l'agent utilise
+# Claudy au nom de chaque personne (Michael, 2026-10-30). Sans cette liste, n'importe quel site pourrait se faire enregistrer
 # et récolter un code d'autorisation sur un clic distrait.
 # == Schema Information
 #
@@ -25,7 +26,8 @@ class Mcp::Client < ApplicationRecord
     %r{\Ahttps://claude\.ai/},
     %r{\Ahttps://claude\.com/},
     %r{\Ahttp://localhost(:\d+)?/},
-    %r{\Ahttp://127\.0\.0\.1(:\d+)?/}
+    %r{\Ahttp://127\.0\.0\.1(:\d+)?/},
+    %r{\Ahttps://mail\.supergenial\.be/integrations/callback\z}
   ].freeze
 
   has_many :grants, class_name: "Mcp::Grant", foreign_key: :mcp_client_id, dependent: :destroy
