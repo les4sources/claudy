@@ -37,6 +37,8 @@
 #  fk_rails_...  (revenue_share_agreement_id => revenue_share_agreements.id)
 #
 class RevenueShareStatement < ApplicationRecord
+  include Payable
+
   STATUSES = %w[draft issued paid].freeze
   STATUS_LABELS = {
     "draft"  => "Brouillon",
@@ -59,6 +61,10 @@ class RevenueShareStatement < ApplicationRecord
   before_validation :ensure_token
 
   scope :recent_first, -> { order(period_from: :desc, id: :desc) }
+  # Un relevé émis est une dette : son écriture a crédité le 440000 du
+  # bénéficiaire. Il quitte « À payer » quand on le marque payé, ou quand une
+  # sortie bancaire le couvre.
+  scope :awaiting_payment, -> { where(status: "issued") }
 
   def status_label = STATUS_LABELS.fetch(status, status)
   def draft?  = status == "draft"
@@ -84,6 +90,17 @@ class RevenueShareStatement < ApplicationRecord
     self.base_cents = base
     self.share_cents = revenue_share_agreement.share_of(base)
   end
+
+  # --- Contrat `Payable` (epic #240, phase 4) --------------------------------
+
+  def payable_amount_cents = share_cents.to_i
+  def payable_beneficiary = revenue_share_agreement.beneficiary_name
+  def payable_third_party = revenue_share_agreement.beneficiary_third_party
+  def payable_iban = revenue_share_agreement.beneficiary_iban
+  def payable_communication = reference
+  def payable_reference = reference
+  def payable_label = "Partage de revenus #{lodging&.name} — #{period_label}"
+  def payable_path = Rails.application.routes.url_helpers.finance_revenue_share_statement_path(self)
 
   private
 

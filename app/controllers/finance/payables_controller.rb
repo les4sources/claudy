@@ -19,9 +19,20 @@ module Finance
       @overdue = @rows.select(&:payable_overdue?)
       @without_iban = @rows.reject(&:payable_ready?)
       @expected = queue.expected_payments
+      @not_ready = not_ready_invoices
     end
 
     private
+
+    # Les factures reçues qui ne sont pas encore « à payer » (à traiter, à
+    # valider), Michael 2026-10-30 : hors file et hors total — sans
+    # ventilation ni validation il n'y a pas d'écriture — mais visibles ici,
+    # parce que leur échéance court quand même.
+    def not_ready_invoices
+      scope = PurchaseInvoice.where(status: %w[to_process to_validate]).includes(:third_party, :legal_entity)
+      scope = scope.where(legal_entity_id: @entity.id) if @entity
+      scope.to_a.sort_by { |invoice| [invoice.due_on || Date.new(9999, 1, 1), invoice.id] }
+    end
 
     def accounting_secondary = "payables"
   end
