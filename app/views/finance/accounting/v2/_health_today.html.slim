@@ -1,0 +1,65 @@
+/ AUJOURD'HUI, une structure : le feu et la phrase de « Peut-on dépenser ? »,
+  puis trois chiffres que tout administrateur lit sans lexique. Ce que Claudy
+  ne sait pas, la carte le dit au lieu d'afficher un chiffre trompeur. En vue
+  d'une seule structure (`full`), le calcul du verdict s'ouvre sous la carte.
+- e = health.entity
+- v = health.verdict
+article.ui-card.ui-adm-ent(data-entity-today=e.id data-status=health.status)
+  header.ui-adm-ent-h
+    div
+      h3.ui-adm-ent-n = e.name
+      small = e.form_label
+    = overview_light(health)
+  - before, highlighted, after = accounting_phrase(v)
+  p.ui-adm-phrase
+    - if health.tracked?
+      = before
+      - if highlighted
+        mark.ui-hl = highlighted
+      = after
+    - else
+      | Claudy ne suit encore aucun compte bancaire de cette structure : son argent ne se lit pas ici.
+  dl.ui-adm-figs
+    div(data-fig="balance")
+      dt En banque
+      dd
+        - if health.tracked? && v.verdict != "inconnu"
+          b = accounting_euros(health.balance_cents)
+          small(class=("is-stale" if health.treasury.as_of && (health.treasury.today - health.treasury.as_of).to_i > 7)) = accounting_as_of(health.treasury).sub(/\Adisponibles, /, "")
+        - else
+          b.ui-adm-na —
+          small aucun solde vérifié
+    div(data-fig="result")
+      dt = health.books? ? "Résultat depuis le #{overview_day(health.year_start)}" : "Résultat de l’année"
+      dd
+        - if health.books?
+          b(class=("is-neg" if health.result_cents.negative?)) = overview_signed(health.result_cents)
+          small
+            = "#{accounting_euros(health.revenue_cents)} rentrés, #{accounting_euros(health.expense_cents)} sortis"
+            - unless health.previous_result_cents.nil?
+              br
+              = "l’an dernier à la même date : #{overview_signed(health.previous_result_cents)}"
+        - else
+          b.ui-adm-na —
+          small Pas de comptes de l’exercice dans Claudy : le comptable les tient.
+    div(data-fig="owed")
+      dt Ce qu’elle doit encore
+      dd
+        b = accounting_euros(health.owed_cents)
+        small
+          - parts = []
+          - parts << "#{accounting_euros(health.loans_cents)} de prêts" if health.loans_cents.positive?
+          - parts << "#{accounting_euros(health.liabilities_cents)} de dettes et litiges" if health.liabilities_cents.positive?
+          = parts.any? ? parts.join(", ") : "ni prêt ni dette sans facture"
+  - if health.pending_count.positive?
+    p.ui-adm-note
+      = "#{health.pending_count} mouvement#{'s' if health.pending_count > 1} pas encore classé#{'s' if health.pending_count > 1} : "
+      | ces chiffres sont incomplets.
+  - if full && v && v.verdict != "inconnu"
+    details.ui-adm-calc
+      summary Comment ce verdict est calculé
+      .ui-acc-hero.ui-adm-calc-b
+        .ui-acc-calc-b
+          = render "finance/accounting/v2/calculation", v: v
+  - elsif !full
+    = link_to "Voir #{accounting_entity_short(e)} en détail", finance_accounting_path(entity: e.id), class: "ui-card-link ui-adm-zoom"

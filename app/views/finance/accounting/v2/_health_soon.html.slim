@@ -1,0 +1,62 @@
+/ LES TROIS PROCHAINS MOIS, une structure : la courbe de la banque, ce qui va
+  rentrer et sortir (chaque montant ouvre sa liste), le point le plus bas, et
+  les obligations légales de l'horizon. En vue d'ensemble, trois obligations
+  au plus ; en vue d'une structure, toutes.
+- e = health.entity
+- v = health.verdict
+- deadlines = full ? health.deadlines : health.deadlines.first(3)
+article.ui-card.ui-adm-ent(data-entity-soon=e.id)
+  header.ui-adm-ent-h
+    h3.ui-adm-ent-n = e.name
+    - if health.tracked? && e.form == "foundation"
+      = link_to "Trésorerie", finance_treasury_path, class: "ui-card-link"
+  - if health.tracked? && v.verdict != "inconnu"
+    .ui-adm-soon-b
+      .ui-acc-chart.ui-adm-chart
+        = render Charts::BalanceLineComponent.new(history: health.treasury.history, projection: health.treasury.projection, today: health.treasury.today, lowest: health.lowest_point, compact: true)
+      dl.ui-adm-figs
+        div(data-fig="incoming")
+          dt Va rentrer
+          dd
+            - if health.incoming_cents.positive?
+              = link_to "+#{accounting_euros(health.incoming_cents)}", finance_accounting_verdict_detail_path(e, "incoming"), data: { turbo_frame: "modal" }, class: "ui-adm-amount"
+            - else
+              b = accounting_euros(0)
+            small soldes des séjours confirmés
+        div(data-fig="outgoing")
+          dt Va sortir
+          dd
+            - if health.outgoing_cents.positive?
+              = link_to "−#{accounting_euros(health.outgoing_cents)}", finance_accounting_verdict_detail_path(e, "outgoing"), data: { turbo_frame: "modal" }, class: "ui-adm-amount"
+            - else
+              b = accounting_euros(0)
+            small factures, charges fixes, dettes
+        div(data-fig="lowest")
+          - low = health.lowest_point
+          dt Au plus bas
+          dd
+            b(class=("is-neg" if low.balance_cents.negative?)) = accounting_euros(low.balance_cents)
+            small = low.date == health.today ? "aujourd’hui" : "le #{l(low.date, format: '%-d %B')}"
+        div(data-fig="horizon")
+          dt = "Le #{l(health.today + Finance::Treasury::HORIZON_DAYS, format: '%-d %B')}"
+          dd
+            b(class=("is-neg" if health.horizon_balance_cents.negative?)) = accounting_euros(health.horizon_balance_cents)
+            small en banque si tout se passe comme prévu
+  - else
+    p.ui-adm-empty Sans solde vérifié, Claudy ne peut pas projeter son argent.
+
+  .ui-adm-dl-h
+    h4 Obligations légales
+    = link_to "Échéancier", finance_compliance_deadlines_path, class: "ui-card-link"
+  - if deadlines.any?
+    ul.ui-acc-dl.ui-adm-dl
+      - deadlines.each do |deadline|
+        li(class=("is-late" if deadline.overdue?))
+          b.ui-acc-dl-d = l(deadline.due_on, format: "%-d %b")
+          .ui-acc-dl-m
+            = link_to deadline.display_title, finance_compliance_deadline_path(deadline)
+          .ui-acc-dl-s = accounting_deadline_side(deadline)
+    - if health.deadlines.size > deadlines.size
+      = link_to "et #{health.deadlines.size - deadlines.size} autre#{'s' if health.deadlines.size - deadlines.size > 1}", finance_accounting_path(entity: e.id), class: "ui-card-link ui-adm-zoom"
+  - else
+    p.ui-adm-empty Rien à tenir dans les trois mois.
