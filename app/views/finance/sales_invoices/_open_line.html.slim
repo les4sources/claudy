@@ -1,0 +1,33 @@
+/ Une ligne d'une facture de vente : compte de produit (classe 7), pôle,
+  libellé, montant HTVA et taux. Même gabarit et même contrôleur que les lignes
+  d'achat (`purchase-invoice-form`), qui calcule le reste à ventiler.
+- line = lf.object
+- entered_cents = line.net_cents || (line.amount_cents.to_i.nonzero? ? line.net_amount_cents : 0)
+.rounded-xl.bg-gray-50.px-3.py-3(data-purchase-invoice-form-target="row")
+  = lf.hidden_field :id
+  = lf.hidden_field :_destroy, value: "0"
+  .grid.gap-2(class="sm:grid-cols-12")
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative sm:col-span-7")
+      label.block.text-xs.font-medium.text-gray-500 Compte de produit
+      = lf.collection_select :general_account_id, revenue_accounts, :id, :to_s, { include_blank: "Choisir…" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+      = render "shared/searchable_select_search", label: "Chercher un compte"
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Non affecté" data-searchable-select-clearable-value="true" class="relative sm:col-span-5")
+      label.block.text-xs.font-medium.text-gray-500 Pôle
+      = lf.collection_select :team_id, teams, :id, :name, { include_blank: "Non affecté" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+      = render "shared/searchable_select_search", label: "Chercher un pôle"
+    .sm:col-span-6
+      label.block.text-xs.font-medium.text-gray-500 Libellé
+      = lf.text_field :label, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+    .sm:col-span-3
+      label.block.text-xs.font-medium.text-gray-500(data-role="amount-label") Montant HTVA (€)
+      = text_field_tag "#{lf.object_name}[entered_euros]", (entered_cents.nonzero? ? format("%.2f", entered_cents / 100.0) : nil),
+                       inputmode: "decimal", placeholder: "0,00",
+                       class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
+                       data: { role: "amount", action: "input->purchase-invoice-form#refresh" }
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Taux…" class="relative sm:col-span-3")
+      label.block.text-xs.font-medium.text-gray-500 TVA
+      = lf.select :vat_rate, SalesInvoiceLine::VAT_RATES.map { |rate| ["#{rate} %", rate] }, { selected: line.vat_rate }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { role: "vat-rate", searchable_select_target: "select", action: "change->purchase-invoice-form#refresh" }
+      = render "shared/searchable_select_search", label: "Chercher un taux"
+  .mt-2.flex.items-center.justify-between.gap-3
+    p.text-xs.text-gray-500(data-role="counterpart")
+    button.text-xs.text-gray-400(type="button" data-action="purchase-invoice-form#remove") Retirer cette ligne

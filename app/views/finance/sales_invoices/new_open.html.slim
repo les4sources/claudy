@@ -1,0 +1,7 @@
+/ Enregistrer une facture de vente sans réservation (Michael, 2026-10-30).
+- content_for :page_header do
+  = render "layouts/components/page_header", title: (@invoice.credit_note? ? "Enregistrer une note de crédit" : "Enregistrer une facture de vente")
+
+= render "finance/sales_invoices/open_form", invoice: @invoice, url: finance_sales_invoices_path, method: :post,
+         entities: @entities, third_parties: @third_parties, revenue_accounts: @revenue_accounts, teams: @teams,
+         creditable: @creditable, submit_label: "Enregistrer et comptabiliser", cancel_path: finance_sales_invoices_path

@@ -3,6 +3,13 @@
 - content_for :page_header do
   = render "layouts/components/page_header", title: "Ventes"
 
+/ Une facture sans réservation s'enregistre ici ; celle d'un séjour, depuis la
+  file Facturation, en face de ce qu'elle facture.
+.mb-4.flex.flex-wrap.items-center.gap-2
+  = link_to "Nouvelle facture", new_finance_sales_invoice_path, class: "inline-flex items-center rounded-lg bg-4s-main px-3 py-2 text-sm font-medium text-white hover:bg-teal-700"
+  = link_to "Nouvelle note de crédit", new_finance_sales_invoice_path(type: "credit_note"), class: "inline-flex items-center rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 hover:border-stone-300"
+  = link_to "Factures de séjour : file Facturation", invoicing_path, class: "text-sm text-blue-500 hover:text-blue-700 ml-2"
+
 .mb-6.grid.grid-cols-1.gap-3(class="sm:grid-cols-3")
   .rounded-xl.border.border-stone-200.bg-white.px-4.py-3
     p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Factures
@@ -22,6 +29,14 @@
     label class="block text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Statut
     = select_tag :status, options_for_select(SalesInvoice::STATUSES.map { |s| [SalesInvoice::STATUS_LABELS[s], s] }, params[:status]), include_blank: "Tous", class: "rounded-lg border-stone-200 text-sm", data: { searchable_select_target: "select" }
     = render "shared/searchable_select_search", label: "Chercher un statut"
+  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Tous les types" data-searchable-select-clearable-value="true" class="relative w-44")
+    label class="block text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Type
+    = select_tag :type, options_for_select(SalesInvoice::KINDS.map { |k| [SalesInvoice::KIND_LABELS[k], k] }, params[:type]), include_blank: "Tous", class: "rounded-lg border-stone-200 text-sm", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher un type"
+  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Tous les tiers" data-searchable-select-clearable-value="true" class="relative w-56")
+    label class="block text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Client (tiers)
+    = select_tag :third_party_id, options_from_collection_for_select(@third_parties, :id, :name, params[:third_party_id]), include_blank: "Tous", class: "rounded-lg border-stone-200 text-sm", data: { searchable_select_target: "select" }
+    = render "shared/searchable_select_search", label: "Chercher un tiers"
   div
     label class="block text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Du
     = date_field_tag :from, params[:from], class: "rounded-lg border-stone-200 text-sm"
@@ -37,9 +52,9 @@
   .rounded-xl.border.border-dashed.border-stone-300.p-8.text-center
     p.text-sm.text-stone-500 Aucune facture de vente pour ce filtre.
     p.mt-1.text-xs.text-stone-400
-      | Les factures s'enregistrent depuis la file
+      | Une facture de séjour s'enregistre depuis la file
       = link_to "Facturation", invoicing_path, class: "text-blue-500 hover:text-blue-700 mx-1"
-      | , en face du séjour qu'elles facturent.
+      | ; toute autre avec « Nouvelle facture ».
 - else
   .overflow-x-auto.rounded-lg.shadow.ring-1.ring-black.ring-opacity-5
     table.min-w-full.divide-y.divide-gray-300
@@ -48,16 +63,21 @@
           th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Numéro
           th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Date
           th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Entité
+          th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Client
           th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Ce qui est facturé
           th.px-3.py-2.text-right.text-xs.font-medium.text-gray-500.uppercase Montant
+          th.px-3.py-2.text-right.text-xs.font-medium.text-gray-500.uppercase Reste dû
           th.px-3.py-2.text-left.text-xs.font-medium.text-gray-500.uppercase Statut
       tbody.divide-y.divide-gray-200.bg-white
         - @invoices.each do |invoice|
           tr.hover:bg-gray-50.transition-colors
-            td.px-3.py-2.text-sm
+            td.px-3.py-2.text-sm.whitespace-nowrap
               = link_to invoice.number, finance_sales_invoice_path(invoice), class: "font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
+              - if invoice.credit_note?
+                span class="ml-2 inline-flex rounded-full bg-violet-50 px-2 py-0.5 text-[0.65rem] font-medium text-violet-700" NC
             td.px-3.py-2.text-sm.text-gray-700.whitespace-nowrap = l(invoice.issued_on, format: :long)
             td.px-3.py-2.text-sm.text-gray-600 = invoice.legal_entity.name
+            td.px-3.py-2.text-sm.text-gray-700 = invoice.customer_name || "—"
             td.px-3.py-2.text-sm.text-gray-600
               - sources = invoice.sales_invoice_sources.to_a
               - if sources.any?
@@ -65,10 +85,12 @@
               - else
                 span.text-gray-400 —
             td.px-3.py-2.text-sm.text-right.font-medium.text-gray-900.whitespace-nowrap.tabular-nums
-              = humanized_money_with_symbol(Money.new(invoice.total_cents, "EUR"))
+              = humanized_money_with_symbol(Money.new(invoice.credit_note? ? -invoice.total_cents : invoice.total_cents, "EUR"))
+            td.px-3.py-2.text-sm.text-right.whitespace-nowrap.tabular-nums.text-gray-600
+              = invoice.credit_note? || invoice.paid? ? "—" : humanized_money_with_symbol(Money.new(invoice.remaining_cents, "EUR"))
             td.px-3.py-2.text-sm
               - if invoice.paid?
                 span class="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-[0.7rem] font-medium text-teal-700"
-                  = "Payée#{invoice.paid_on ? " le #{l(invoice.paid_on, format: :short)}" : ''}"
+                  = "#{invoice.status_label}#{invoice.paid_on ? " le #{l(invoice.paid_on, format: :short)}" : ''}"
               - else
-                span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[0.7rem] font-medium text-amber-700" Émise
+                span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[0.7rem] font-medium text-amber-700" = invoice.status_label
