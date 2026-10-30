@@ -12,6 +12,9 @@ module Mcp
       # recette arrive à l'encaissement du séjour), et toute autre facture, avec
       # son tiers et ses lignes (`SalesInvoices::Record`, écriture au journal
       # Ventes). Corriger une facture comptabilisée contre-passe et repasse.
+      # Une facture dont l'écriture existe déjà (reprise Winbooks, pièce passée
+      # à la main) se RATTACHE à elle (`rattacher_ecriture`,
+      # `SalesInvoices::AttachEntry`) : aucune écriture nouvelle.
       class FactureVente < Ecriture
         include Commun
 
@@ -32,7 +35,13 @@ module Mcp
                           "lignes ; une facture comptabilisée est contre-passée à sa date puis repassée (refusé sur mois " \
                           "arrêté ou exercice clôturé : émets une note de crédit). retirer : la sort du registre (écriture " \
                           "contre-passée), refusé si des lignes bancaires ou une note de crédit y sont liées. `piece_pdf` : " \
-                          "le PDF en base64.",
+                          "le PDF en base64. REPRISE : enregistrer avec `rattacher_ecriture` (l'écriture de vente déjà au " \
+                          "grand livre : « Ventes 2026/72 », « 2026:VENTES:2026-078 », le numéro en tête du libellé ou #id) " \
+                          "met la facture au registre SANS nouvelle écriture : tiers, total, type et lignes se lisent sur " \
+                          "l'écriture (donne `numero` ou `tiers` s'ils n'y sont pas), et les encaissements déjà imputés au " \
+                          "400000 du tiers qui citent le numéro, sinon le seul du montant exact, deviennent ses paiements " \
+                          "(`relier_paiements: false` pour ne pas). Une facture rattachée se retire sans toucher au grand " \
+                          "livre ; elle ne se corrige que pour ses notes, son PDF ou la facture qu'elle corrige.",
              schema: {
                properties: {
                  geste: { type: "string", enum: GESTES },
@@ -65,6 +74,8 @@ module Mcp
                  entite: ENTITE.merge(description: "Entité qui facture. Défaut : la première active."),
                  notes: { type: "string" },
                  piece_pdf: { type: "string", description: "Le PDF de la facture, encodé en base64." },
+                 rattacher_ecriture: { type: %w[integer string], description: "Reprise : l'écriture de vente existante à rattacher (« Ventes 2026/72 », « 2026:VENTES:2026-078 », numéro de facture ou #id)." },
+                 relier_paiements: { type: "boolean", description: "Avec rattacher_ecriture : relier les encaissements déjà au 400000 du tiers. Défaut : oui." },
                  nom_pdf: { type: "string", description: "Nom du fichier PDF. Défaut : <numéro>.pdf." }
                },
                required: %w[geste]
@@ -80,6 +91,7 @@ module Mcp
         end
 
         def plan_enregistrer(arguments)
+          return plan_rattacher(arguments) if arguments["rattacher_ecriture"].present?
           return plan_enregistrer_reservation(arguments) if arguments["reservation"].present?
 
           numero = arguments["numero"].to_s.strip.presence || raise(Error, "Donne le numéro de la facture (OkiOki).")
@@ -123,6 +135,58 @@ module Mcp
                    empreinte: [donnees.except(:pdf), donnees[:pdf]&.dig(:sha), etat_de(source)], donnees: donnees)
         end
 
+        def plan_rattacher(arguments)
+          raise Error, "rattacher_ecriture ne va pas avec une réservation : la facture d'un séjour n'a pas d'écriture de vente." if arguments["reservation"].present?
+
+          entite = entite!(arguments["entite"]) if arguments["entite"].present?
+          ecriture = ecriture_vente!(arguments["rattacher_ecriture"], entite)
+          attributs = { "number" => arguments["numero"].to_s.strip.presence,
+                        "notes" => arguments["notes"].to_s.strip.presence }
+          attributs["issued_on"] = date!(arguments["date"], "date").iso8601 if arguments["date"].present?
+          attributs["third_party_id"] = tiers!(arguments["tiers"]).id if arguments["tiers"].present?
+          attributs["kind"] = type!(arguments) if arguments["type"].present?
+          attributs["total_cents"] = cents!(arguments["montant"], "montant").abs if arguments["montant"].present?
+          attributs["credited_invoice_id"] = facture_vente!(arguments["facture_corrigee"]).id if arguments["facture_corrigee"].present?
+          attributs["sales_invoice_lines_attributes"] = lignes!(arguments["lignes"], ecriture.legal_entity) if arguments["lignes"].present?
+          attributs.compact!
+          pdf = pdf!(arguments, attributs["number"] || ecriture.label)
+
+          donnees = { geste: "rattacher", ecriture: ecriture.id, attributs: attributs, pdf: pdf,
+                      relier: arguments["relier_paiements"] != false }
+          apres = simuler { rattacher(donnees, "claude:#{user.email}") }
+          Plan.new(resume: "Rattacher #{ecriture.reference} (#{ecriture.legal_entity.name}, « #{ecriture.label} ») — " \
+                           "aucune nouvelle écriture.\n#{apres}",
+                   empreinte: [ecriture.id, attributs, pdf&.dig(:sha), donnees[:relier]],
+                   donnees: donnees)
+        end
+
+        def ecriture_vente!(reference, entite)
+          reference = "##{reference}" if reference.is_a?(Integer)
+          trouvees = ::SalesInvoices::AttachEntry.entries_for(legal_entity: entite, reference: reference)
+                                                  .includes(:legal_entity, :fiscal_year).to_a
+          raise Error, "Aucune écriture au journal Ventes pour « #{reference} »#{" chez #{entite.name}" if entite}." if trouvees.empty?
+          return trouvees.first if trouvees.one?
+
+          raise Error, "Plusieurs écritures répondent à « #{reference} » : " \
+                       "#{trouvees.first(8).map { |e| "#{e.reference} ##{e.id} (#{e.legal_entity.name}, « #{e.label} »)" }.join(', ')}. " \
+                       "Précise l'entité ou donne la référence au journal."
+        end
+
+        def rattacher(d, auteur)
+          service = ::SalesInvoices::AttachEntry.new(journal_entry: JournalEntry.find(d[:ecriture]), attributes: d[:attributs],
+                                                     document: piece(d[:pdf]), link_payments: d[:relier], whodunnit: auteur)
+          metier! { service.run! }
+          lignes = [ligne_vente(service.invoice)]
+          service.linked_allocations.each do |a|
+            lignes << "Paiement relié : ligne ##{a.cash_entry_id} du #{a.cash_entry.entry_date} · #{euros(a.amount_cents.abs)} · #{a.cash_entry.label}"
+          end
+          lignes << "Aucun encaissement relié." if d[:relier] && service.linked_allocations.empty?
+          lignes.concat(service.warnings.map { |w| "Attention : #{w}" })
+          lignes.join("\n")
+        rescue ::SalesInvoices::AttachEntry::Refused => e
+          raise Error, e.message
+        end
+
         def plan_corriger(arguments)
           facture = facture_vente!(arguments["facture"])
           attributs = {}
@@ -157,10 +221,15 @@ module Mcp
 
         def plan_retirer(arguments)
           facture = facture_vente!(arguments["facture"])
-          raise Error, "Cette facture porte des affectations bancaires : retire-les d'abord (geste_ligne_tresorerie retirer_affectation)." if facture.cash_allocations.any?
+          if facture.cash_allocations.any? && !facture.attached?
+            raise Error, "Cette facture porte des affectations bancaires : retire-les d'abord (geste_ligne_tresorerie retirer_affectation)."
+          end
           raise Error, "Une note de crédit corrige cette facture : retire-la d'abord." if facture.credit_notes.any?
 
-          suite = if facture.posted?
+          suite = if facture.attached?
+                    "Son écriture reprise (#{facture.journal_entry.reference}) reste au grand livre" \
+                      "#{", ses #{facture.cash_allocations.count} encaissement(s) redeviennent de simples imputations au 400000" if facture.cash_allocations.any?}."
+                  elsif facture.posted?
                     "Son écriture de vente (#{facture.journal_entry&.reference}) est contre-passée à sa date."
                   elsif facture.on_payment?
                     "La réservation reste marquée « facture envoyée »."
@@ -176,6 +245,7 @@ module Mcp
           when "enregistrer" then "Facture enregistrée : #{enregistrer(d, whodunnit)}"
           when "enregistrer_libre" then "Enregistrée et passée au journal Ventes : #{enregistrer_libre(d, whodunnit)}"
           when "corriger" then "Corrigée : #{corriger(d, whodunnit)}"
+          when "rattacher" then "Rattachée, sans nouvelle écriture : #{rattacher(d, whodunnit)}"
           else
             facture = SalesInvoice.find(d[:id])
             metier! { ::SalesInvoices::Withdraw.new(sales_invoice: facture, whodunnit: whodunnit).run! }

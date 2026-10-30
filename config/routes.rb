@@ -527,7 +527,14 @@ Rails.application.routes.draw do
     # depuis la file Facturation — jamais dans le vide.
     # `edit`/`update` corrigent ce qui a été mal saisi (numéro, date, montant,
     # PDF) sans toucher au lien vers ce qu'elle facture.
-    resources :sales_invoices, path: "sales", only: %i[index show new create edit update destroy]
+    resources :sales_invoices, path: "sales", only: %i[index show new create edit update destroy] do
+      # Reprise : rattacher les écritures de vente déjà au grand livre.
+      collection do
+        get :attachable, path: "rattacher"
+        post :attach, path: "rattacher"
+        post :attach_all, path: "rattacher/tout"
+      end
+    end
 
     resources :general_accounts, path: "chart_of_accounts", except: [:show]
     # Les comptes de trésorerie à l'écran (Michael, 2026-10-19) : l'IBAN seul s'y

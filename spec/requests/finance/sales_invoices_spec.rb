@@ -372,4 +372,43 @@ RSpec.describe "Comptabilité — factures de vente (epic #240, phase 6)", type:
       expect(JournalEntry.where(reversal_of: facture.journal_entry_id)).to exist
     end
   end
+
+  describe "rattacher des écritures existantes" do
+    let!(:fiscal_year) { build_fiscal_year(entity) }
+    let!(:clients) { build_general_account(code: "400000", name: "Clients", klass: 4, nature: "asset") }
+    let!(:salles) { build_general_account(code: "701002", name: "Location de salles", klass: 7, nature: "revenue") }
+    let!(:ciep) { ThirdParty.create!(name: "CIEP Namur", kind: "customer") }
+
+    def vente(libelle, cents, tiers: ciep)
+      Accounting::PostDocument.new(
+        legal_entity: entity, journal: "sales", entry_date: Date.new(2026, 9, 28), label: libelle,
+        lines: [{ account: clients, debit_cents: cents, credit_cents: 0, third_party: tiers },
+                { account: salles, debit_cents: 0, credit_cents: cents }]
+      ).run!
+    end
+
+    it "liste les écritures sans facture, et les rattache sans nouvelle écriture" do
+      lisible = vente("2026-094 CIEP Namur - ateliers", 75_000)
+      sans_tiers = vente("Location salle", 20_000, tiers: nil)
+
+      get attachable_finance_sales_invoices_path(legal_entity_id: entity.id, year: 2026)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(lisible.reference, "2026-094", "CIEP Namur", sans_tiers.reference,
+                                       "Choisis le client", "Rattacher les 1 écriture(s) lisibles")
+
+      expect { post attach_all_finance_sales_invoices_path(legal_entity_id: entity.id, year: 2026) }
+        .to change(SalesInvoice, :count).by(1)
+      expect(JournalEntry.count).to eq(2)
+      expect(SalesInvoice.last).to have_attributes(number: "2026-094", journal_entry: lisible, third_party: ciep)
+
+      post attach_finance_sales_invoices_path, params: { journal_entry_id: sans_tiers.id, number: "2026-095", third_party_id: ciep.id }
+      expect(flash[:notice]).to include("Facture 2026-095 rattachée à #{sans_tiers.reference}")
+
+      get attachable_finance_sales_invoices_path(legal_entity_id: entity.id, year: 2026)
+      expect(response.body).to include("Toutes les écritures de vente de cette année ont leur facture au registre.")
+
+      get finance_sales_invoice_path(SalesInvoice.last)
+      expect(response.body).to include("Écriture reprise")
+    end
+  end
 end

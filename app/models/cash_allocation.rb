@@ -88,6 +88,18 @@ class CashAllocation < ApplicationRecord
   # rapproché » dès l'import, et sa ligne bancaire impossible à rapprocher.
   scope :outside_stripe, -> { joins(cash_entry: :cash_account).where.not(cash_accounts: { kind: "stripe" }) }
 
+  # Relie l'affectation à la pièce qu'elle règle, même sur une ligne
+  # comptabilisée (factures de vente reprises, Michael 2026-10-30). Le document
+  # n'entre pas dans l'écriture — compte, tiers, montant restent ce qu'ils sont —
+  # donc rien n'est à contre-passer ; tout autre changement reste refusé.
+  def relink_document!(document)
+    @relinking_document = true
+    self.document = document
+    save!
+  ensure
+    @relinking_document = false
+  end
+
   private
 
   # Quatre dettes se rapprochent aujourd'hui : la facture d'achat (epic #240), la
@@ -170,6 +182,7 @@ class CashAllocation < ApplicationRecord
   # garderait une ventilation que plus personne ne voit à l'écran.
   def entry_not_posted
     return if cash_entry.blank? || !cash_entry.posted?
+    return if @relinking_document && persisted? && (changed - %w[document_type document_id updated_at]).empty?
 
     errors.add(:base, "Cette ligne est déjà comptabilisée — annule sa passation avant de la réaffecter")
   end

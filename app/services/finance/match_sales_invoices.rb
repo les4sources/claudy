@@ -74,7 +74,9 @@ module Finance
 
     # Le numéro entier, pas un morceau d'un autre : « 2026-04 » ne doit pas se
     # lire dans « 2026-047 », ni « 047 » dans un montant.
-    def numero_cite?(texte, numero)
+    def numero_cite?(texte, numero) = self.class.cites?(texte, numero)
+
+    def self.cites?(texte, numero)
       return false if texte.blank? || numero.to_s.length < 4
 
       texte.match?(/(?<![\w-])#{Regexp.escape(numero)}(?![\w-])/i)
