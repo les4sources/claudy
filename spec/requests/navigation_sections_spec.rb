@@ -81,7 +81,7 @@ RSpec.describe "Appartenance des contrôleurs Finance::", type: :model do
     general_accounts ledger liabilities mail_messages monthly_close payables purchase_invoices
     recurring_expenses revenue_share_agreements
     revenue_share_statements sales_invoices stripe stripe_category_mappings stripe_fee_invoices
-    third_parties treasury trial_balance
+    third_parties third_party_balance treasury trial_balance
   ].freeze
 
   # Les réglages de la compta qui vivent dans Paramètres (Michael, 2026-10-30) :

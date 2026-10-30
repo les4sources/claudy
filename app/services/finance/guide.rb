@@ -397,6 +397,14 @@ module Finance
         ["Si les totaux ne sont pas égaux, signale-le : c'est une erreur à corriger."],
         %w[balance debit-credit compte]
       ),
+      "finance/third_party_balance" => Page.new(
+        "La balance des tiers : à une date, ce qu'on doit à chaque fournisseur, ou ce que chaque client nous doit.",
+        ["Choisis Fournisseurs ou Clients, la structure et la date.",
+         "Le solde en tête de liste est la plus grosse dette : compare-le aux factures « À payer ».",
+         "La ligne « (sans tiers) » est de l'argent posé sans dire à qui : retrouve sa pièce au grand livre.",
+         "Clique sur un compte pour lire, ligne par ligne, d'où vient le solde."],
+        %w[tiers balance grand-livre]
+      ),
       "finance/analytic_balance" => Page.new(
         "Ce que chaque pôle rapporte et coûte, sur une période.",
         ["Regarde la part « non affecté » : plus elle est grande, moins les chiffres des pôles sont fiables."],

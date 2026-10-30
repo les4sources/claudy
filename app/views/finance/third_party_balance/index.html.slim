@@ -1,0 +1,93 @@
+/ LA BALANCE DES TIERS (2026-10-30) : à une date, le solde de chaque
+  fournisseur ou de chaque client. Côté et structure sont des pastilles (des
+  liens) : la vue se partage et se recharge telle quelle.
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Balance tiers"
+
+- with_params = ->(changes) { finance_third_party_balance_path(request.query_parameters.merge(changes.stringify_keys).compact_blank) }
+- pill_on = "rounded-full px-3 py-1 text-sm bg-gray-900 text-white"
+- pill_off = "rounded-full px-3 py-1 text-sm bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
+- suppliers = @balance.side == "suppliers"
+
+.mb-3.flex.flex-wrap.gap-2
+  - Accounting::ThirdPartyBalance::SIDES.each do |key, side|
+    = link_to side[:label], with_params.call(side: key), class: (@balance.side == key ? pill_on : pill_off)
+
+= render "finance/shared/entity_filter", url: finance_third_party_balance_path
+
+= form_with url: finance_third_party_balance_path, method: :get, class: "mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm", data: { controller: "auto-submit" } do
+  = hidden_field_tag :side, @balance.side, id: nil
+  - if @entity
+    = hidden_field_tag :legal_entity_id, @entity.id, id: nil
+  label.flex.items-center.gap-2.text-gray-600
+    | Solde au
+    = date_field_tag :as_of, @as_of, class: "rounded-md border-gray-300 text-sm shadow-sm", data: { action: "change->auto-submit#submit" }
+  label.flex.items-center.gap-2.text-gray-600
+    = check_box_tag :settled, "1", @show_settled, class: "rounded border-gray-300", data: { action: "change->auto-submit#submit" }
+    | Afficher les tiers soldés
+  noscript
+    button.rounded-md.border.border-gray-300.bg-white.px-3.py-1.text-sm(type="submit") Afficher
+
+.mb-6.grid.gap-4.sm:grid-cols-3
+  .p-5.rounded-lg.border.border-gray-100.bg-white
+    p.text-xs.uppercase.text-gray-500= suppliers ? "Nous devons" : "On nous doit"
+    p.mt-1.text-2xl.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(@balance.owed_cents, "EUR"))
+  .p-5.rounded-lg.border.border-gray-100.bg-white
+    p.text-xs.uppercase.text-gray-500= suppliers ? "Avances versées" : "Avances reçues"
+    p.mt-1.text-2xl.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(@balance.advances_cents, "EUR"))
+  .p-5.rounded-lg.border.border-gray-100.bg-white
+    p.text-xs.uppercase.text-gray-500 Tiers avec un solde
+    p.mt-1.text-2xl.font-semibold.text-gray-900= @balance.open_rows.count { |row| row.third_party }
+    p.mt-1.text-xs.text-gray-500
+      = "Comptes #{@balance.accounts.map(&:code).join(', ').presence || '—'} · "
+      = @entity ? @entity.name : "toutes les structures"
+
+- if (unassigned = @balance.unassigned_row)
+  .mb-6.p-4.rounded-lg.border.border-amber-200.bg-amber-50.text-sm.text-amber-900
+    strong= humanized_money_with_symbol(Money.new(unassigned.due_cents, "EUR"))
+    = " sur #{unassigned.accounts.map(&:code).join(', ')} sans tiers : on ne sait pas à qui. Retrouve ces lignes au grand livre (ligne « (sans tiers) ») et leur pièce."
+
+- if @rows.empty?
+  .p-6.text-sm.text-gray-500.bg-white.rounded-lg.border.border-gray-100
+    - if @balance.accounts.empty?
+      p.font-medium.text-gray-700 Aucun compte #{suppliers ? '44' : '40'} dans le plan comptable.
+    - else
+      p.font-medium.text-gray-700 = suppliers ? "Aucun fournisseur avec un solde au #{l(@as_of)}." : "Aucun client avec un solde au #{l(@as_of)}."
+      - unless suppliers
+        p.mt-1 Les séjours se ventilent en produits à l'encaissement, sans compte client par personne : seules les factures de vente laissent un solde ici.
+- else
+  p.mb-2.text-xs.text-gray-500
+    = suppliers ? "Solde = ce qu'on doit au fournisseur ; « avance » quand on a payé plus que facturé." : "Solde = ce que le client nous doit ; « avance » quand il a payé d'avance."
+  .overflow-x-auto.relative
+    table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
+      thead.text-xs.text-gray-700.uppercase.bg-gray-50
+        tr
+          th.py-3.px-6[scope="col"] Tiers
+          th.py-3.px-6[scope="col"] Comptes
+          th.py-3.px-6.text-right[scope="col"] Ouverture
+          th.py-3.px-6.text-right[scope="col"] Débit
+          th.py-3.px-6.text-right[scope="col"] Crédit
+          th.py-3.px-6.text-right[scope="col"] Solde
+      tbody
+        - @rows.each do |row|
+          tr.border-b class=(row.third_party ? "bg-white" : "bg-amber-50")
+            td.py-4.px-6.font-medium.text-gray-900= row.name
+            td.py-4.px-6.whitespace-nowrap
+              - row.accounts.each do |account|
+                = link_to account.code,
+                          finance_ledger_path(general_account_id: account.id, third_party_id: row.third_party&.id || "none",
+                                              legal_entity_id: @entity&.id,
+                                              from: @entity ? @balance.period_start(@entity) : @as_of.beginning_of_year, to: @as_of),
+                          class: "mr-2 font-mono text-blue-500 hover:text-blue-700", title: "Grand livre de #{account} pour ce tiers"
+            td.py-4.px-6.text-right.whitespace-nowrap= humanized_money_with_symbol(Money.new(row.opening_due_cents, "EUR"))
+            td.py-4.px-6.text-right.whitespace-nowrap= row.debit_cents.positive? ? humanized_money_with_symbol(Money.new(row.debit_cents, "EUR")) : ""
+            td.py-4.px-6.text-right.whitespace-nowrap= row.credit_cents.positive? ? humanized_money_with_symbol(Money.new(row.credit_cents, "EUR")) : ""
+            td.py-4.px-6.text-right.whitespace-nowrap.font-semibold
+              - if row.due_cents.negative?
+                span.text-green-700= "#{humanized_money_with_symbol(Money.new(-row.due_cents, 'EUR'))} d'avance"
+              - else
+                span.text-gray-900= humanized_money_with_symbol(Money.new(row.due_cents, "EUR"))
+      tfoot
+        tr.bg-gray-50.font-semibold.text-gray-900
+          td.py-3.px-6(colspan="5") Total
+          td.py-3.px-6.text-right.whitespace-nowrap= humanized_money_with_symbol(Money.new(@balance.total_due_cents, "EUR"))

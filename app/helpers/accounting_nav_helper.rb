@@ -62,6 +62,7 @@ module AccountingNavHelper
       ["États", "etats", [
         ["Grand livre", finance_ledger_path, %w[finance/ledger]],
         ["Balance", finance_trial_balance_path, %w[finance/trial_balance]],
+        ["Balance tiers", finance_third_party_balance_path, %w[finance/third_party_balance]],
         ["Analytique", finance_analytic_balance_path, %w[finance/analytic_balance]],
         ["Comptes annuels", finance_annual_accounts_path, %w[finance/annual_accounts]],
         ["Immobilisations", finance_fixed_assets_path, %w[finance/fixed_assets]],
@@ -103,6 +104,7 @@ module AccountingNavHelper
     "Partages de revenus" => "Reverser la part d'un hébergement",
     "Grand livre" => "Toutes les écritures d'un compte",
     "Balance" => "Le total de chaque compte",
+    "Balance tiers" => "Ce qu'on doit à chaque fournisseur, ce que chaque client doit",
     "Analytique" => "Ce que chaque pôle rapporte et coûte",
     "Comptes annuels" => "Bilan et compte de résultats, au format BNB",
     "Immobilisations" => "Les biens durables et leurs amortissements",
