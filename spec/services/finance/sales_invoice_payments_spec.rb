@@ -106,6 +106,15 @@ RSpec.describe Finance::RecordSalesInvoicePayment do
       expect(matches.map(&:invoice)).to include(meme_montant)
     end
 
+    it "propose la facture dont la communication structurée est reprise, même écrite autrement" do
+      f = facture("2026-049", 64_000)
+      f.update_columns(payment_reference: "+++090/9337/55493+++")
+
+      matches = described_class.new.for_entry(ligne(10_000, communication: "090 9337 55493"))
+
+      expect(matches.sole).to have_attributes(invoice: f, confidence: 95)
+    end
+
     it "ne lit pas un numéro dans un autre" do
       facture("2026-04", 64_000)
 

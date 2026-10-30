@@ -110,6 +110,10 @@
         div
           p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Client
           p.text-sm.text-stone-700 = link_to @invoice.customer_name.presence || "Client ##{@invoice.customer_id}", customer_path(@invoice.customer), class: "text-blue-600 hover:text-blue-800"
+      - if @invoice.payment_reference.present?
+        div
+          p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Communication structurée
+          p.text-sm.font-mono.text-stone-700 = @invoice.payment_reference
       - if @invoice.notes.present?
         div
           p class="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-400" Notes
