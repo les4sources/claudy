@@ -1,0 +1,20 @@
+/ Le filtre « Structure » en haut d'un écran de la Comptabilité (2026-10-30) :
+  sans lui, on ne sait pas si la liste parle de toutes les structures ou d'une
+  seule. Le choix EST la validation (auto-submit) ; « Toutes » = pas de filtre.
+  Le contrôleur pose `@entities` et `@entity` (`load_entity_filter`).
+  Locales : url (l'écran lui-même), hint (facultatif, ce que le filtre touche).
+= form_with url: url, method: :get, class: "mb-5 flex flex-wrap items-end gap-x-4 gap-y-2", data: { controller: "auto-submit" } do
+  div(data-controller="searchable-select" data-searchable-select-placeholder-value="Toutes les structures" data-searchable-select-clearable-value="true" class="relative w-64")
+    label.block.text-xs.font-medium.text-gray-500(for="legal_entity_id") Structure
+    = select_tag :legal_entity_id, options_from_collection_for_select(@entities, :id, :name, @entity&.id),
+                 include_blank: "Toutes les structures", class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
+                 data: { searchable_select_target: "select", action: "change->auto-submit#submit" }
+    = render "shared/searchable_select_search", label: "Chercher une structure"
+  p.pb-2.text-sm.text-gray-500
+    - if @entity
+      = "Seulement #{@entity.name}. "
+      = link_to "Voir toutes les structures", url, class: "text-blue-500 hover:text-blue-700"
+    - else
+      = local_assigns[:hint] || "Toutes les structures confondues."
+  noscript
+    button.rounded-md.border.border-gray-300.bg-white.px-3.py-2.text-sm(type="submit") Filtrer

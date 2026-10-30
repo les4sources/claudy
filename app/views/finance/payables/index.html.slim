@@ -10,6 +10,8 @@
            links: [link_to("Achats", finance_purchase_invoices_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
                    link_to("À affecter", finance_unallocated_cash_entries_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
 
+= render "finance/shared/entity_filter", url: finance_payables_path
+
 / Les paiements de l'échéancier dont la pièce n'est pas encore encodée. Hors
   total : sans facture, il n'y a ni montant sûr ni écriture. L'encart dit quoi
   faire — encoder la facture, qui entrera alors dans la file avec son échéance.
@@ -33,7 +35,7 @@
 
 - if @rows.blank?
   .p-8.text-center.bg-green-50.rounded-lg.border.border-green-100
-    p.text-2xl.font-semibold.text-green-700 ✓ Rien à payer
+    p.text-2xl.font-semibold.text-green-700= @entity ? "✓ Rien à payer pour #{@entity.name}" : "✓ Rien à payer"
     p.mt-2.text-sm.text-gray-600
       | Aucune facture validée n'attend son virement. Les factures arrivent ici dès qu'un pôle les a validées — ou directement, quand aucune validation n'est requise.
 - else
@@ -61,6 +63,10 @@
             .min-w-0
               p.flex.flex-wrap.items-center.gap-2
                 = link_to row.payable_beneficiary, row.payable_path, class: "font-medium text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+                / Sans filtre, chaque ligne dit quelle structure paie : c'est
+                  elle qui choisit le compte en banque d'où part le virement.
+                - if @entity.nil? && row.payable_legal_entity
+                  span.rounded-full.bg-gray-100.text-xs.font-medium.text-gray-600(class="px-2 py-0.5")= row.payable_legal_entity.name
                 - if row.payable_overdue?
                   span.rounded-full.bg-red-100.text-xs.font-semibold.text-red-700(class="px-2 py-0.5")
                     = "en retard de #{row.payable_days_late} j"
@@ -102,3 +108,38 @@
                   = "reste #{humanized_money_with_symbol(Money.new(row.remaining_cents, 'EUR'))}"
               p.mt-1
                 = link_to "Ouvrir", row.payable_path, class: "text-xs text-blue-500 hover:text-blue-700"
+
+/ Les factures reçues pas encore « à payer » (Michael, 2026-10-30). Hors
+  total : sans ventilation ni validation, pas d'écriture, donc pas de dette au
+  sens de la file. Mais leur échéance court déjà : les cacher ici, c'était les
+  découvrir en retard.
+- if @not_ready.any?
+  .mt-6.rounded-xl.border.border-amber-200.p-4(class="bg-amber-50/60")
+    .flex.flex-wrap.items-baseline.justify-between.gap-2
+      p.text-sm.font-semibold.text-amber-900 Factures pas encore prêtes à payer
+      p.text-sm.font-semibold.text-amber-900
+        = "#{@not_ready.size} facture(s) · #{humanized_money_with_symbol(Money.new(@not_ready.sum(&:total_cents), 'EUR'))}"
+    p.mt-1.text-xs.text-amber-900
+      | Hors total : une facture rejoint la file une fois ventilée (et validée par son pôle quand il le faut). Traite d'abord celles dont l'échéance approche.
+    ul.mt-3.divide-y.divide-amber-100
+      - @not_ready.each do |invoice|
+        li.flex.flex-wrap.items-center.justify-between.gap-3.py-2
+          div
+            p.flex.flex-wrap.items-center.gap-2
+              = link_to invoice.third_party&.name || "Facture ##{invoice.id}", finance_purchase_invoice_path(invoice), class: "font-medium text-blue-600 hover:text-blue-800"
+              span.rounded-full.bg-white.text-xs.font-medium.text-amber-800.ring-1.ring-amber-200(class="px-2 py-0.5")= invoice.status_label
+              - if @entity.nil? && invoice.legal_entity
+                span.rounded-full.bg-gray-100.text-xs.font-medium.text-gray-600(class="px-2 py-0.5")= invoice.legal_entity.name
+            p.text-xs(class="#{invoice.overdue? ? 'text-red-700 font-semibold' : 'text-gray-600'}")
+              = invoice.number.present? ? "n° #{invoice.number}" : "sans numéro"
+              span.mx-1 ·
+              - if invoice.due_on
+                = "échéance le #{l(invoice.due_on, format: :long)}"
+                - if invoice.overdue?
+                  = " — en retard de #{(Date.current - invoice.due_on).to_i} j"
+              - else
+                | sans échéance
+          .flex.items-center.gap-3
+            span.text-sm.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(invoice.total_cents, "EUR"))
+            = link_to "Traiter", finance_purchase_invoice_path(invoice),
+                      class: "inline-flex items-center rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-50"

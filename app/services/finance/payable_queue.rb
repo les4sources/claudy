@@ -9,14 +9,25 @@ module Finance
   # l'argent n'est pas encore sorti — et depuis l'epic #248 phase 3 les relevés
   # de dépôt-vente à virer, et depuis les epics #245 et #244 phase 3 les parts
   # d'organisateurs d'événements réglés et les relevés de rémunération des
-  # porteurs d'activité. Les dettes restantes se brancheront ICI de la même
+  # porteurs d'activité, et depuis le 2026-10-30 les relevés de partage de
+  # revenus émis (la tiny house) et les comptes de membres en crédit (les
+  # cuisiniers du batch cooking). Les dettes restantes se brancheront ICI de la même
   # façon, dans `rows`, sans toucher aux vues : c'est tout l'intérêt du contrat
   # `Payable`.
   class PayableQueue
+    # `legal_entity` (2026-10-30) : la file d'UNE structure — le filtre
+    # « Structure » de l'écran. Sans elle, toutes les structures, comme avant :
+    # la trésorerie et « À faire » lisent la file entière.
+    def initialize(legal_entity: nil)
+      @legal_entity = legal_entity
+    end
+
     # Triées par ÉCHÉANCE, les sans-échéance en dernier : c'est l'ordre dans
     # lequel on paie, pas l'ordre de saisie.
     def rows
-      @rows ||= (invoices + expense_reports + consignment_reports + event_settlement_lines + carrier_statements)
+      @rows ||= (invoices + expense_reports + consignment_reports + event_settlement_lines + carrier_statements +
+                 revenue_share_statements + member_payables)
+                .then { |rows| @legal_entity ? rows.select { |row| row.payable_legal_entity == @legal_entity } : rows }
                 .sort_by { |row| [row.payable_due_on || Date.new(9999, 1, 1), row.class.name, row.id] }
     end
 
@@ -26,12 +37,13 @@ module Finance
     # restent donc hors du total, dans leur propre encart. Une fois la facture
     # encodée et liée, c'est elle qui entre dans la file, avec son échéance.
     def expected_payments
-      ComplianceDeadline.outstanding.payments
-                        .where(purchase_invoice_id: nil)
-                        .where(due_on: ..(Date.current + ComplianceDeadlinesController::SOON_DAYS * 2))
-                        .includes(compliance_obligation: :legal_entity)
-                        .ordered
-                        .to_a
+      deadlines = ComplianceDeadline.outstanding.payments
+      deadlines = deadlines.for_entity(@legal_entity.id) if @legal_entity
+      deadlines.where(purchase_invoice_id: nil)
+               .where(due_on: ..(Date.current + ComplianceDeadlinesController::SOON_DAYS * 2))
+               .includes(compliance_obligation: :legal_entity)
+               .ordered
+               .to_a
     end
 
     private
@@ -54,6 +66,23 @@ module Finance
                       .includes(:human, :cash_allocations)
                       .to_a
                       .reject(&:payable_settled?)
+    end
+
+    # Les relevés de partage de revenus ÉMIS : l'écriture a crédité le 440000
+    # du bénéficiaire. Un brouillon n'est pas une dette, un relevé marqué payé
+    # non plus.
+    def revenue_share_statements
+      RevenueShareStatement.awaiting_payment
+                           .includes(:cash_allocations, :lodging, :revenue_share_agreement)
+                           .to_a
+                           .reject(&:payable_settled?)
+    end
+
+    # Les comptes de membres créditeurs — les cuisiniers du batch cooking, que
+    # l'écran Batch cooking listait seul. Ils sont à la Fondation.
+    def member_payables
+      foundation = LegalEntity.find_by(form: "foundation")
+      Finance::MemberPayables.new.rows.map { |row| Finance::MemberPayable.new(row, legal_entity: foundation) }
     end
 
     def invoices

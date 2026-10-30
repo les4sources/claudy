@@ -30,6 +30,7 @@ class EventSettlementLine < ApplicationRecord
   def payable_reference = "EVT-#{event_settlement_id}-#{id}"
   def payable_label = "Part organisateur — #{event.name}"
   def payable_path = Rails.application.routes.url_helpers.event_path(event, tab: "comptabilite")
+  def payable_entry_source = event_settlement
 
   # Le `paid_on` est une TRACE de ce que le rapprochement a constaté, pas la
   # source de vérité : c'est `payable_settled?` qui décide.

@@ -11,6 +11,14 @@ module Finance
 
     private
 
+    # Le filtre « Structure » en haut d'un écran (2026-10-30, partiel
+    # `finance/shared/entity_filter`) : les structures actives et celle choisie,
+    # nil = toutes.
+    def load_entity_filter
+      @entities = LegalEntity.actives.ordered
+      @entity = @entities.find_by(id: params[:legal_entity_id])
+    end
+
     def set_presenters
       @menu_presenter = Components::MenuPresenter.new(
         active_primary: "accounting",

@@ -47,6 +47,21 @@ module Payable
   def payable_label = "#{self.class.model_name.human} #{payable_reference}"
   def payable_path = nil
 
+  # La structure qui doit (2026-10-30, filtre « Structure » de « À payer ») :
+  # celle du document quand il la porte, sinon celle de son écriture d'achat —
+  # un relevé de porteur ou une part d'événement n'a pas de colonne, c'est sa
+  # passation qui a choisi l'entité.
+  def payable_legal_entity
+    return @payable_legal_entity if defined?(@payable_legal_entity)
+
+    @payable_legal_entity = try(:legal_entity) ||
+                            JournalEntry.find_by(source: payable_entry_source, journal: "purchases")&.legal_entity
+  end
+
+  # Le document que porte l'écriture d'achat ; une part d'événement se surcharge
+  # (l'écriture est celle du règlement entier).
+  def payable_entry_source = self
+
   # --- Ce qui se déduit du rapprochement -------------------------------------
 
   def allocated_cents = cash_allocations.sum(:amount_cents).abs
