@@ -232,10 +232,10 @@
                 button.inline-flex.items-center.rounded-md.border.border-transparent.px-3.py-1.5.text-xs.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit") Enregistrer le règlement
 
     / Une facture de VENTE qui attend son encaissement (epic #240, phase 6).
-      Une ligne ENTRANTE du montant exact d'une facture émise, ou venant de
-      l'IBAN déjà appris pour ce client. LA PROPOSITION N'A RIEN ÉCRIT —
-      c'est ce bouton qui ventile la recette et fait passer la facture en
-      « payée ». Aucune écriture de vente n'est générée (décision 8).
+      Une ligne ENTRANTE qui cite son numéro, du montant de ce qui reste dû, ou
+      venant de l'IBAN connu du client. LA PROPOSITION N'A RIEN ÉCRIT — c'est
+      ce bouton qui rapproche : ventilation du séjour pour une facture de
+      séjour, 400000 du tiers pour une facture passée au journal Ventes.
     - ventes = @sales_invoice_matches[entry.id]
     - if ventes.present?
       - ventes.first(2).each do |match|
@@ -245,6 +245,9 @@
               p.text-sm.text-gray-800
                 strong = "Facture de vente #{match.invoice.number}"
                 = " — #{humanized_money_with_symbol(Money.new(match.invoice.total_cents, 'EUR'))} du #{l(match.invoice.issued_on, format: :short)}"
+                = " · #{match.invoice.customer_name}" if match.invoice.customer_name
+                - if match.invoice.remaining_cents != match.invoice.total_cents
+                  = " · reste dû #{humanized_money_with_symbol(Money.new(match.invoice.remaining_cents, 'EUR'))}"
               p.mt-0.5.text-xs.text-gray-500
                 = match.reason
                 = " (#{match.confidence} % de confiance)"
