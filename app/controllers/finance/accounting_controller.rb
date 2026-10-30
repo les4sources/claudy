@@ -49,18 +49,16 @@ module Finance
 
     private
 
-    # La nouvelle interface (redesign, Michael 2026-10-29) : la même page, lue
-    # pour UNE entité à la fois (`?entity=`, la Fondation d'abord). Le verdict,
-    # les chiffres, la courbe, les échéances, les dettes et les prêts sont ceux
-    # de l'entité choisie ; « À faire » reste commun, les files n'ont pas
-    # d'entité. L'aide de l'écran se pose sous l'en-tête, pas au-dessus.
+    # La nouvelle interface (Michael, 2026-10-30) : la page du collectif des
+    # administrateurs. Les trois structures côte à côte (`Finance::Overview`) :
+    # aujourd'hui, les trois prochains mois, plus loin, et ce qu'il faut
+    # trancher ensemble ; `?entity=` zoome sur une seule. Le travail des
+    # comptables (« À faire », la caisse, les repères) reste en bas, replié.
     def render_v2_index
-      @verdict = @verdicts.find { |verdict| verdict.entity.id.to_s == params[:entity].to_s } || @verdicts.first
-      entity = @verdict&.entity
-      deadlines = @deadlines_overdue + @deadlines_soon
-      @entity_deadlines = entity ? deadlines.select { |deadline| deadline.legal_entity == entity } : deadlines
-      @entity_liabilities = entity ? @open_liabilities.select { |liability| liability.legal_entity == entity } : @open_liabilities
-      @entity_loans = entity && @loans.groups.find { |group| group.entity == entity }
+      @overview = Finance::Overview.new(loans: @loans, verdicts: @verdicts)
+      @focus = @overview.find(params[:entity]) if params[:entity].present?
+      @healths = @focus ? [@focus] : @overview.entities
+      @signals = @overview.signals(only: @focus)
       @page_guide_inline = true
       render "finance/accounting/v2/index"
     end

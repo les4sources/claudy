@@ -74,4 +74,60 @@ module AccountingOverviewHelper
       ui_status(:todo, "À préparer")
     end
   end
+
+  # --- La page du collectif des administrateurs (Michael, 2026-10-30) --------
+
+  # Le feu d'une structure : la forme et le mot de « Peut-on dépenser ? ».
+  OVERVIEW_LIGHTS = {
+    "oui" => [:ok, "Peut dépenser"],
+    "prudence" => [:todo, "Prudence"],
+    "non" => [:no, "Pas de dépense nouvelle"],
+    "inconnu" => [:off, "Pas suivie ici"]
+  }.freeze
+
+  OVERVIEW_LEVELS = { no: [:no, "À traiter"], warn: [:todo, "À surveiller"], info: [:off, "À savoir"] }.freeze
+
+  # Les mots de la page, dits sans jargon : un administrateur qui n'a jamais
+  # ouvert un grand livre doit pouvoir lire chaque chiffre.
+  OVERVIEW_GLOSSARY = [
+    ["En banque", "L'argent sur les comptes bancaires et dans la caisse, tel que le dernier relevé (ou le dernier " \
+                  "comptage) l'affirme. Un compte jamais vérifié n'y est pas."],
+    ["Résultat", "Ce qui est rentré (ventes, séjours, dons) moins ce qui est sorti (achats, services, salaires) " \
+                 "depuis le début de l'exercice. Négatif : la structure a dépensé plus qu'elle n'a reçu."],
+    ["Ce qu’elle doit encore", "Les dettes et litiges sans facture (une taxe réclamée…) et les prêts reçus qui " \
+                               "restent à rendre. Les factures courantes sont dans « Va sortir »."],
+    ["Va rentrer, va sortir", "Les trois mois qui viennent : les soldes des séjours confirmés d'un côté ; les " \
+                              "factures, les charges fixes et les mensualités des dettes de l'autre."],
+    ["Au plus bas", "Le moment où, si tout se passe comme prévu, il restera le moins d'argent en banque. Sous zéro, " \
+                    "il faudra trouver de l'argent avant cette date."],
+    ["Prêt à court terme, à long terme", "Un prêt à court terme peut être réclamé à tout moment : l'argent est en " \
+                                         "banque, mais il n'est pas à la structure. Un prêt à long terme (certificats…) " \
+                                         "ne se rend pas dans l'année."],
+    ["Ce qu’elle vaut", "Tout ce qu'elle possède (bâtiments, matériel, argent, ce qu'on lui doit) moins tout ce " \
+                        "qu'elle doit. C'est le « fonds propres » du bilan ; négatif, ses dettes dépassent ses avoirs."],
+    ["Mouvement pas classé", "Une ligne de banque ou de caisse que personne n'a encore rangée (quelle dépense, " \
+                             "quelle recette ?). Tant qu'il en reste, les chiffres sont incomplets."],
+    ["Obligation légale", "Ce que la loi impose à date fixe : déclaration de TVA, impôts, dépôt des comptes, " \
+                          "assurances. Une obligation en retard peut coûter une amende."]
+  ].freeze
+
+  def overview_light(health)
+    kind, label = OVERVIEW_LIGHTS.fetch(health.status)
+    ui_status(kind, label)
+  end
+
+  def overview_level(signal)
+    kind, label = OVERVIEW_LEVELS.fetch(signal.level)
+    ui_status(kind, label)
+  end
+
+  # « +1 200 € », « −3 400 € » : un résultat se lit avec son signe.
+  def overview_signed(cents)
+    cents.positive? ? "+#{accounting_euros(cents)}" : accounting_euros(cents)
+  end
+
+  # « 1er janvier », « 15 mars ».
+  def overview_day(date)
+    date.day == 1 ? "1er #{l(date, format: '%B')}" : l(date, format: "%-d %B")
+  end
 end
