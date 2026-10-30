@@ -5,6 +5,7 @@ require "rails_helper"
 # jour, agrégeant ses composants en badges compacts, au lieu d'un bloc par
 # composant. Les occupations SANS séjour gardent leur bloc propre.
 RSpec.describe "Calendrier — bloc séjour unifié", type: :request do
+  include ActiveSupport::Testing::TimeHelpers
   include Devise::Test::IntegrationHelpers
 
   let(:user) { User.create!(email: "agent-unified@les4sources.be", password: "password123") }
@@ -13,6 +14,12 @@ RSpec.describe "Calendrier — bloc séjour unifié", type: :request do
   let(:space)  { Space.create!(name: "Grande Salle", code: "GS", capacity: 40) }
 
   before { sign_in user }
+
+  # Le calendrier racine montre le mois courant, et ces specs réservent au
+  # « vendredi qui vient » : en fin de mois, il tombe hors de la grille (le
+  # 30 octobre 2026, le vendredi suivant est le 6 novembre). Un mercredi en
+  # milieu de mois garde ce vendredi dans le mois affiché.
+  around { |example| travel_to(Time.zone.local(2026, 10, 14, 10)) { example.run } }
 
   def hue_for(stay_id)
     ((stay_id * CalendarHelper::GOLDEN_ANGLE) % 360).round

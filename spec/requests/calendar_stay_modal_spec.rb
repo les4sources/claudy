@@ -6,6 +6,7 @@ require "rails_helper"
 # stay-details#open. Le lien historique booking_path/space_booking_path reste dans
 # le DOM (anti-régression Phase 4).
 RSpec.describe "Calendrier — modale séjour depuis les blocs (epic #66, Phase 5)", type: :request do
+  include ActiveSupport::Testing::TimeHelpers
   include Devise::Test::IntegrationHelpers
 
   let(:user)    { User.create!(email: "agent-modal@les4sources.be", password: "password123") }
@@ -18,6 +19,12 @@ RSpec.describe "Calendrier — modale séjour depuis les blocs (epic #66, Phase 
   let(:space) { Space.create!(name: "Grande Salle", capacity: 40) }
 
   before { sign_in user }
+
+  # Le calendrier racine montre le mois courant, et ces specs réservent au
+  # « vendredi qui vient » : en fin de mois, il tombe hors de la grille (le
+  # 30 octobre 2026, le vendredi suivant est le 6 novembre). Un mercredi en
+  # milieu de mois garde ce vendredi dans le mois affiché.
+  around { |example| travel_to(Time.zone.local(2026, 10, 14, 10)) { example.run } }
 
   def stay_with_lodging(from:, to:)
     booking = Booking.create!(firstname: "Alex", group_name: "Groupe", lodging: lodging,

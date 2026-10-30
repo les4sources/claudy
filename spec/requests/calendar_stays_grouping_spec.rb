@@ -5,6 +5,7 @@ require "rails_helper"
 # inline), tout en gardant UN BLOC PAR RESSOURCE occupée (chambre / espace /
 # camping-van) — ce qui préserve la représentation qui porte le veto Grand-Duc.
 RSpec.describe "Calendrier — regroupement par séjour (epic #66, Phase 4)", type: :request do
+  include ActiveSupport::Testing::TimeHelpers
   include Devise::Test::IntegrationHelpers
 
   let(:user)    { User.create!(email: "agent@les4sources.be", password: "password123") }
@@ -17,6 +18,12 @@ RSpec.describe "Calendrier — regroupement par séjour (epic #66, Phase 4)", ty
   let(:space) { Space.create!(name: "Grande Salle", capacity: 5) }
 
   before { sign_in user }
+
+  # Le calendrier racine montre le mois courant, et ces specs réservent au
+  # « vendredi qui vient » : en fin de mois, il tombe hors de la grille (le
+  # 30 octobre 2026, le vendredi suivant est le 6 novembre). Un mercredi en
+  # milieu de mois garde ce vendredi dans le mois affiché.
+  around { |example| travel_to(Time.zone.local(2026, 10, 14, 10)) { example.run } }
 
   # Teinte attendue pour un séjour — même formule que CalendarHelper.
   def hue_for(stay_id)
