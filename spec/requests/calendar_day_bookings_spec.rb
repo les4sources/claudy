@@ -3,6 +3,7 @@ require "rails_helper"
 # Séjours rendus dans les cellules de jour du calendrier racine, entre les
 # avatars veilleurs et les notes (remplace les barres hebdo de l'issue #10).
 RSpec.describe "Calendrier — séjours dans les cellules", type: :request do
+  include ActiveSupport::Testing::TimeHelpers
   let(:user) { User.create!(email: "agent@les4sources.be", password: "password123") }
   let(:lodging) { Lodging.create!(name: "La Hulotte", price_night_cents: 48_500) }
   let(:room) do
@@ -12,6 +13,12 @@ RSpec.describe "Calendrier — séjours dans les cellules", type: :request do
   end
 
   before { sign_in user }
+
+  # Le calendrier racine montre le mois courant, et ces specs réservent au
+  # « vendredi qui vient » : en fin de mois, il tombe hors de la grille (le
+  # 30 octobre 2026, le vendredi suivant est le 6 novembre). Un mercredi en
+  # milieu de mois garde ce vendredi dans le mois affiché.
+  around { |example| travel_to(Time.zone.local(2026, 10, 14, 10)) { example.run } }
 
   # Crée un booking confirmé + ses réservations jour par jour (c'est ce que lit
   # le calendrier), sur les nuits [from, to).

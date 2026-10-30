@@ -9,10 +9,17 @@ require "rails_helper"
 # chambres jour par jour (fix epic #66, Phase 6). On le PROUVE ici de bout en
 # bout — création, Reservation, veto Grand-Duc, rendu calendrier, prefill edit.
 RSpec.describe "Stays — canal OTA (epic #81, Phase 4)", type: :request do
+  include ActiveSupport::Testing::TimeHelpers
   include Devise::Test::IntegrationHelpers
 
   let(:user) { User.create!(email: "admin-ota@les4sources.be", password: "password123") }
   before { sign_in user }
+
+  # Le calendrier racine montre le mois courant, et ces specs réservent au
+  # « vendredi qui vient » : en fin de mois, il tombe hors de la grille (le
+  # 30 octobre 2026, le vendredi suivant est le 6 novembre). Un mercredi en
+  # milieu de mois garde ce vendredi dans le mois affiché.
+  around { |example| travel_to(Time.zone.local(2026, 10, 14, 10)) { example.run } }
 
   # La Hulotte est au barème B2C (Pricing::Catalog) ET porte une chambre : c'est
   # la chambre qui reçoit les `Reservation` jour par jour — source de vérité du
