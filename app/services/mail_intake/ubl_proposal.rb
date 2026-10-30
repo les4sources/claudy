@@ -4,7 +4,8 @@ module MailIntake
   # mais avec la source « ubl » : rien n'y est deviné, tout est lu.
   #
   # Une UBL émise par une de NOS entités est une vente (les copies « [Sales] »
-  # qu'OkiOki renvoie sur compta@) : elle ne propose pas de facture d'achat.
+  # qu'OkiOki renvoie sur compta@) : elle ne propose pas de facture d'achat —
+  # sauf quand le client est une autre de nos entités (voir `kind`).
   class UblProposal
     def initialize(ubl, from_address: nil)
       @ubl = ubl
@@ -46,11 +47,23 @@ module MailIntake
       raw
     end
 
+    # Une facture d'une de nos structures à une AUTRE des nôtres (la SRL qui
+    # facture la Fondation, Michael 2026-10-30) n'est pas qu'une vente : c'est
+    # la dette de la structure cliente. La lire « vente » la faisait ignorer, et
+    # la Fondation ne la voyait jamais dans « À payer » (2026-013, 5 519,87 €).
     def kind
-      return "sales" if our_vats.include?(InvoiceCandidates.normalize_vat(@ubl.supplier.vat))
+      return "sales" if ours?(@ubl.supplier.vat) && !intra_group?
 
       @ubl.credit_note? ? "credit_note" : "invoice"
     end
+
+    def intra_group?
+      supplier = InvoiceCandidates.normalize_vat(@ubl.supplier.vat)
+      customer = InvoiceCandidates.normalize_vat(@ubl.customer.vat)
+      ours?(customer) && customer != supplier
+    end
+
+    def ours?(vat) = our_vats.include?(InvoiceCandidates.normalize_vat(vat))
 
     # Une ligne de ventilation par taux de TVA, au montant TVAC du taux : la
     # somme retombe exactement sur le total de la facture.

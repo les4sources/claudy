@@ -143,3 +143,49 @@
             span.text-sm.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(invoice.total_cents, "EUR"))
             = link_to "Traiter", finance_purchase_invoice_path(invoice),
                       class: "inline-flex items-center rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-50"
+
+/ Les factures reçues sur compta@ pas encore encodées (Michael, 2026-10-30).
+  Hors total, comme l'encart du dessus : sans facture encodée, pas de dette au
+  sens de la file. Mais une facture OkiOki restée dans la boîte de réception
+  n'apparaissait nulle part, même échue et relancée.
+- if @unencoded.pieces.any?
+  .mt-6.rounded-xl.border.border-amber-200.p-4(class="bg-amber-50/60")
+    .flex.flex-wrap.items-baseline.justify-between.gap-2
+      p.text-sm.font-semibold.text-amber-900 Reçues par mail, pas encore encodées
+      p.text-sm.font-semibold.text-amber-900
+        = "#{@unencoded.pieces.size} pièce(s) · #{humanized_money_with_symbol(Money.new(@unencoded.total_cents, 'EUR'))} de factures"
+    p.mt-1.text-xs.text-amber-900
+      | Hors total : ces factures attendent dans la
+      = link_to " boîte de réception", finance_mail_messages_path, class: "underline hover:text-amber-700"
+      | . Encode-les pour qu'elles rejoignent la file, en commençant par celles dont l'échéance est passée.
+    ul.mt-3.divide-y.divide-amber-100
+      - @unencoded.pieces.each do |piece|
+        li.flex.flex-wrap.items-center.justify-between.gap-3.py-2
+          div
+            p.flex.flex-wrap.items-center.gap-2
+              = link_to piece.supplier_name, finance_mail_message_path(piece.mail_message), class: "font-medium text-blue-600 hover:text-blue-800"
+              - if piece.credit_note?
+                span.rounded-full.bg-white.text-xs.font-medium.text-amber-800.ring-1.ring-amber-200(class="px-2 py-0.5") Note de crédit, à déduire
+              - if @entity.nil? && piece.legal_entity
+                span.rounded-full.bg-gray-100.text-xs.font-medium.text-gray-600(class="px-2 py-0.5")= piece.legal_entity.name
+            p.text-xs(class="#{piece.overdue? ? 'text-red-700 font-semibold' : 'text-gray-600'}")
+              = piece.number ? "n° #{piece.number}" : "sans numéro"
+              span.mx-1 ·
+              - if piece.due_on
+                = "échéance le #{l(piece.due_on, format: :long)}"
+                - if piece.overdue?
+                  = " — en retard de #{(Date.current - piece.due_on).to_i} j"
+              - else
+                | sans échéance
+              span.mx-1 ·
+              = "reçue le #{l(piece.mail_message.received_at.to_date, format: :long)}"
+          .flex.items-center.gap-3
+            span.text-sm.font-semibold.text-gray-900= humanized_money_with_symbol(Money.new(piece.signed_cents, "EUR"))
+            / Une note de crédit n'est pas une facture d'achat : elle se lit dans
+              son mail, et se déduit du paiement du même fournisseur.
+            - if piece.credit_note?
+              = link_to "Voir", finance_mail_message_path(piece.mail_message),
+                        class: "inline-flex items-center rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-50"
+            - else
+              = link_to "Encoder", new_finance_purchase_invoice_path(mail_attachment_id: piece.attachment.id),
+                        class: "inline-flex items-center rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-50"

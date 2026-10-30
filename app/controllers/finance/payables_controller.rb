@@ -20,6 +20,7 @@ module Finance
       @without_iban = @rows.reject(&:payable_ready?)
       @expected = queue.expected_payments
       @not_ready = not_ready_invoices
+      @unencoded = Finance::UnencodedMailInvoices.new(legal_entity: @entity)
     end
 
     private

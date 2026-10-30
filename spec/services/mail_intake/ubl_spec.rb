@@ -127,6 +127,24 @@ RSpec.describe MailIntake::Ubl do
       expect(message.reload.triage.dig("nature", "value")).to eq("sales")
     end
 
+    # Michael (2026-10-30) : la 2026-013 de la SRL à la Fondation, lue comme une
+    # vente, était partie dans « Ignorés » et manquait à « À payer ».
+    it "lit une facture d'une de nos structures à une autre comme l'achat de la cliente" do
+      srl = LegalEntity.create!(name: "Domaine d'Ahinvaux SRL", form: "srl", vat_number: "BE0867485747")
+      xml = ubl_xml(number: "2026-013", supplier: "DOMAINE D'AHINVAUX", supplier_vat: srl.vat_number,
+                    customer_vat: fondation.vat_number, pdf: pdf)
+      message = relever([raw_ubl_mail(message_id: "u5@okioki.be", xml: xml,
+                                      subject: "Fondation Les 4 Sources UBL Invoice - DOMAINE D'AHINVAUX - 2026-013 [Purchase]")]).first
+
+      MailIntake::Analyze.new(mail_message: message, jev: jev).run!
+
+      piece = message.mail_attachments.find_by(content_type: "application/pdf")
+      expect(piece.kind).to eq("invoice")
+      expect(piece).to be_invoice_like
+      expect(piece.proposed(:legal_entity_id)).to eq(fondation.id)
+      expect(message.reload.triage.dig("nature", "value")).to eq("invoice")
+    end
+
     it "relit l'UBL d'un mail relevé avant que Claudy sache le garder" do
       message = relever([raw_ubl_mail(message_id: "u4@okioki.be", xml: ubl_xml(pdf: pdf))]).first
       message.mail_attachments.each { |a| a.file.purge }

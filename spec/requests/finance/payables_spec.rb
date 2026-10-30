@@ -69,6 +69,62 @@ end
     expect(encart.text).to include("BROUILLON", "À traiter", "en retard de 3 j", "120 €")
   end
 
+  # Michael (2026-10-30) : des factures OkiOki « que je sais non payées »
+  # restaient dans la boîte de réception, invisibles ici.
+  describe "factures reçues par mail, pas encore encodées" do
+    let(:account) { MailAccount.create!(address: "compta@les4sources.be", purpose: "accounting") }
+
+    def piece(subject:, total:, number:, due_on: nil, status: "pending", kind: "invoice", issued_on: "2026-10-09",
+              legal_entity: entity, content_type: "application/pdf", source: "jev")
+      message = MailMessage.create!(mail_account: account, message_id: "#{subject}-#{content_type}@okioki.be",
+                                    subject: subject, from_address: "noreply@okioki.be",
+                                    received_at: Time.zone.parse("2026-10-09 10:00"), status: status)
+      proposal = { "kind" => kind, "total_cents" => total, "number" => number, "issued_on" => issued_on,
+                   "due_on" => due_on&.iso8601, "legal_entity_id" => legal_entity&.id, "supplier_name" => subject }
+      message.mail_attachments.create!(filename: "#{number}.pdf", content_type: content_type, sha256: SecureRandom.hex(32),
+                                       proposal: proposal.compact.transform_values { |v| { "value" => v, "source" => source } })
+    end
+
+    def encart
+      Nokogiri::HTML(response.body).at_xpath("//p[contains(., 'Reçues par mail, pas encore encodées')]/ancestor::div[contains(@class, 'border-amber-200')]")
+    end
+
+    it "les montre hors total, en retard en évidence, avec de quoi les encoder" do
+      grange = piece(subject: "Ferme de Grange", total: 74_287, number: "FAC/2026/00130", due_on: Date.current - 6)
+
+      get finance_payables_path
+
+      expect(response.body).to include("Rien à payer")
+      expect(encart.text).to include("Ferme de Grange", "FAC/2026/00130", "en retard de 6 j", "742,87 €")
+      expect(encart.to_html).to include(new_finance_purchase_invoice_path(mail_attachment_id: grange.id))
+    end
+
+    it "ne compte qu'une fois les deux mails qu'OkiOki envoie pour une facture, et laisse une note de crédit hors total" do
+      piece(subject: "Marco PDF", total: 12_100, number: "2026-045")
+      piece(subject: "Marco UBL", total: 12_100, number: "2026 045", content_type: "application/xml", source: "ubl")
+      piece(subject: "Frennet", total: 10_000, number: "26030", kind: "credit_note")
+
+      get finance_payables_path
+
+      expect(encart.text).to include("2 pièce(s) · 121 € de factures", "Marco UBL", "Note de crédit", "-100 €")
+      expect(encart.text).not_to include("Marco PDF")
+    end
+
+    it "écarte ce qui est déjà encodé, ignoré, sans montant ou à une autre structure" do
+      facture(number: "VOO-1", total: 1_815, payable: false).update!(issued_on: Date.new(2026, 10, 9))
+      srl = build_legal_entity(name: "Domaine d'Ahinvaux SRL")
+      piece(subject: "Orange lu de travers", total: 1_815, number: "0022172946")
+      piece(subject: "Ignorée", total: 551_987, number: "2026-013", status: "ignored")
+      piece(subject: "Conditions générales", total: nil, number: nil)
+      piece(subject: "Pour la SRL", total: 5_000, number: "S-1", legal_entity: srl)
+      piece(subject: "Rappel", total: 5_000, number: "R-1", kind: "reminder")
+
+      get finance_payables_path(legal_entity_id: entity.id)
+
+      expect(encart).to be_nil
+    end
+  end
+
   # L'ordre de l'écran est l'ordre dans lequel on paie, pas l'ordre de saisie.
   it "trie par échéance, les sans-échéance en dernier" do
     facture(number: "TARD", due_on: Date.current + 30)
