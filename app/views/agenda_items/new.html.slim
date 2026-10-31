@@ -3,7 +3,8 @@
            title: "Ajouter un point à l'ODJ"
 
 = form_with model: [@gathering, @agenda_item],
-            url: gathering_agenda_items_path(@gathering) do |f|
+            url: gathering_agenda_items_path(@gathering),
+            multipart: true do |f|
   .space-y-8.divide-y.divide-gray-200.sm:space-y-5
     .space-y-6.sm:space-y-5
       = render "form", f: f

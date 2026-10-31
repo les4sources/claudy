@@ -289,6 +289,39 @@ RSpec.describe "Comptabilité > Achats", type: :request do
     end
   end
 
+  # Michael, 2026-10-31 (facture #23) : un PDF déposé pour remplacer le XML
+  # venu du mail n'arrivait jamais. La pièce passe par un `file_field_tag`,
+  # que `form_with` ne voit pas : sans `multipart`, Turbo envoie le formulaire
+  # encodé en URL et laisse tomber le fichier en silence.
+  describe "la pièce justificative" do
+    def formulaire_de_la_piece
+      Nokogiri::HTML(response.body).at_css("form:has(input[type=file][name='purchase_invoice[document]'])")
+    end
+
+    it "est envoyée en multipart, à la création comme à la modification" do
+      get new_finance_purchase_invoice_path
+      expect(formulaire_de_la_piece["enctype"]).to eq("multipart/form-data")
+
+      get edit_finance_purchase_invoice_path(cree_facture)
+      expect(formulaire_de_la_piece["enctype"]).to eq("multipart/form-data")
+    end
+
+    it "remplace le XML joint par le PDF déposé" do
+      facture = cree_facture
+      facture.document.attach(io: StringIO.new("<Invoice/>"), filename: "facture.xml", content_type: "application/xml")
+      facture.update!(pdf_sha256: Digest::SHA256.hexdigest("<Invoice/>"))
+      pdf = fixture_file_upload("ticket.pdf", "application/pdf")
+
+      patch finance_purchase_invoice_path(facture), params: { purchase_invoice: { notes: "PDF reçu", document: pdf } }
+
+      expect(response).to redirect_to(finance_purchase_invoice_path(facture))
+      facture.reload
+      expect(facture.document.filename.to_s).to eq("ticket.pdf")
+      expect(facture.document.content_type).to eq("application/pdf")
+      expect(facture.pdf_sha256).to eq(Digest::SHA256.file(file_fixture("ticket.pdf")).hexdigest)
+    end
+  end
+
   describe "une facture comptabilisée" do
     it "ne se modifie plus" do
       facture = cree_facture

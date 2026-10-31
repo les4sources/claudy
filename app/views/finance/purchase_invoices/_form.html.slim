@@ -7,7 +7,10 @@
   contre le document, pas de mémoire.
 - supplier_draft = local_assigns[:supplier_draft] || {}
 - document_blob = invoice.document.attached? ? invoice.document.blob : nil
-= form_with model: invoice, url: url, method: method, html: { class: "space-y-6" },
+/ `multipart` à la main : la pièce passe par un `file_field_tag` (glisser-déposer),
+  que `form_with` ne voit pas. Sans lui, Turbo envoie le formulaire encodé en URL
+  et laisse tomber le fichier sans rien dire : la pièce ne se remplaçait pas.
+= form_with model: invoice, url: url, method: method, html: { class: "space-y-6", multipart: true },
             data: { controller: "purchase-invoice-form" } do |f|
 
   .grid.gap-4(class="lg:grid-cols-2")

@@ -110,4 +110,13 @@ RSpec.describe "Notes des points de l'ODJ", type: :request do
       expect(point.notes.map { |n| n.gathering_id }).to contain_exactly(reunion.id, suivante.id)
     end
   end
+
+  # Les pièces jointes d'un point passent par un `file_field_tag` : sans
+  # `multipart` sur le formulaire, Turbo les laissait tomber à la création.
+  it "envoie le formulaire d'un nouveau point en multipart, pour ses pièces jointes" do
+    get new_gathering_agenda_item_path(reunion)
+
+    formulaire = Nokogiri::HTML(response.body).at_css("form:has(input[type=file][name='agenda_item[attachments][]'])")
+    expect(formulaire["enctype"]).to eq("multipart/form-data")
+  end
 end
