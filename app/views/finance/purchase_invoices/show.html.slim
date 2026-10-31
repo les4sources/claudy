@@ -142,11 +142,30 @@
           object.w-full.rounded-lg.border.border-gray-200(data=url_for(@invoice.document) type="application/pdf" height="420")
             p.p-3.text-sm.text-gray-500
               = link_to "Ouvrir la pièce", url_for(@invoice.document), class: "text-blue-500 underline"
-        - else
+        - elsif @invoice.document.image?
           = image_tag url_for(@invoice.document), class: "w-full rounded-lg border border-gray-200"
+        - else
+          / Un XML (facture électronique venue du mail) ne s'affiche pas en image.
+          p.text-sm.text-gray-600
+            | Pièce au format #{@invoice.document.filename.extension.upcase}, sans aperçu.
+            = " "
+            = link_to "L'ouvrir", url_for(@invoice.document), target: "_blank", rel: "noopener", class: "text-blue-500 underline"
         p.mt-2.text-xs.text-gray-400= @invoice.document.filename.to_s
       - else
         p.text-sm.text-gray-400 Aucune pièce déposée.
+      / Quel que soit le statut : une facture comptabilisée ne passe plus par
+        « Modifier », mais sa pièce n'est pas une donnée comptable.
+      details.mt-3(open=!@invoice.document.attached?)
+        summary.cursor-pointer.select-none.text-sm.text-blue-500.hover:underline
+          = @invoice.document.attached? ? "Remplacer la pièce…" : "Déposer la pièce…"
+        = form_with url: replace_document_finance_purchase_invoice_path(@invoice), method: :post, multipart: true,
+                    class: "mt-2 space-y-2 rounded-md border border-gray-200 bg-gray-50 p-3" do
+          = file_field_tag "purchase_invoice[document]", accept: "application/pdf,image/*", required: true,
+                           class: "block w-full text-sm text-gray-700", aria: { label: "Fichier de la pièce" }
+          = submit_tag (@invoice.document.attached? ? "Remplacer la pièce" : "Déposer la pièce"),
+                       class: "inline-flex items-center rounded-md border border-transparent px-3 py-1.5 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
+          - if @invoice.frozen_content?
+            p.text-xs.text-gray-500 La facture reste comptabilisée : seule la pièce change, l'écriture ne bouge pas.
 
     .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-3
       h3.text-xs.uppercase.tracking-wide.text-gray-400 Et maintenant ?

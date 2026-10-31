@@ -6,7 +6,8 @@ module Finance
   # blocage implicite, donc invisible, et on découvrait au moment de payer que
   # personne n'avait dit oui.
   class PurchaseInvoicesController < Finance::AccountingBaseController
-    before_action :get_invoice, only: %i[show edit update submit dispute reopen validate_by_team pay_in_cash paid_by_member]
+    before_action :get_invoice, only: %i[show edit update submit dispute reopen validate_by_team pay_in_cash paid_by_member
+                                              replace_document]
     before_action :get_form_collections, only: %i[new create edit update]
 
     breadcrumb "Achats", :finance_purchase_invoices_path, match: :exact
@@ -94,6 +95,24 @@ module Finance
       else
         flash.now[:alert] = doublon_message(@invoice) || @invoice.errors.full_messages.to_sentence
         render :edit, status: :unprocessable_entity
+      end
+    end
+
+    # « Remplacer la pièce » depuis la fiche (Michael, 2026-10-31) : une facture
+    # comptabilisée ne passe plus par le formulaire, mais sa pièce n'est pas
+    # une donnée comptable. Le XML venu du mail se remplace par le PDF sans
+    # contre-passer l'écriture. Le contrôle de doublon (sha256) reste.
+    def replace_document
+      if params.dig(:purchase_invoice, :document).blank?
+        return redirect_to finance_purchase_invoice_path(@invoice), alert: "Choisis d'abord le fichier de la pièce."
+      end
+
+      attach_document(@invoice)
+      if @invoice.save
+        redirect_to finance_purchase_invoice_path(@invoice), notice: "Pièce remplacée."
+      else
+        redirect_to finance_purchase_invoice_path(@invoice),
+                    alert: doublon_message(@invoice) || @invoice.errors.full_messages.to_sentence
       end
     end
 
@@ -294,9 +313,13 @@ module Finance
       file = params.dig(:purchase_invoice, :document)
       return if file.blank?
 
-      invoice.document.attach(file)
+      # L'empreinte AVANT `attach` : sur une facture enregistrée sans autre
+      # changement, `attach` sauve tout de suite et lit le fichier jusqu'au
+      # bout — l'empreinte prise après était celle d'un fichier vide, et
+      # l'enregistrement immédiat passait à côté du contrôle de doublon.
       invoice.pdf_sha256 = Digest::SHA256.hexdigest(file.tempfile.read)
       file.tempfile.rewind
+      invoice.document.attach(file)
     end
 
     def doublon_message(invoice)

@@ -320,6 +320,72 @@ RSpec.describe "Comptabilité > Achats", type: :request do
       expect(facture.document.content_type).to eq("application/pdf")
       expect(facture.pdf_sha256).to eq(Digest::SHA256.file(file_fixture("ticket.pdf")).hexdigest)
     end
+
+    # Sans autre changement, `attach` sauve tout de suite et vide le fichier :
+    # l'empreinte doit être prise avant.
+    it "prend l'empreinte du PDF même quand rien d'autre ne change" do
+      facture = cree_facture
+
+      patch finance_purchase_invoice_path(facture),
+            params: { purchase_invoice: { document: fixture_file_upload("ticket.pdf", "application/pdf") } }
+
+      expect(facture.reload.pdf_sha256).to eq(Digest::SHA256.file(file_fixture("ticket.pdf")).hexdigest)
+    end
+  end
+
+  # Michael, 2026-10-31 : la facture #23 était déjà « À payer », donc sans
+  # bouton « Modifier », et sa pièce restait le XML du mail.
+  describe "POST /finance/purchases/:id/replace_document" do
+    def joint_un_xml(facture)
+      facture.document.attach(io: StringIO.new("<Invoice/>"), filename: "facture.xml", content_type: "application/xml")
+      facture.update!(pdf_sha256: Digest::SHA256.hexdigest("<Invoice/>"))
+    end
+
+    it "remplace la pièce d'une facture comptabilisée sans toucher à l'écriture" do
+      facture = cree_facture
+      post submit_finance_purchase_invoice_path(facture)
+      joint_un_xml(facture.reload)
+      expect(facture.status).to eq("to_pay")
+      ecriture = JournalEntry.find_by!(source: facture, journal: "purchases")
+
+      get finance_purchase_invoice_path(facture)
+      expect(response.body).to include("Pièce au format XML")
+      formulaire = Nokogiri::HTML(response.body).at_css("form:has(input[type=file][name='purchase_invoice[document]'])")
+      expect(formulaire["action"]).to eq(replace_document_finance_purchase_invoice_path(facture))
+      expect(formulaire["enctype"]).to eq("multipart/form-data")
+
+      post replace_document_finance_purchase_invoice_path(facture),
+           params: { purchase_invoice: { document: fixture_file_upload("ticket.pdf", "application/pdf") } }
+
+      expect(response).to redirect_to(finance_purchase_invoice_path(facture))
+      expect(flash[:notice]).to eq("Pièce remplacée.")
+      facture.reload
+      expect(facture.document.filename.to_s).to eq("ticket.pdf")
+      expect(facture.status).to eq("to_pay")
+      expect(facture.pdf_sha256).to eq(Digest::SHA256.file(file_fixture("ticket.pdf")).hexdigest)
+      expect(JournalEntry.where(source: facture)).to contain_exactly(ecriture)
+    end
+
+    it "refuse une pièce déjà déposée sur une autre facture" do
+      autre = cree_facture(number: "F-AUTRE")
+      autre.update!(pdf_sha256: Digest::SHA256.file(file_fixture("ticket.pdf")).hexdigest)
+      facture = cree_facture
+      joint_un_xml(facture)
+
+      post replace_document_finance_purchase_invoice_path(facture),
+           params: { purchase_invoice: { document: fixture_file_upload("ticket.pdf", "application/pdf") } }
+
+      expect(flash[:alert]).to include("déjà été déposée")
+      expect(facture.reload.document.filename.to_s).to eq("facture.xml")
+    end
+
+    it "demande un fichier" do
+      facture = cree_facture
+
+      post replace_document_finance_purchase_invoice_path(facture), params: { purchase_invoice: { document: "" } }
+
+      expect(flash[:alert]).to eq("Choisis d'abord le fichier de la pièce.")
+    end
   end
 
   describe "une facture comptabilisée" do
