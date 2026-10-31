@@ -438,6 +438,9 @@ Rails.application.routes.draw do
         post :pay_in_cash
         # Payée en magasin par un membre : sa note de frais la rembourse.
         post :paid_by_member
+        # La pièce se remplace quel que soit le statut : ce n'est pas une
+        # donnée comptable, et une facture comptabilisée ne se modifie plus.
+        post :replace_document
       end
     end
     resources :cash_motifs, path: "cash/motifs", except: %i[show destroy] do
