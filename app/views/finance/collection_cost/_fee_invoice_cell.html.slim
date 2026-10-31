@@ -11,7 +11,7 @@
   - else
     details
       summary.cursor-pointer.select-none.text-sm.text-indigo-600 Déposer le justificatif…
-      = form_with url: finance_stripe_fee_invoices_path, method: :post, class: "mt-2 space-y-2 rounded-md border border-gray-200 bg-gray-50 p-3" do |f|
+      = form_with url: finance_stripe_fee_invoices_path, method: :post, multipart: true, class: "mt-2 space-y-2 rounded-md border border-gray-200 bg-gray-50 p-3" do |f|
         = hidden_field_tag :account_key, row.account_key
         = hidden_field_tag :period_month, row.month.to_s
         label.block.text-xs.text-gray-600

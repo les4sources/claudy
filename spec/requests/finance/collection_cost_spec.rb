@@ -25,6 +25,10 @@ RSpec.describe "Finances > Coût d'encaissement", type: :request do
     expect(response.body).to include("Claudy")
     expect(response.body).to include("ne coûte aucune commission")
     expect(response.body).to include("2,38 %")
+    # Le justificatif se dépose dans un formulaire multipart, sinon le PDF
+    # n'arrive jamais (même piège que la pièce d'une facture d'achat).
+    formulaire = Nokogiri::HTML(response.body).at_css("form:has(input[type=file][name='stripe_fee_invoice[document]'])")
+    expect(formulaire["enctype"]).to eq("multipart/form-data")
   end
 
   it "invite à lancer la synchronisation quand il n'y a rien" do
