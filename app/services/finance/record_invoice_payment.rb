@@ -11,6 +11,10 @@ module Finance
   # enregistrée ne s'affecte plus directement sur la charge — la charge est
   # déjà passée au journal des achats. L'affecter une seconde fois sur le
   # compte de charge la compterait deux fois.
+  #
+  # Une NOTE DE CRÉDIT « À rembourser » (2026-11-01) se rapproche par le même
+  # geste, dans l'autre sens : la ligne ENTRANTE du fournisseur qui nous
+  # rembourse, affectée au crédit du 440000 avec la note en document.
   class RecordInvoicePayment < ServiceBase
     class NotPayable < StandardError; end
     class WrongDirection < StandardError; end
@@ -35,19 +39,24 @@ module Finance
       raise NotPayable, "Aucune facture à payer." if @invoice.blank?
       unless @invoice.to_pay?
         raise NotPayable,
-              "Seule une facture « À payer » se rapproche — celle-ci est #{@invoice.status_label.downcase}."
+              "Seule une #{@invoice.kind_label.downcase} « #{@invoice.credit_note? ? 'À rembourser' : 'À payer'} » " \
+              "se rapproche — celle-ci est #{@invoice.status_label.downcase}."
       end
-      raise WrongDirection, "Une facture se paie depuis une ligne SORTANTE." unless @entry.amount_cents.negative?
+      if @invoice.credit_note?
+        raise WrongDirection, "Une note de crédit se rembourse par une ligne ENTRANTE." unless @entry.amount_cents.positive?
+      elsif !@entry.amount_cents.negative?
+        raise WrongDirection, "Une facture se paie depuis une ligne SORTANTE."
+      end
 
       du = @invoice.remaining_cents
-      raise NotPayable, "Cette facture est déjà entièrement rapprochée." unless du.positive?
+      raise NotPayable, "Cette #{@invoice.kind_label.downcase} est déjà entièrement rapprochée." unless du.positive?
 
       # Sans montant explicite on solde ce qui reste, dans la limite de ce que
       # la ligne peut encore porter : un virement groupé paie plusieurs factures.
       montant = @amount_cents || [du, @entry.remaining_cents.abs].min
       if montant > du
         raise TooMuch,
-              "Cette facture n'attend que #{Money.new(du, 'EUR').format} — " \
+              "Cette #{@invoice.kind_label.downcase} n'attend que #{Money.new(du, 'EUR').format} — " \
               "en affecter #{Money.new(montant, 'EUR').format} la surpaierait."
       end
 
@@ -60,8 +69,8 @@ module Finance
             legal_entity: @invoice.legal_entity,
             third_party: @invoice.third_party,
             document: @invoice,
-            amount_cents: -montant,
-            label: "Paiement #{@invoice.payable_label}"
+            amount_cents: @invoice.credit_note? ? montant : -montant,
+            label: "#{@invoice.credit_note? ? 'Remboursement' : 'Paiement'} #{@invoice.payable_label}"
           )
 
           Accounting::PostCashEntry.new(cash_entry: @entry, whodunnit: @whodunnit).run! if @entry.reload.fully_allocated?

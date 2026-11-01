@@ -15,6 +15,9 @@ module Finance
   #
   # Calqué sur `Finance::MatchMemberPayouts` : même forme, même écran, même
   # geste — l'équipe n'a pas à apprendre deux vocabulaires pour le même travail.
+  #
+  # Dans l'autre sens (2026-11-01) : une ligne ENTRANTE peut être le
+  # remboursement d'une note de crédit « À rembourser », mêmes indices.
   class MatchPurchaseInvoices
     Match = Struct.new(:invoice, :third_party, :due_cents, :reason, :confidence, keyword_init: true)
 
@@ -26,13 +29,14 @@ module Finance
     end
 
     def for_entry(entry)
-      return [] unless entry.amount_cents.negative?
+      return [] if entry.amount_cents.zero?
       return [] if entry.cash_allocations.any?
 
       montant = entry.amount_cents.abs
       iban = normalized(entry.counterparty_iban)
+      candidates = invoices.select { |invoice| invoice.credit_note? == entry.amount_cents.positive? }
 
-      invoices.filter_map do |invoice|
+      candidates.filter_map do |invoice|
         du = invoice.remaining_cents
         next unless du.positive?
 
@@ -42,7 +46,7 @@ module Finance
                     confidence: IBAN_CONFIDENCE)
         elsif du == montant
           Match.new(invoice: invoice, third_party: invoice.third_party, due_cents: du,
-                    reason: "#{invoice.payable_label} attend exactement ce montant",
+                    reason: "#{invoice.payable_label} #{invoice.credit_note? ? 'nous doit' : 'attend'} exactement ce montant",
                     confidence: AMOUNT_CONFIDENCE)
         end
       end.sort_by { |match| -match.confidence }
@@ -61,7 +65,8 @@ module Finance
     private
 
     def invoices
-      @invoices ||= PurchaseInvoice.payable.includes(:third_party, :legal_entity, :cash_allocations).to_a
+      @invoices ||= PurchaseInvoice.with_status("to_pay")
+                                   .includes(:third_party, :legal_entity, :cash_allocations, :credited_invoice).to_a
     end
 
     def normalized(iban) = iban.to_s.gsub(/\s+/, "").upcase.presence

@@ -465,4 +465,51 @@ RSpec.describe "Comptabilité > Achats", type: :request do
       expect(facture.reload).to be_to_process
     end
   end
+
+  # Les notes de crédit fournisseurs (Michael, 2026-11-01).
+  describe "une note de crédit" do
+    it "s'encode depuis le formulaire, liée à la facture qu'elle corrige" do
+      facture = cree_facture(total: 50_000)
+
+      get new_finance_purchase_invoice_path(kind: "credit_note")
+      expect(response.body).to include("Nouvelle note de crédit fournisseur", "Facture corrigée")
+
+      post finance_purchase_invoices_path,
+           params: { purchase_invoice: {
+             kind: "credit_note", credited_invoice_id: facture.id,
+             legal_entity_id: entity.id, third_party_id: antargaz.id, number: "NC-1",
+             issued_on: "2026-06-10", total_euros: "200,00",
+             purchase_invoice_lines_attributes: { "0" => { general_account_id: charges.id, amount_euros: "200,00" } }
+           } }
+
+      note = PurchaseInvoice.credit_notes.sole
+      expect(note.credited_invoice).to eq(facture)
+      expect(flash[:notice]).to eq("Note de crédit enregistrée.")
+
+      post submit_finance_purchase_invoice_path(note)
+      expect(note.reload.status_label).to eq("Imputée")
+      expect(facture.reload.remaining_cents).to eq(30_000)
+
+      get finance_purchase_invoice_path(note)
+      expect(response.body).to include("Imputé sur la facture", "-200,00")
+      get finance_purchase_invoice_path(facture)
+      expect(response.body).to include("Note de crédit NC-1")
+    end
+
+    it "se préremplit comme note de crédit depuis une pièce du mail lue comme telle" do
+      account = MailAccount.create!(address: "compta@les4sources.be", purpose: "accounting")
+      message = account.mail_messages.create!(message_id: "<nc@test>", from_address: "okioki@example.com",
+                                              subject: "Credit note", received_at: Time.current)
+      piece = message.mail_attachments.new(filename: "nc.pdf", content_type: "application/pdf", sha256: "abc",
+                                           proposal: { "kind" => { "value" => "credit_note" },
+                                                       "third_party_id" => { "value" => antargaz.id } })
+      piece.file.attach(io: StringIO.new("%PDF-1.4"), filename: "nc.pdf", content_type: "application/pdf")
+      piece.save!
+
+      get new_finance_purchase_invoice_path(mail_attachment_id: piece.id)
+
+      expect(response.body).to include("Nouvelle note de crédit fournisseur")
+      expect(response.body).to match(/value="credit_note"[^>]*checked|checked[^>]*value="credit_note"/)
+    end
+  end
 end

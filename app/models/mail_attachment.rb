@@ -96,7 +96,7 @@ class MailAttachment < ApplicationRecord
       suppliers += ThirdParty.where.not(vat_number: [nil, ""])
                              .select { |t| MailIntake::InvoiceCandidates.normalize_vat(t.vat_number) == vat }.map(&:id)
     end
-    same_supplier = suppliers.any? ? PurchaseInvoice.find_by(number: number, third_party_id: suppliers.uniq) : nil
+    same_supplier = suppliers.any? ? same_kind.find_by(number: number, third_party_id: suppliers.uniq) : nil
     same_supplier || invoice_with_same_number_amount_and_date(number)
   end
 
@@ -109,6 +109,10 @@ class MailAttachment < ApplicationRecord
     issued_on = proposed(:issued_on)
     return nil if total.blank? || issued_on.blank?
 
-    PurchaseInvoice.find_by(number: number, total_cents: total, issued_on: issued_on)
+    same_kind.find_by(number: number, total_cents: total, issued_on: issued_on)
   end
+
+  # Une note de crédit ne désigne jamais une facture, même au même numéro : un
+  # fournisseur peut numéroter les deux à part.
+  def same_kind = kind == "credit_note" ? PurchaseInvoice.credit_notes : PurchaseInvoice.invoices
 end

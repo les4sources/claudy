@@ -16,6 +16,7 @@ module MailIntake
       proposal = {
         "kind" => ubl_value(kind),
         "number" => ubl_value(@ubl.number),
+        "credited_number" => ubl_value((@ubl.credited_number if @ubl.credit_note?)),
         "issued_on" => ubl_value(@ubl.issued_on&.iso8601),
         "due_on" => ubl_value(@ubl.due_on&.iso8601),
         "total_cents" => ubl_value(@ubl.total_cents),

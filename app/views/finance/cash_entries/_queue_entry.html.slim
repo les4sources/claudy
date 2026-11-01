@@ -90,14 +90,18 @@
           .flex.flex-wrap.items-center.justify-between.gap-2
             div
               p.text-sm.text-gray-800
-                strong = "Paiement de #{match.invoice.payable_label}"
-                = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus à #{match.third_party&.name}"
+                - if match.invoice.credit_note?
+                  strong = "Remboursement de la #{match.invoice.payable_label.downcase_first}"
+                  = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} que nous doit #{match.third_party&.name}"
+                - else
+                  strong = "Paiement de #{match.invoice.payable_label}"
+                  = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus à #{match.third_party&.name}"
               p.mt-0.5.text-xs.text-gray-500
                 = match.reason
                 = " (#{match.confidence} % de confiance)"
               p.mt-0.5.text-xs
-                = link_to "Voir la facture", finance_purchase_invoice_path(match.invoice), class: "text-blue-500 hover:text-blue-700"
-            = button_to "Payer cette facture", pay_invoice_finance_cash_entry_path(entry, purchase_invoice_id: match.invoice.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+                = link_to (match.invoice.credit_note? ? "Voir la note de crédit" : "Voir la facture"), finance_purchase_invoice_path(match.invoice), class: "text-blue-500 hover:text-blue-700"
+            = button_to (match.invoice.credit_note? ? "Rapprocher ce remboursement" : "Payer cette facture"), pay_invoice_finance_cash_entry_path(entry, purchase_invoice_id: match.invoice.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
 
     / Une note de frais ou de mission qui attend son virement (epic #241,
       phase 3). Même forme que la facture juste au-dessus : c'est le même geste

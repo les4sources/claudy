@@ -1,7 +1,8 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
            title: "Achats",
-           links: [link_to("➕ Nouvelle facture", new_finance_purchase_invoice_path, class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90")]
+           links: [link_to("Nouvelle note de crédit", new_finance_purchase_invoice_path(kind: "credit_note"), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
+                   link_to("➕ Nouvelle facture", new_finance_purchase_invoice_path, class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90")]
 
 / Les totaux en tête portent sur TOUTES les factures, pas sur le filtre courant :
   c'est une boussole, et une boussole qui suit le filtre ne sert à rien.
@@ -13,6 +14,12 @@
       p.text-xs.uppercase.tracking-wide.text-gray-400= PurchaseInvoice::STATUS_LABELS[status]
       p.mt-1.text-lg.font-semibold.text-gray-900= number_to_currency(donnees[:cents] / 100.0)
       p.text-xs.text-gray-400= "#{donnees[:count]} facture(s)"
+
+/ Les notes de crédit dont le fournisseur nous doit encore l'argent.
+- if @awaiting_refund.any?
+  .mb-5.rounded-lg.border.border-purple-200.bg-purple-50.px-4.py-3.text-sm.text-purple-900
+    = link_to "#{@awaiting_refund.size} note(s) de crédit à rembourser", finance_purchase_invoices_path(status: "to_pay"), class: "font-semibold underline"
+    = " · #{number_to_currency(@awaiting_refund.sum(&:remaining_cents) / 100.0)} que les fournisseurs nous doivent. Leur virement se rapproche depuis « À affecter »."
 
 = render "finance/shared/entity_filter", url: finance_purchase_invoices_path, selected: params[:legal_entity_id]
 
@@ -73,7 +80,7 @@
             td.py-4.px-6.whitespace-nowrap.align-top(class="#{echue ? 'border-l-4 border-red-400' : ''}")
               = link_to l(invoice.issued_on, format: :short), finance_purchase_invoice_path(invoice), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
             td.py-4.px-6.whitespace-nowrap.align-top
-              - if invoice.due_on.nil?
+              - if invoice.due_on.nil? || invoice.credit_note?
                 span.text-gray-300 —
               - elsif echue
                 .font-semibold.text-red-700= l(invoice.due_on, format: :short)
@@ -86,7 +93,11 @@
                 .text-xs(class="#{jours <= 7 ? 'text-amber-700' : 'text-gray-400'}")= jours.zero? ? "aujourd'hui" : "dans #{jours} j"
             td.py-4.px-6.align-top
               .font-medium.text-gray-900= invoice.third_party.name
-              .text-xs.text-gray-400= invoice.number.presence || "sans numéro"
+              .text-xs.text-gray-400
+                - if invoice.credit_note?
+                  span.font-medium.text-purple-700 Note de crédit
+                  = " · "
+                = invoice.number.presence || "sans numéro"
               - if invoice.legal_entity
                 .text-xs.text-gray-400= invoice.legal_entity.name
             td.py-4.px-6.align-top
@@ -97,6 +108,6 @@
               - else
                 span.text-orange-700= "reste #{number_to_currency((invoice.total_cents - invoice.lines_total_cents) / 100.0)}"
             td.py-4.px-6.text-right.whitespace-nowrap.align-top.font-medium.text-gray-900
-              = number_to_currency(invoice.total_cents / 100.0)
+              = number_to_currency(invoice.signed_total_cents / 100.0)
               - if invoice.double_signature?
                 .text-xs.text-amber-700 double signature

@@ -29,6 +29,8 @@ module PurchaseInvoices
     private
 
     def pay
+      raise BadStatus, "Une note de crédit ne se paie pas : le fournisseur nous rembourse." if @invoice.credit_note?
+
       unless @invoice.to_pay?
         raise BadStatus,
               "Seule une facture « À payer » se règle en espèces — celle-ci est " \

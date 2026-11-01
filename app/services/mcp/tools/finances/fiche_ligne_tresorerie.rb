@@ -84,6 +84,10 @@ module Mcp
 
         def pistes_entree(entry)
           pistes = []
+          ::Finance::MatchPurchaseInvoices.new.for_entry(entry).each do |m|
+            pistes << "avec: facture_achat, facture: #{m.invoice.id} — remboursement de la #{m.invoice.payable_label.downcase_first} " \
+                      "reste #{euros(m.due_cents)} (#{m.reason})"
+          end
           if (sejour = ::Finance::MatchStay.new(cash_entry: entry).run!)
             lignes = begin
               ::Finance::VentilateStay.new(stay: sejour.stay, amount_cents: entry.amount_cents).run!

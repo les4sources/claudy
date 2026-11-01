@@ -36,6 +36,9 @@ module PurchaseInvoices
           # facture qui attend encore l'aval d'un pôle n'est pas une dette.
           if cible == "to_pay"
             Accounting::PostPurchaseInvoice.new(purchase_invoice: @invoice, whodunnit: @whodunnit).run!
+            # Une note de crédit liée s'impute tout de suite sur sa facture :
+            # l'une peut en sortir « Imputée », l'autre « Payée ».
+            RefreshPayment.new(purchase_invoice: @invoice.reload).run! if @invoice.credit_note?
           end
         end
       end

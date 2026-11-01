@@ -24,6 +24,7 @@ module PurchaseInvoices
         value = attachment.proposed(field)
         invoice.public_send("#{field}=", value) if value.present?
       end
+      prefill_credit_note(invoice)
       prefill_vat_lines(invoice, attachment.proposed(:vat_lines))
       invoice.notes = "Payée d'avance selon la facture électronique (UBL)." if attachment.proposed(:fully_prepaid)
       invoice.document.attach(attachment.file.blob)
@@ -43,6 +44,18 @@ module PurchaseInvoices
     end
 
     private
+
+    # Une note de crédit lue comme telle (PDF ou UBL) en est une ; la facture
+    # qu'elle cite, si on la connaît chez ce fournisseur, est proposée.
+    def prefill_credit_note(invoice)
+      return unless attachment.kind == "credit_note"
+
+      invoice.kind = "credit_note"
+      cited = attachment.proposed(:credited_number)
+      return if cited.blank? || invoice.third_party_id.blank?
+
+      invoice.credited_invoice = PurchaseInvoice.invoices.find_by(third_party_id: invoice.third_party_id, number: cited)
+    end
 
     # Une facture électronique donne la TVA par taux : une ligne de ventilation
     # par taux, au montant TVAC, dont il ne reste qu'à choisir compte et pôle.
