@@ -48,6 +48,8 @@
 @import 'mail_body.css';
 /* Nouvelle interface (redesign 2026-10-24), scopée sous `body.ui-v2`. */
 @import 'ui_v2.css';
+/* Fiche du bar à imprimer (Catalogue), au Design System des 4 Sources. */
+@import 'bar_sheet.css';
 
 /* --- Averia Serif Libre ---------------------------------------------------
    PLACÉ APRÈS LES @import : en CSS, `@import` doit précéder toute autre règle.

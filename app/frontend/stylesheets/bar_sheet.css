@@ -1,0 +1,129 @@
+/* ==========================================================================
+   FICHE DU BAR À IMPRIMER (Catalogue › « Fiche du bar », Michael 2026-11-01)
+   Design System des 4 Sources (artifact JeEwAbp24wMuK1hwFnLRDr) appliqué au
+   papier : teal #224246 sur blanc, Averia Serif Libre pour les titres et le
+   texte, Be Vietnam Pro pour les petites étiquettes en capitales et les prix,
+   surligneur jaune derrière le titre, couleurs de pôle en aplats clairs (une
+   par catégorie), pas d'ombre ni de dégradé sur la feuille.
+   Tout est préfixé `.bs-` : aucune collision avec Tailwind ni ui_v2.
+   ========================================================================== */
+
+.bs-body {
+  --bs-teal: #224246;
+  --bs-ink-2: #4b6265;
+  --bs-paper: #faf6f0;
+  --bs-yellow: #eac20b;
+  --bs-grid: rgba(34, 66, 70, .38);
+  --bs-f-d: 'Averia Serif Libre', Georgia, serif;
+  --bs-f-ui: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  margin: 0;
+  background: var(--bs-paper);
+  color: var(--bs-teal);
+  font-family: var(--bs-f-d);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Barre d'outils, à l'écran seulement ---------------------------------- */
+.bs-toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  max-width: 210mm; margin: 0 auto; padding: 20px 0 16px;
+  font-family: var(--bs-f-ui); font-size: 14px;
+}
+.bs-toolbar-months { display: flex; align-items: center; gap: 8px; }
+.bs-toolbar a, .bs-toolbar button { font-family: inherit; }
+.bs-link {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px;
+  border: 1.5px solid #d8e0e0; border-radius: 999px; background: #fff;
+  color: var(--bs-teal); font-weight: 500; text-decoration: none;
+}
+.bs-link:hover { border-color: var(--bs-teal); }
+.bs-month-label { min-width: 150px; text-align: center; font-weight: 700; }
+.bs-print {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 22px;
+  border: 0; border-radius: 999px; background: var(--bs-teal); color: #fff;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.bs-print:hover { background: #2e585d; }
+.bs-warning {
+  max-width: 210mm; margin: 0 auto 16px; padding: 12px 16px; border-radius: 12px;
+  background: #fcf4cc; color: #6f5b00; font-family: var(--bs-f-ui); font-size: 14px;
+}
+
+/* --- La feuille A4 --------------------------------------------------------- */
+@page { size: A4 portrait; margin: 9mm 9mm 8mm; }
+
+.bs-sheet {
+  box-sizing: border-box;
+  width: 210mm; min-height: 297mm; margin: 0 auto 40px; padding: 9mm 9mm 8mm;
+  background: #fff;
+  box-shadow: 0 6px 20px -8px rgba(34, 66, 70, .22);
+}
+
+.bs-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 6mm; margin-bottom: 4mm; }
+.bs-brand { display: flex; align-items: flex-end; gap: 4mm; }
+/* Le PNG du logo a de l'air à droite de l'arche : on recadre sur l'arche. */
+.bs-mark { display: block; width: 11.5mm; height: 16mm; object-fit: cover; object-position: left center; }
+.bs-overline {
+  margin: 0 0 1mm; font-family: var(--bs-f-ui); font-size: 7.5pt; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--bs-ink-2);
+}
+.bs-title { margin: 0; font-size: 24pt; font-weight: 700; line-height: 1.1; }
+/* Surligneur du DS : un aplat jaune décalé sous le bas des lettres. */
+.bs-highlight {
+  padding: 0 1.5mm;
+  background: linear-gradient(transparent 68%, var(--bs-yellow) 68%, var(--bs-yellow) 96%, transparent 96%);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+.bs-month { margin: 1mm 0 0; font-size: 14pt; font-weight: 400; line-height: 1.1; }
+.bs-note { margin: 0; max-width: 62mm; font-size: 9pt; line-height: 1.35; text-align: right; color: var(--bs-ink-2); }
+
+/* --- Le tableau ------------------------------------------------------------ */
+.bs-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.bs-table th, .bs-table td { border: .6pt solid var(--bs-grid); }
+.bs-col-item { width: 44mm; }
+.bs-col-price { width: 14mm; }
+
+.bs-table thead th {
+  padding: 1.6mm 1mm; border-bottom: 1.5pt solid var(--bs-teal); vertical-align: bottom;
+  font-family: var(--bs-f-ui); font-size: 7pt; font-weight: 700; line-height: 1.15;
+  letter-spacing: .04em; text-transform: uppercase; text-align: center;
+  overflow-wrap: anywhere;
+}
+.bs-table thead th.bs-th-item { text-align: left; padding-left: 1.6mm; }
+
+.bs-group td {
+  padding: 1mm 1.6mm; font-size: 10.5pt; font-weight: 700; line-height: 1.2;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.bs-group .bs-emoji { margin-right: 1.5mm; font-size: 9.5pt; }
+.bs-tone-socioculturel td { background: #fcf4cc; }
+.bs-tone-accueil td { background: #fbe6e2; }
+.bs-tone-ressourcement td { background: #e4ecff; }
+.bs-tone-vie-collective td { background: #ffe6db; }
+.bs-tone-artisanat td { background: #f6ece1; }
+.bs-tone-nature td { background: #dcf3ea; }
+.bs-tone-microferme td { background: #f1f5d9; }
+
+.bs-line td { height: 5.4mm; padding: 0 1.6mm; font-size: 9.5pt; line-height: 1.1; }
+.bs-line .bs-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bs-line .bs-price {
+  padding: 0 1.2mm; text-align: right; white-space: nowrap;
+  font-family: var(--bs-f-ui); font-size: 8.5pt; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.bs-line .bs-price-missing { color: #b83a2a; }
+.bs-blank td { height: 5.4mm; }
+
+.bs-foot {
+  display: flex; justify-content: space-between; gap: 6mm; margin-top: 3mm;
+  font-family: var(--bs-f-ui); font-size: 7pt; color: var(--bs-ink-2);
+}
+
+/* --- Sur papier : la feuille seule ----------------------------------------- */
+@media print {
+  .bs-body { background: #fff; }
+  .bs-toolbar, .bs-warning { display: none !important; }
+  .bs-sheet { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
+  .bs-table thead { display: table-header-group; }
+  .bs-line, .bs-group { break-inside: avoid; }
+  .bs-group { break-after: avoid; }
+}

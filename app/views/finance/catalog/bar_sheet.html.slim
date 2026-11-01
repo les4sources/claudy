@@ -1,0 +1,82 @@
+/ Fiche du bar du mois, à imprimer et poser au bar (Michael, 2026-11-01).
+  Une ligne par article ACTIF du canal Bar, une colonne par compte sourcier
+  actif : c'est la même matrice que l'écran d'encodage des Fiches papier. Le
+  prix est le prix SOURCIER, jamais le prix d'achat. Dessin : bar_sheet.css.
+- month_label = l(@sheet.month, format: "%B %Y")
+- content_for :title, "Fiche du bar — #{month_label}"
+- content_for :print_body_class, "bs-body"
+
+nav.bs-toolbar(aria-label="Fiche du bar")
+  = link_to "← Catalogue", finance_catalog_index_path(channel: "bar"), class: "bs-link"
+  .bs-toolbar-months
+    = link_to "‹", finance_catalog_bar_sheet_path(month: @sheet.month.prev_month.strftime("%Y-%m")), class: "bs-link", aria: { label: "Mois précédent" }, title: "Mois précédent"
+    span.bs-month-label= month_label.capitalize
+    = link_to "›", finance_catalog_bar_sheet_path(month: @sheet.month.next_month.strftime("%Y-%m")), class: "bs-link", aria: { label: "Mois suivant" }, title: "Mois suivant"
+  button.bs-print(type="button" onclick="window.print()") Imprimer
+
+- if @sheet.missing_prices.any?
+  p.bs-warning
+    | Sans prix sourcier au #{l(@sheet.price_date, format: :long).squish} :
+    = " #{@sheet.missing_prices.map(&:name).to_sentence}. "
+    | Pose-leur un palier dans le catalogue avant d'imprimer.
+
+article.bs-sheet
+  header.bs-head
+    .bs-brand
+      = vite_image_tag "images/les-4-sources-logo-seul.png", alt: "Les 4 Sources", class: "bs-mark"
+      div
+        p.bs-overline Les 4 Sources · bar des sourciers
+        h1.bs-title
+          span.bs-highlight Fiche du bar
+        p.bs-month= month_label.capitalize
+    p.bs-note
+      | Note tes consommations dans ta colonne, sur la ligne de l'article.
+      br
+      | Prix sourciers.
+
+  - if @sheet.empty? || @sheet.accounts.empty?
+    p
+      - if @sheet.empty?
+        | Aucun article actif dans le canal Bar du catalogue.
+      - else
+        | Aucun compte sourcier actif.
+  - else
+    table.bs-table
+      colgroup
+        col.bs-col-item
+        col.bs-col-price
+        - @sheet.accounts.each do
+          col
+      thead
+        tr
+          th.bs-th-item(scope="col") Article
+          th(scope="col") Prix
+          - @sheet.accounts.each do |account|
+            th(scope="col")= account.name
+      tbody
+        - @sheet.groups.each do |group|
+          tr.bs-group(class="bs-tone-#{group.tone}")
+            td(colspan=(@sheet.accounts.size + 2))
+              - if group.emoji
+                span.bs-emoji(aria-hidden="true")= group.emoji
+              = group.name
+          - group.lines.each do |line|
+            tr.bs-line
+              td.bs-name= line.item.name
+              - if line.price_cents
+                td.bs-price= number_to_currency(line.price_cents / 100.0)
+              - else
+                td.bs-price.bs-price-missing —
+              - @sheet.accounts.each do
+                td
+        / Deux lignes libres pour ce qui n'est pas (encore) au catalogue.
+        - 2.times do
+          tr.bs-line.bs-blank
+            td
+            td
+            - @sheet.accounts.each do
+              td
+
+  footer.bs-foot
+    span Prix sourciers au #{l(@sheet.price_date, format: :long).squish}
+    span Imprimée le #{l(Date.current, format: :long).squish} depuis Claudy
