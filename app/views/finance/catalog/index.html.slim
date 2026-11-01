@@ -2,6 +2,7 @@
   = render "layouts/components/page_header",
            title: "Catalogue",
            links: [ \
+             link_to("🖨️ Fiche du bar du mois", finance_catalog_bar_sheet_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50", target: "_blank"), \
              link_to("🖨️ Liste sourcier", finance_catalog_print_path(audience: "member", channel: @channel), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50", target: "_blank"), \
              link_to("🖨️ Liste publique", finance_catalog_print_path(audience: "public", channel: @channel), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50", target: "_blank"), \
              link_to("➕ Nouvel article", new_finance_catalog_path(channel: @channel), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2") \

@@ -13,6 +13,13 @@ html(lang="fr")
     = csp_meta_tag
     = vite_client_tag
     = vite_javascript_tag "application", "data-turbo-track": "reload"
-  body.bg-white
-    .max-w-3xl.mx-auto.p-8
+  / Une page peut prendre la main sur la feuille entière en donnant la classe du
+    `body` (`content_for :print_body_class`) : la fiche du bar a besoin de toute
+    la largeur d'un A4 pour ses colonnes de comptes.
+  - if content_for?(:print_body_class)
+    body(class=yield(:print_body_class))
       = yield
+  - else
+    body.bg-white
+      .max-w-3xl.mx-auto.p-8
+        = yield

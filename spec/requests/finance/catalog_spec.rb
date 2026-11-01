@@ -258,6 +258,30 @@ RSpec.describe "Finances > Catalogue", type: :request do
     end
   end
 
+  describe "fiche du bar du mois" do
+    let!(:compte) { MemberAccount.create!(kind: "entity", name: "Seb & Mag") }
+
+    it "est proposée depuis le catalogue" do
+      get finance_catalog_index_path
+
+      expect(response.body).to include(finance_catalog_bar_sheet_path)
+    end
+
+    it "liste les articles actifs du bar, une colonne par compte, au prix sourcier" do
+      get finance_catalog_bar_sheet_path(month: "2026-11")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Fiche du bar")
+      expect(response.body).to include("novembre 2026")
+      expect(response.body).to include("Moinette")
+      expect(response.body).to include("Seb &amp; Mag")
+      expect(response.body).to include("2,10")     # prix sourcier
+      expect(response.body).not_to include("1,91") # prix d'achat
+      expect(response.body).not_to include("4,00") # prix public
+      expect(response.body).not_to include("Avoine bio") # canal Cellier
+    end
+  end
+
   describe "suggestion de prix" do
     it "renvoie la proposition en JSON" do
       Rate.create!(key: "bar.member_markup", amount_cents: 110, unit: "percent")
