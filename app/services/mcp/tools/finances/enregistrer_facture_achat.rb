@@ -13,6 +13,8 @@ module Mcp
       class EnregistrerFactureAchat < Ecriture
         include Commun
 
+        TYPES = { "facture" => "invoice", "note_de_credit" => "credit_note" }.freeze
+
         LIGNE_FACTURE = {
           type: "object",
           additionalProperties: false,
@@ -34,12 +36,17 @@ module Mcp
                           "oui avant le paiement (« aucune » pour retirer). Ensuite : geste_facture_achat soumettre. " \
                           "Pour une pièce de la boite compta@ (boite_compta) : `piece_mail` reprend ce que la lecture " \
                           "du mail a trouvé (fournisseur, numéro, total, dates, communication ; les arguments donnés " \
-                          "l'emportent), joint son PDF et classe le mail. Sinon la pièce PDF se dépose dans Claudy.",
+                          "l'emportent), joint son PDF et classe le mail. Sinon la pièce PDF se dépose dans Claudy. " \
+                          "Une NOTE DE CRÉDIT fournisseur : `type` note_de_credit (repris d'office d'une pièce lue " \
+                          "comme telle), montants positifs, `facture_corrigee` facultative ; une fois soumise, elle " \
+                          "s'impute sur ce qui reste à payer de cette facture, le reste est « à rembourser » par le fournisseur.",
              schema: {
                properties: {
                  facture: FACTURE.merge(description: "Pour corriger : la facture (#88). Absente : nouvelle facture."),
                  piece_mail: { type: %w[integer string], description: "Nouvelle facture depuis une pièce de la boite compta@ (#id de pièce, rendu par boite_compta)." },
                  fournisseur: { type: "string", description: "Le tiers fournisseur (nom ou code), voir referentiel_comptable tiers." },
+                 type: { type: "string", enum: TYPES.keys, description: "facture (défaut) ou note_de_credit." },
+                 facture_corrigee: { type: %w[integer string], description: "Note de crédit : la facture qu'elle corrige (#88), ou « aucune »." },
                  entite: ENTITE.merge(description: "Entité qui doit la facture. Défaut : la fondation."),
                  numero: { type: "string" },
                  date: DATE.merge(description: "Date de la facture. Défaut : aujourd'hui."),
@@ -72,10 +79,13 @@ module Mcp
           total_lignes = attributs[:lignes] ? attributs[:lignes].sum { |l| l[:amount_cents] } : brouillon.lines_total_cents
           ecart = brouillon.total_cents.to_i - total_lignes
 
-          resume = [facture ? "Corriger #{ligne_facture(facture)}" : "Nouvelle facture d'achat (à traiter)"]
+          resume = [facture ? "Corriger #{ligne_facture(facture)}" : "Nouvelle #{brouillon.credit_note? ? 'note de crédit fournisseur' : "facture d'achat"} (à traiter)"]
           resume << "Fournisseur #{brouillon.third_party&.name} · #{brouillon.legal_entity&.name} · n° #{brouillon.number || '—'} · " \
                     "du #{brouillon.issued_on} · échéance #{brouillon.due_on || '—'} · total #{euros(brouillon.total_cents)}"
           resume << "Communication : #{brouillon.payment_reference}" if brouillon.payment_reference.present?
+          if brouillon.credit_note?
+            resume << (brouillon.credited_invoice ? "Corrige #{ligne_facture(brouillon.credited_invoice)}" : "Sans facture corrigée : le fournisseur nous remboursera.")
+          end
           resume << "Validation par le pôle #{brouillon.validation_team&.name}" if brouillon.requires_validation?
           if attributs[:lignes]
             resume << "Lignes#{' (remplacent les actuelles)' if facture} :"
@@ -83,7 +93,7 @@ module Mcp
           end
           resume << (ecart.zero? ? "Les lignes couvrent le total." : "⚠ Il reste #{euros(ecart)} à ventiler avant de soumettre au paiement.")
           if (doublon = doublon(brouillon))
-            raise Error, "Ce numéro existe déjà pour ce fournisseur : facture ##{doublon.id}."
+            raise Error, "Ce numéro existe déjà pour ce fournisseur : #{doublon.kind_label.downcase} ##{doublon.id}."
           end
           if @piece
             resume << "Pièce : « #{@piece.filename} » du mail de #{@piece.mail_message.sender_label} " \
@@ -108,7 +118,7 @@ module Mcp
           piece&.attach_document(facture)
           metier! { facture.save! }
           piece&.settle!(facture, user)
-          "Facture enregistrée : #{ligne_facture(facture.reload)}#{"\nMail classé." if piece&.attachment&.mail_message&.reload&.status == 'filed'}"
+          "#{facture.kind_label} enregistrée : #{ligne_facture(facture.reload)}#{"\nMail classé." if piece&.attachment&.mail_message&.reload&.status == 'filed'}"
         end
 
         def attributs!(arguments, facture)
@@ -141,7 +151,20 @@ module Mcp
             end
           end
           a[:lignes] = lignes!(arguments["lignes"]) if arguments.key?("lignes")
+          note_de_credit!(a, arguments, facture)
           a
+        end
+
+        def note_de_credit!(attributs, arguments, facture)
+          if arguments["type"].present?
+            attributs[:kind] = TYPES.fetch(arguments["type"]) { raise Error, "type : facture ou note_de_credit." }
+          end
+          return unless arguments.key?("facture_corrigee")
+
+          brut = arguments["facture_corrigee"].to_s.strip
+          attributs[:credited_invoice_id] = brut.match?(/\A(aucune?|non)?\z/i) ? nil : facture!(brut).id
+          kind = attributs[:kind] || facture&.kind || "invoice"
+          raise Error, "facture_corrigee ne se donne qu'à une note de crédit (type note_de_credit)." if attributs[:credited_invoice_id] && kind != "credit_note"
         end
 
         # Ce que la lecture du mail propose, pour les champs que l'utilisateur
@@ -153,7 +176,8 @@ module Mcp
           ::PurchaseInvoices::FromMailAttachment.new(piece).prefill(brouillon)
           { third_party_id: brouillon.third_party_id, legal_entity_id: brouillon.legal_entity_id, number: brouillon.number,
             total_cents: brouillon.total_cents, issued_on: brouillon.issued_on, due_on: brouillon.due_on,
-            payment_reference: brouillon.payment_reference, notes: brouillon.notes }.compact
+            payment_reference: brouillon.payment_reference, notes: brouillon.notes,
+            kind: (brouillon.kind if brouillon.credit_note?), credited_invoice_id: brouillon.credited_invoice_id }.compact
         end
 
         def piece_mail!(reference)
@@ -188,7 +212,8 @@ module Mcp
         def doublon(facture)
           return nil if facture.number.blank? || facture.third_party_id.blank?
 
-          PurchaseInvoice.where(third_party_id: facture.third_party_id, number: facture.number).where.not(id: facture.id).first
+          PurchaseInvoice.where(third_party_id: facture.third_party_id, kind: facture.kind, number: facture.number)
+                         .where.not(id: facture.id).first
         end
       end
     end

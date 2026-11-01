@@ -43,7 +43,7 @@ module Mcp
 
           totaux = PurchaseInvoice::STATUSES.map do |statut|
             base = PurchaseInvoice.with_status(statut)
-            "#{PurchaseInvoice::STATUS_LABELS[statut]} #{base.count} (#{euros(base.sum(:total_cents))})"
+            "#{PurchaseInvoice::STATUS_LABELS[statut]} #{base.count} (#{euros(base.invoices.sum(:total_cents) - base.credit_notes.sum(:total_cents))})"
           end
           factures = scope.limit(LIMITE + 1).to_a
           corps = factures.first(LIMITE).map { |f| ligne_facture(f) }
@@ -64,6 +64,11 @@ module Mcp
           details << "Contestée : #{facture.dispute_reason}" if facture.dispute_reason.present?
           details << "Défauts : #{facture.quality_flags.join(', ')} (no_document = pièce PDF à joindre dans Claudy)" if facture.quality_flags.present?
           details << "Notes : #{facture.notes}" if facture.notes.present?
+          if facture.credit_note?
+            details << "Imputée sur la facture ##{facture.credited_invoice_id} : #{euros(facture.imputed_cents)}" if facture.credited_invoice_id
+          else
+            facture.credit_notes.each { |note| details << "Corrigée par : #{ligne_facture(note)}" }
+          end
           lignes = facture.purchase_invoice_lines.map do |l|
             "  #{euros(l.amount_cents)} → #{l.general_account}#{" · pôle #{l.team.name}" if l.team}#{" · « #{l.label} »" if l.label.present?}"
           end

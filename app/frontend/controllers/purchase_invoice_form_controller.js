@@ -7,12 +7,20 @@ import { Controller } from "@hotwired/stimulus"
 // boîte mail. Sans le reste-à-ventiler affiché, on découvre le déséquilibre à la
 // validation, une fois les vingt lignes tapées.
 export default class extends Controller {
-  static targets = ["rows", "template", "row", "total", "allocated", "vat", "remaining", "verdict", "mode",
+  static targets = ["rows", "template", "row", "total", "allocated", "vat", "remaining", "verdict", "mode", "kind", "creditedOnly",
                     "dropzone", "file", "filename", "previewFrame", "previewImage", "previewEmpty"]
 
   connect() {
     this.counter = 0
+    this.toggleKind()
     this.refresh()
+  }
+
+  // Facture ou note de crédit (2026-11-01) : la facture corrigée ne se choisit
+  // que pour une note de crédit.
+  toggleKind() {
+    const creditNote = this.kindTargets.find((input) => input.checked)?.value === "credit_note"
+    this.creditedOnlyTargets.forEach((element) => { element.hidden = !creditNote })
   }
 
   add(event) {

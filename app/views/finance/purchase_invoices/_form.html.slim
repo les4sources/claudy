@@ -6,6 +6,7 @@
   à l'écran pendant qu'on descend dans la ventilation. On relit chaque champ
   contre le document, pas de mémoire.
 - supplier_draft = local_assigns[:supplier_draft] || {}
+- creditable_invoices = local_assigns[:creditable_invoices] || []
 - document_blob = invoice.document.attached? ? invoice.document.blob : nil
 / `multipart` à la main : la pièce passe par un `file_field_tag` (glisser-déposer),
   que `form_with` ne voit pas. Sans lui, Turbo envoie le formulaire encodé en URL
@@ -16,6 +17,21 @@
   .grid.gap-4(class="lg:grid-cols-2")
     .space-y-4.min-w-0
       .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-4
+        / Facture ou note de crédit (2026-11-01) : les montants se tapent
+          toujours positifs, c'est le type qui retourne l'écriture.
+        .flex.flex-wrap.items-center.gap-2.text-sm
+          span.text-gray-500 Pièce
+          .inline-flex.rounded-lg.bg-gray-100.p-1
+            - PurchaseInvoice::KIND_LABELS.each do |value, label|
+              label.cursor-pointer
+                = f.radio_button :kind, value, class: "peer sr-only", data: { purchase_invoice_form_target: "kind", action: "change->purchase-invoice-form#toggleKind" }
+                span.block.rounded-md.px-3.py-1.text-gray-600(class="peer-checked:bg-white peer-checked:text-gray-900 peer-checked:shadow-sm peer-focus-visible:ring-2 peer-focus-visible:ring-4s-main")= label
+        div(data-purchase-invoice-form-target="creditedOnly" hidden=!invoice.credit_note?)
+          div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucune : le fournisseur nous rembourse" data-searchable-select-clearable-value="true" class="relative")
+            label.block.text-xs.font-medium.text-gray-500(for="purchase_invoice_credited_invoice_id") Facture corrigée
+            = f.select :credited_invoice_id, options_for_select(creditable_invoices.map { |i| ["#{i.third_party&.name} · n° #{i.number.presence || "##{i.id}"} · #{l(i.issued_on)} · #{number_to_currency(i.total_cents / 100.0)}", i.id] }, invoice.credited_invoice_id), { include_blank: "Aucune" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+            = render "shared/searchable_select_search", label: "Chercher une facture du fournisseur"
+          p.mt-1.text-xs.text-gray-400 La note s'impute sur ce qui reste à payer de cette facture. Sans facture, ou si elle est déjà payée, le fournisseur nous rembourse : le remboursement se rapproche depuis « À affecter ».
         .grid.gap-3(class="sm:grid-cols-2")
           / Le fournisseur se cherche, et se crée ici s'il n'existe pas encore :
             quitter l'écran pour le créer ferait perdre la facture en cours.
@@ -32,7 +48,7 @@
             = f.collection_select :legal_entity_id, entities, :id, :name, {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
             = render "shared/searchable_select_search", label: "Chercher une entité juridique"
           div
-            label.block.text-xs.font-medium.text-gray-500 Numéro de facture
+            label.block.text-xs.font-medium.text-gray-500 Numéro de la pièce
             = f.text_field :number, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
           div
             label.block.text-xs.font-medium.text-gray-500 Montant total (€)
@@ -41,7 +57,7 @@
                              class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
                              data: { purchase_invoice_form_target: "total", action: "input->purchase-invoice-form#refresh" }
           div
-            label.block.text-xs.font-medium.text-gray-500 Date de la facture
+            label.block.text-xs.font-medium.text-gray-500 Date de la pièce
             = f.date_field :issued_on, value: invoice.issued_on || Date.current, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
           div
             label.block.text-xs.font-medium.text-gray-500 Échéance

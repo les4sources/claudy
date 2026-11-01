@@ -12,6 +12,9 @@ module Accounting
   # Sinon (fondation exemptée, franchise, ou 411000 encore désactivé) la TVA
   # ne se récupère pas : elle fait partie de la charge, TVAC.
   #
+  # Une note de crédit (2026-11-01) passe la même écriture à l'envers : 440000
+  # au débit (le fournisseur nous doit), charges et TVA à récupérer au crédit.
+  #
   # Idempotent : `PostDocument` rend l'écriture existante si le même document a
   # déjà été passé dans le même journal.
   class PostPurchaseInvoice < ServiceBase
@@ -46,14 +49,25 @@ module Accounting
         legal_entity: @invoice.legal_entity,
         journal: "purchases",
         entry_date: @invoice.issued_on,
-        label: [@invoice.third_party.name, @invoice.number].compact_blank.join(" · "),
+        label: [("Note de crédit" if @invoice.credit_note?), @invoice.third_party.name, @invoice.number]
+          .compact_blank.join(" · "),
         source: @invoice,
         whodunnit: @whodunnit,
-        lines: charge_lines(lines) + vat_lines(lines) + [supplier_line]
+        lines: orient(charge_lines(lines) + vat_lines(lines) + [supplier_line])
       ).run!
 
       @invoice.update_column(:posted_at, Time.current) if @invoice.posted_at.blank?
       entry
+    end
+
+    # Une note de crédit retourne chaque ligne : débit et crédit s'échangent.
+    def orient(entry_lines)
+      return entry_lines unless @invoice.credit_note?
+
+      entry_lines.map do |line|
+        line.except(:debit_cents, :credit_cents)
+            .merge(debit_cents: line[:credit_cents], credit_cents: line[:debit_cents]).compact
+      end
     end
 
     def charge_lines(lines)

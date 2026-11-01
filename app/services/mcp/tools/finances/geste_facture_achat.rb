@@ -116,6 +116,10 @@ module Mcp
             destinataires = facture.validation_recipients.map(&:email)
             ["→ À VALIDER par le pôle #{facture.validation_team&.name}. " +
              (destinataires.any? ? "Elle sera dans le récapitulatif des factures à valider de lundi matin, envoyé à : #{destinataires.join(', ')}." : "Le pôle n'a aucune adresse : à prévenir à la main."), {}]
+          elsif facture.credit_note?
+            ["→ Note de crédit comptabilisée (440000 au débit, charges au crédit)" +
+             (facture.credited_invoice ? ", imputée sur ce qui reste à payer de la facture ##{facture.credited_invoice_id}" : "") +
+             " ; le reste éventuel attend le remboursement du fournisseur.", {}]
           else
             ["→ À PAYER : l'écriture d'achat est passée au journal.", {}]
           end
