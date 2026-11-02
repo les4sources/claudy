@@ -10,7 +10,8 @@ module Mcp
              title: "Décomptes mensuels",
              description: "Les décomptes d'un mois : ceux qui sont émis (statut, solde de clôture, envoi, relances) et " \
                           "les comptes actifs qui n'en ont pas encore (au solde non nul, sauf `avec_soldes_nuls`). " \
-                          "Défaut : le mois en cours. Pour émettre, envoyer, relancer ou marquer réglé : decompte.",
+                          "Signale un décompte qui ne colle plus au grand livre. Défaut : le mois en cours. Pour émettre, envoyer, " \
+                          "relancer, marquer réglé, régénérer ou annuler : decompte.",
              schema: {
                properties: {
                  mois: MOIS,
@@ -30,7 +31,7 @@ module Mcp
             sans_email = compte.contact_email.blank? && compte.human&.email.blank?
             "Décompte ##{s.id} #{compte.code} #{compte.name} · #{s.status_label} · solde #{euros(s.closing_balance_cents)}" \
               "#{" · envoyé le #{I18n.l(s.sent_at.to_date)}" if s.sent_at}#{" · #{s.reminders_count} relance(s)" if s.reminders_count.to_i.positive?}" \
-              "#{" · PAS D'EMAIL DE CONTACT" if sans_email}"
+              "#{" · PAS D'EMAIL DE CONTACT" if sans_email}#{ecart(s)}"
           end
           lignes_candidats = candidats.map { |c| "#{c.code} #{c.name} · solde #{euros(c.balance_cents)}" }
 
@@ -39,6 +40,17 @@ module Mcp
             lignes_emis.join("\n").presence,
             "À émettre (#{candidats.size}) :\n#{lignes_candidats.presence&.join("\n") || 'aucun'}"
           ].compact.join("\n\n")
+        end
+
+        private
+
+        # Une ligne du mois (ou d'avant) arrivée après l'émission : le décompte
+        # ne colle plus au grand livre.
+        def ecart(statement)
+          return "" if statement.ledger_gap_cents.zero?
+
+          suite = statement.regenerable? ? "à régénérer (decompte, geste regenerer)" : "l'écart passera sur le décompte suivant"
+          " · GRAND LIVRE #{euros(statement.ledger_balance_cents)} : #{suite}"
         end
       end
     end

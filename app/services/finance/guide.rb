@@ -84,8 +84,9 @@ module Finance
                "l'argent qui sort. Chaque écriture a autant au débit qu'au crédit : c'est la « partie double ». Claudy " \
                "les génère, tu n'as jamais à les taper."),
       Term.new("decompte", "Décompte",
-               "Le relevé mensuel du compte courant d'un habitant : ce qu'il doit et ce qu'il a payé. Il s'émet puis " \
-               "s'envoie, depuis la section Comptes."),
+               "Le relevé mensuel du compte courant d'un habitant : ce qu'il doit et ce qu'il a payé. Il s'émet une fois " \
+               "le mois terminé (bar et charges posés), puis s'envoie, depuis la section Comptes. Tant qu'il n'est pas " \
+               "envoyé, il se régénère ; une ligne arrivée après son envoi passe sur le décompte suivant."),
       Term.new("dette", "Dette ou litige",
                "Une somme que la maison doit, ou risque de devoir, sans facture encodée : une taxe réclamée, un arriéré, " \
                "une contestation. On la note pour que la trésorerie ne paraisse pas meilleure qu'elle n'est."),

@@ -23,7 +23,7 @@
 #
 #  index_account_statements_on_deleted_at                          (deleted_at)
 #  index_account_statements_on_member_account_id                   (member_account_id)
-#  index_account_statements_on_member_account_id_and_period_month  (member_account_id,period_month) UNIQUE
+#  index_account_statements_on_member_account_id_and_period_month  (member_account_id,period_month) UNIQUE WHERE (deleted_at IS NULL)
 #  index_account_statements_on_token                               (token) UNIQUE
 #
 # Foreign Keys
@@ -52,7 +52,9 @@ class AccountStatement < ApplicationRecord
 
   validates :period_month, presence: true
   validates :status, inclusion: { in: STATUSES }
-  validates :period_month, uniqueness: { scope: :member_account_id }
+  # Un décompte régénéré part à la corbeille : il ne compte plus pour l'unicité
+  # (l'index unique de la base ignore lui aussi les décomptes supprimés).
+  validates :period_month, uniqueness: { scope: :member_account_id, conditions: -> { where(deleted_at: nil) } }
   validate :balances_add_up
   validate :opens_where_previous_closed
 
@@ -65,6 +67,41 @@ class AccountStatement < ApplicationRecord
   def status_label = STATUS_LABELS.fetch(status, status)
   def issued? = issued_at.present?
   def settled? = status == "settled"
+
+  # Régénérable : émis trop tôt et jamais parti. Une fois envoyé, relancé ou
+  # réglé, le décompte est un document que quelqu'un a lu ; on ne le réécrit
+  # plus, la correction passe par le décompte suivant. Et seulement le DERNIER
+  # du compte : ceux d'après s'ouvrent sur sa clôture.
+  def regenerable?
+    status == "issued" && sent_at.nil? && reminders_count.to_i.zero? && !later_statement?
+  end
+
+  # Pourquoi il ne l'est pas, en une phrase ; nil s'il l'est.
+  def regeneration_refusal
+    return "il est déjà réglé" if settled?
+    return "il a déjà été envoyé" if sent_at.present? || status == "sent"
+    return "il a déjà été relancé" if reminders_count.to_i.positive?
+    return "un décompte plus récent s'ouvre sur sa clôture" if later_statement?
+    return "il n'est pas émis" unless status == "issued"
+
+    nil
+  end
+
+  def later_statement?
+    self.class.where(member_account_id: member_account_id).where("period_month > ?", period_month).exists?
+  end
+
+  # Le solde du grand livre au dernier jour du mois couvert. Il diffère de la
+  # clôture figée quand une ligne datée du mois (ou d'avant) est arrivée après
+  # l'émission : elle passera sur le décompte suivant, ou on régénère.
+  def ledger_balance_cents
+    member_account.opening_balance_cents +
+      AccountEntry.where(member_account_id: member_account_id)
+                  .where(entry_date: ..period_month.end_of_month)
+                  .sum(:amount_cents)
+  end
+
+  def ledger_gap_cents = ledger_balance_cents - closing_balance_cents
 
   def previous
     self.class.where(member_account_id: member_account_id)

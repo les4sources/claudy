@@ -344,7 +344,7 @@ RSpec.describe Mcp::Server, "finances" do
     compte = MemberAccount.create!(kind: "household", household: menage, name: "Chevêche", contact_email: "cheveche@example.com")
     RecurringCharge.create!(member_account: compte, label: "Forfait dôme", basis: "flat", amount_cents: 5_000,
                             flow: "dome", starts_on: Date.new(2023, 1, 1))
-    mois = jour.strftime("%Y-%m")
+    mois = jour.prev_month.strftime("%Y-%m") # un décompte s'émet une fois le mois terminé
 
     expect(texte(outil("generer_charges_recurrentes", { "mois" => mois }))).to include("1 écriture(s) à créer", "Forfait dôme")
     confirme("generer_charges_recurrentes", { "mois" => mois })
@@ -360,6 +360,28 @@ RSpec.describe Mcp::Server, "finances" do
       confirme("decompte", { "geste" => "envoyer", "decomptes" => [statement.id] })
     end.to change { ActionMailer::Base.deliveries.size }.by(1)
     expect(statement.reload.status).to eq("sent")
+  end
+
+  it "régénère un décompte émis trop tôt, puis refuse une fois envoyé" do
+    menage = Household.create!(name: "Chevêche", kind: "resident", moved_in_on: Date.new(2023, 1, 1))
+    compte = MemberAccount.create!(kind: "household", household: menage, name: "Chevêche", contact_email: "cheveche@example.com")
+    mois = jour.prev_month.beginning_of_month
+    compte.account_entries.create!(entry_date: mois + 7, amount_cents: 10_000, label: "Batch cooking")
+    statement = Finance::IssueStatement.new(member_account: compte, month: mois).run!
+    compte.account_entries.create!(entry_date: mois.end_of_month, amount_cents: 2_500, flow: "bar", label: "Bar")
+
+    expect(texte(outil("decomptes", { "mois" => mois.strftime("%Y-%m") }))).to include("GRAND LIVRE 125,00 €", "à régénérer")
+    apercu = texte(outil("decompte", { "geste" => "regenerer", "decomptes" => [statement.id] }))
+    expect(apercu).to include("nouveau solde 125,00 €")
+    expect(statement.reload.deleted_at).to be_nil
+
+    confirme("decompte", { "geste" => "regenerer", "decomptes" => [statement.id] })
+    nouveau = AccountStatement.for_month(mois).sole
+    expect(nouveau.closing_balance_cents).to eq(12_500)
+    expect(nouveau.id).not_to eq(statement.id)
+
+    nouveau.update!(status: "sent", sent_at: Time.current)
+    expect(texte(outil("decompte", { "geste" => "annuler", "decomptes" => [nouveau.id] }))).to include("REFUSÉ", "déjà été envoyé")
   end
 
   it "enregistre une session de batch cooking et la supprime" do

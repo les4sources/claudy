@@ -7,7 +7,7 @@ module Finance
   # dette entre voisins, un automatisme silencieux serait de toute façon une
   # mauvaise idée.
   class StatementsController < Finance::BaseController
-    before_action :get_statement, only: [:send_email, :remind, :mark_settled]
+    before_action :get_statement, only: [:send_email, :remind, :mark_settled, :regenerate, :cancel]
 
     breadcrumb "Décomptes", :finance_statements_path, match: :exact
 
@@ -22,6 +22,14 @@ module Finance
       @candidates = MemberAccount.ordered.where(active: true).reject { |a| issued_ids.include?(a.id) }
       @include_zero = params[:include_zero] == "1"
       @candidates = @candidates.reject { |a| a.balance_cents.zero? } unless @include_zero
+      @month_over = Date.current > @month.end_of_month
+      # Utile seulement quand on peut émettre : avant la fin du mois, le bar
+      # manque partout, c'est normal.
+      @bar_missing = if @month_over
+                       @candidates.select { |a| Finance::IssueStatement.bar_missing?(a, @month) }.map(&:id).to_set
+                     else
+                       Set.new
+                     end
     end
 
     def issue
@@ -34,7 +42,7 @@ module Finance
         begin
           issued << Finance::IssueStatement.new(member_account: account, month: @month,
                                                 whodunnit: current_user&.email).run!
-        rescue Finance::IssueStatement::RecurringChargesMissing, Finance::IssueStatement::AlreadyIssued => e
+        rescue Finance::IssueStatement::Refused => e
           refused << "#{account.name} : #{e.message}"
         end
       end
@@ -42,6 +50,26 @@ module Finance
       notice = "#{issued.compact.size} décompte(s) émis."
       flash[:alert] = refused.join(" · ") if refused.any?
       redirect_to finance_statements_path(month: @month.strftime("%Y-%m")), notice: notice
+    end
+
+    # Un décompte émis trop tôt, que personne n'a encore reçu : on le reprend
+    # avec tout ce que le grand livre porte aujourd'hui sur le mois.
+    def regenerate
+      result = Finance::RegenerateStatement.new(statement: @statement, whodunnit: current_user&.email).run!
+      nouveau = result.statement
+      redirect_to finance_statements_path(month: @statement.period_month.strftime("%Y-%m")),
+                  notice: "Décompte de #{@statement.member_account.name} régénéré : " \
+                          "#{money(result.previous[:closing_balance_cents])} → #{money(nouveau.closing_balance_cents)}."
+    rescue Finance::IssueStatement::Refused => e
+      redirect_to finance_statements_path(month: @statement.period_month.strftime("%Y-%m")), alert: e.message
+    end
+
+    def cancel
+      Finance::RegenerateStatement.new(statement: @statement, whodunnit: current_user&.email, reissue: false).run!
+      redirect_to finance_statements_path(month: @statement.period_month.strftime("%Y-%m")),
+                  notice: "Décompte de #{@statement.member_account.name} annulé : ses lignes sont déverrouillées."
+    rescue Finance::IssueStatement::Refused => e
+      redirect_to finance_statements_path(month: @statement.period_month.strftime("%Y-%m")), alert: e.message
     end
 
     def send_email
@@ -142,6 +170,8 @@ module Finance
     rescue Date::Error
       Date.current.beginning_of_month
     end
+
+    def money(cents) = helpers.number_to_currency(cents / 100.0)
 
     def finance_secondary = "statements"
   end

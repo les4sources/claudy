@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_01_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_02_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -88,7 +88,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_170000) do
     t.string "token", null: false
     t.datetime "updated_at", null: false
     t.index ["deleted_at"], name: "index_account_statements_on_deleted_at"
-    t.index ["member_account_id", "period_month"], name: "index_account_statements_on_member_account_id_and_period_month", unique: true
+    t.index ["member_account_id", "period_month"], name: "index_account_statements_on_member_account_id_and_period_month", unique: true, where: "(deleted_at IS NULL)"
     t.index ["member_account_id"], name: "index_account_statements_on_member_account_id"
     t.index ["token"], name: "index_account_statements_on_token", unique: true
   end
