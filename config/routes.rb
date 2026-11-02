@@ -560,6 +560,8 @@ Rails.application.routes.draw do
         post :send_email
         post :remind
         post :mark_settled
+        post :regenerate
+        post :cancel
       end
     end
 

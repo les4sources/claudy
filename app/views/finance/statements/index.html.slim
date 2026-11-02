@@ -17,6 +17,9 @@
   décompte de celui qui doit vraiment quelque chose.
 - if @candidates.any?
   = section_heading_tw heading: "À émettre (#{@candidates.size})"
+  - unless @month_over
+    .mb-3.p-3.rounded-md.bg-amber-50.text-sm.text-amber-900
+      | #{l(@month, format: "%B %Y").capitalize} n'est pas terminé : les décomptes s'émettent à partir du 1er #{l(@month.next_month, format: "%B")}, une fois la feuille de bar et les charges du mois posées.
   = form_with url: issue_finance_statements_path(month: @month.strftime("%Y-%m")), method: :post do
     .overflow-x-auto.relative.mb-3
       table.w-full.text-sm.text-left.text-gray-500(data-controller="stacked-table")
@@ -34,11 +37,14 @@
               td.py-3.px-6.font-medium.text-gray-900
                 = account.name
                 span.ml-2.text-xs.font-mono.text-gray-400= account.code
+                - if @bar_missing.include?(account.id)
+                  .mt-0.5.text-xs.font-normal.text-amber-700 Aucune ligne de bar ce mois-ci : la feuille de bar est-elle saisie ?
               td.py-3.px-6.text-right(class=decorated.balance_css)= decorated.balance
-    button.inline-flex.items-center.rounded-md.bg-green-700.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="hover:bg-green-800" type="submit")
-      | Émettre les décomptes sélectionnés
+    - if @month_over
+      button.inline-flex.items-center.rounded-md.bg-green-700.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="hover:bg-green-800" type="submit")
+        | Émettre les décomptes sélectionnés
     p.mt-2.text-xs.text-gray-400
-      | L'émission fige les montants et verrouille les écritures du mois. Une correction passera par une contre-écriture, sur le décompte suivant.
+      | L'émission fige les montants et verrouille les écritures du mois. Tant qu'un décompte n'est pas envoyé, il peut être régénéré ; ensuite, une ligne arrivée en retard passe sur le décompte suivant.
 
 = section_heading_tw heading: "Décomptes du mois (#{@statements.size})"
 
@@ -69,12 +75,26 @@
             td.py-3.px-6.text-right= number_to_currency(statement.opening_balance_cents / 100.0)
             td.py-3.px-6.text-right
               = number_to_currency((statement.debits_cents + statement.credits_cents) / 100.0)
-            td.py-3.px-6.text-right.font-semibold.text-gray-900= number_to_currency(statement.closing_balance_cents / 100.0)
+            td.py-3.px-6.text-right.font-semibold.text-gray-900
+              = number_to_currency(statement.closing_balance_cents / 100.0)
+              - gap = statement.ledger_gap_cents
+              - unless gap.zero?
+                .mt-0.5.text-xs.font-normal.text-amber-700(title="Lignes du mois, ou d'avant, arrivées après l'émission")
+                  = "Grand livre : #{number_to_currency(statement.ledger_balance_cents / 100.0)} — " \
+                    "#{statement.regenerable? ? 'à régénérer' : 'l’écart passera sur le décompte suivant'}"
             td.py-3.px-6.text-right.whitespace-nowrap
               = link_to "Voir", public_statement_path(statement.token), target: "_blank", class: "text-xs text-blue-600 hover:text-blue-800 mr-3"
               - if statement.sent_at.nil?
                 = button_to "Envoyer", send_email_finance_statement_path(statement), method: :post, class: "inline text-xs text-blue-600 hover:text-blue-800 mr-3"
               - else
                 = button_to "Relancer", remind_finance_statement_path(statement), method: :post, class: "inline text-xs text-amber-700 hover:text-amber-900 mr-3"
+              - if statement.regenerable?
+                = button_to "Régénérer", regenerate_finance_statement_path(statement), method: :post,
+                  form: { data: { turbo_confirm: "Régénérer ce décompte ? Il sera remplacé par un décompte qui reprend tout ce que le grand livre porte aujourd'hui." } },
+                  class: "inline text-xs text-amber-700 hover:text-amber-900 mr-3"
               - unless statement.settled?
                 = button_to "Marquer réglé", mark_settled_finance_statement_path(statement), method: :post, class: "inline text-xs text-gray-500 hover:text-gray-700"
+              - if statement.regenerable?
+                = button_to "Annuler", cancel_finance_statement_path(statement), method: :post,
+                  form: { data: { turbo_confirm: "Annuler ce décompte ? Ses lignes seront déverrouillées et le compte reviendra dans « À émettre »." } },
+                  class: "inline text-xs text-red-600 hover:text-red-800 ml-3"

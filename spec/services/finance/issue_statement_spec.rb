@@ -4,6 +4,8 @@ require "rails_helper"
 # d'être un affichage pour devenir un document : ces specs vérifient qu'il ne
 # peut pas mentir.
 RSpec.describe Finance::IssueStatement do
+  include ActiveSupport::Testing::TimeHelpers
+
   let(:household) { Household.create!(name: "Chevêche", kind: "resident", moved_in_on: Date.new(2023, 1, 1)) }
   let(:account) { MemberAccount.create!(kind: "household", household: household, name: "Chevêche") }
 
@@ -145,6 +147,97 @@ RSpec.describe Finance::IssueStatement do
       expect(contre.amount_cents).to eq(-1000)
       expect(contre.account_statement_id).to be_nil
       expect(AccountStatement.last.closing_balance_cents).to eq(1000)
+    end
+  end
+
+  # 2026-11-02 — les décomptes d'octobre ont été émis le 27, avant la feuille
+  # de bar et les charges du 31.
+  describe "mois pas terminé" do
+    before { add_entry(Date.new(2026, 7, 10), 1000) }
+
+    it "refuse d'émettre avant le dernier jour passé" do
+      travel_to(Date.new(2026, 7, 31)) do
+        expect { issue("2026-07") }.to raise_error(described_class::MonthNotOver, /juillet 2026 n'est pas terminé/i)
+      end
+    end
+
+    it "accepte dès le premier du mois suivant" do
+      travel_to(Date.new(2026, 8, 1)) do
+        expect(issue("2026-07").closing_balance_cents).to eq(1000)
+      end
+    end
+  end
+
+  # La règle « tous les ménages » (charges habitants, cagnotte, balançoire)
+  # n'a pas de compte propre : l'ancien contrôle ne la voyait pas.
+  describe "charge de périmètre non générée" do
+    before do
+      account # le ménage existe avant que la règle ne se déplie
+      RecurringCharge.create!(label: "Charges habitants", basis: "flat", amount_cents: 32_500, flow: "charges",
+                              applies_to: "resident_households", starts_on: Date.new(2023, 1, 1))
+    end
+
+    it "refuse l'émission tant qu'elle n'est pas générée pour ce compte" do
+      expect { issue("2026-07") }.to raise_error(described_class::RecurringChargesMissing, /Charges habitants/)
+    end
+
+    it "accepte une fois générée" do
+      Finance::GenerateRecurringCharges.new(month: "2026-07").run!
+
+      expect(issue("2026-07").closing_balance_cents).to eq(32_500)
+    end
+  end
+
+  # Une ligne datée d'un mois déjà couvert, posée après l'émission (un
+  # règlement rapproché après coup porte la date du virement), ne tombe plus
+  # dans le vide : le décompte suivant la reprend.
+  describe "lignes arrivées après l'émission" do
+    it "passent sur le décompte suivant, qui recolle au grand livre" do
+      add_entry(Date.new(2026, 6, 20), 400)
+      add_entry(Date.new(2026, 7, 10), 1000)
+      juillet = issue("2026-07")
+      expect(juillet.opening_balance_cents).to eq(400)
+
+      travel_to(1.minute.from_now) do
+        add_entry(Date.new(2026, 7, 31), 300)   # le bar de juillet, posé en retard
+        add_entry(Date.new(2026, 3, 4), -5000)  # un règlement de mars rapproché après coup
+      end
+      add_entry(Date.new(2026, 8, 12), 200)
+
+      aout = issue("2026-08")
+
+      expect(aout.opening_balance_cents).to eq(1400)
+      expect(aout.debits_cents).to eq(500)
+      expect(aout.credits_cents).to eq(-5000)
+      expect(aout.closing_balance_cents).to eq(account.reload.balance_cents)
+      expect(aout.account_entries.count).to eq(3)
+    end
+
+    it "ne recompte pas ce que l'ouverture du premier décompte contenait déjà" do
+      add_entry(Date.new(2026, 6, 20), 400)
+      issue("2026-07")
+      add_entry(Date.new(2026, 8, 12), 200)
+
+      aout = issue("2026-08")
+
+      expect(aout.debits_cents).to eq(200)
+      expect(aout.closing_balance_cents).to eq(600)
+    end
+  end
+
+  describe ".bar_missing?" do
+    it "avertit quand un compte qui a du bar d'habitude n'en a aucun ce mois-ci" do
+      add_entry(Date.new(2026, 9, 30), 800, flow: "bar", kind: "bar")
+
+      expect(described_class.bar_missing?(account, Date.new(2026, 10, 1))).to be(true)
+      add_entry(Date.new(2026, 10, 31), 500, flow: "bar", kind: "bar")
+      expect(described_class.bar_missing?(account, Date.new(2026, 10, 1))).to be(false)
+    end
+
+    it "se tait pour un compte qui ne prend jamais rien au bar" do
+      add_entry(Date.new(2026, 9, 30), -800, flow: "bar", kind: "settlement")
+
+      expect(described_class.bar_missing?(account, Date.new(2026, 10, 1))).to be(false)
     end
   end
 end

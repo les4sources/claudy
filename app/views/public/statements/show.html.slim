@@ -37,6 +37,8 @@
           td.py-1.5.text-gray-500.whitespace-nowrap= l(entry.entry_date, format: :short)
           td.py-1.5.text-gray-800
             = entry.label
+            - if entry.entry_date < @statement.period_month
+              span.ml-2.text-xs.text-amber-700= "#{l(entry.entry_date, format: '%B %Y')} : arrivée après son décompte"
             - if entry.quantity.present?
               span.ml-2.text-xs.text-gray-400
                 = "#{entry.quantity.to_s.sub('.0', '')} × #{number_to_currency(entry.unit_price_cents.to_i / 100.0)}"

@@ -79,7 +79,7 @@ RSpec.describe "Lecture d'un compte", type: :request do
   # L'accès public par jeton a été retiré : le décompte reste un mois, et rien
   # n'y renvoie vers l'historique.
   it "n'expose aucune route publique vers la lecture du compte" do
-    statement = Finance::IssueStatement.new(member_account: account, month: Date.current.strftime("%Y-%m")).run!
+    statement = Finance::IssueStatement.new(member_account: account, month: Date.current.prev_month.strftime("%Y-%m")).run!
 
     expect { get "/decompte/#{statement.token}/annee" }.to raise_error(ActionController::RoutingError)
 

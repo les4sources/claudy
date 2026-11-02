@@ -109,6 +109,33 @@ RSpec.describe Finance::MonthlyClose do
     expect(step(:sent).detail).to match(/émis mais jamais envoyés/)
   end
 
+  # 2026-11-02 — les décomptes d'octobre émis avant le bar et les charges du 31.
+  describe "décompte qui ne colle plus au grand livre" do
+    let!(:statement) do
+      account.account_entries.create!(entry_date: Date.new(2026, 8, 15), amount_cents: 12_000, label: "Bar")
+      Finance::IssueStatement.new(member_account: account, month: "2026-08").run!
+    end
+
+    it "passe au vert quand rien n'est arrivé après l'émission" do
+      expect(step(:statements_ledger)).to be_done
+    end
+
+    it "bloque et demande de régénérer un décompte pas encore envoyé" do
+      account.account_entries.create!(entry_date: Date.new(2026, 8, 31), amount_cents: 2_500, label: "Bar en retard")
+
+      expect(step(:statements_ledger)).to be_blocking
+      expect(step(:statements_ledger).detail).to include("Chevêche").and include("Régénère")
+    end
+
+    it "avertit seulement quand le décompte est déjà parti" do
+      statement.update!(status: "sent", sent_at: Time.current)
+      account.account_entries.create!(entry_date: Date.new(2026, 8, 31), amount_cents: 2_500, label: "Bar en retard")
+
+      expect(step(:statements_ledger)).to be_warning
+      expect(step(:statements_ledger).detail).to include("décompte suivant")
+    end
+  end
+
   # Un sourcier peut légitimement payer le mois suivant : ça ne bloque pas
   # l'arrêté, mais ça doit se voir.
   it "montre les décomptes impayés sans bloquer l'arrêté" do

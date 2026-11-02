@@ -47,6 +47,7 @@ module Finance
         allocations_step,
         recurring_charges_step,
         statements_issued_step,
+        statements_match_ledger_step,
         statements_sent_step,
         settlements_step,
         stripe_step,
@@ -151,6 +152,38 @@ module Finance
                          "#{manquants.map(&:name).join(', ')}.",
                  action_label: "Les émettre", action_path: :statements)
       end
+    end
+
+    # 4 bis — un décompte émis trop tôt ne colle plus au grand livre : une
+    # ligne du mois (ou d'avant) est arrivée après lui. Les décomptes d'octobre
+    # 2026, émis le 27, réclamaient 1 286,63 € à un ménage créditeur de
+    # 759,64 €. Pas encore envoyé : on le régénère, et ça bloque. Déjà parti :
+    # l'écart passera sur le décompte suivant, on le signale seulement.
+    def statements_match_ledger_step
+      ecarts = AccountStatement.for_month(@month).includes(:member_account).to_a
+                               .reject { |statement| statement.ledger_gap_cents.zero? }
+      a_regenerer, partis = ecarts.partition(&:regenerable?)
+      titre = "Les décomptes collent au grand livre"
+
+      if a_regenerer.any?
+        Step.new(key: :statements_ledger, title: titre, status: :todo,
+                 detail: "#{a_regenerer.size} décompte(s) émis avant des lignes du mois, jamais envoyés : " \
+                         "#{a_regenerer.map { |s| ecart_detail(s) }.join(' ; ')}. Régénère-les avant de les envoyer.",
+                 action_label: "Les régénérer", action_path: :statements)
+      elsif partis.any?
+        Step.new(key: :statements_ledger, title: titre, status: :warning,
+                 detail: "#{partis.size} décompte(s) déjà partis ne collent plus au grand livre : " \
+                         "#{partis.map { |s| ecart_detail(s) }.join(' ; ')}. L'écart passera sur le décompte suivant.",
+                 action_label: "Voir les décomptes", action_path: :statements)
+      else
+        Step.new(key: :statements_ledger, title: titre, status: :done,
+                 detail: "Chaque décompte du mois reprend tout ce que le grand livre porte sur le mois.")
+      end
+    end
+
+    def ecart_detail(statement)
+      "#{statement.member_account.name} (décompte #{money(statement.closing_balance_cents)}, " \
+        "grand livre #{money(statement.ledger_balance_cents)})"
     end
 
     # 5 — émis ne veut pas dire envoyé. C'est exactement le trou par lequel deux
