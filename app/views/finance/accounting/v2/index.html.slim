@@ -1,136 +1,118 @@
-/ COMPTABILITÉ, Vue d'ensemble, nouvelle interface (redesign, Michael
-  2026-10-29, maquette validée). Les mêmes chiffres que `finance/accounting/
-  index`, lus pour une entité à la fois : « Peut-on dépenser ? » en une phrase,
-  quatre chiffres, les files « À faire » dans l'ordre, la courbe, les
-  échéances, puis ce qui pèse encore (dettes, prêts). Le calcul du verdict et
-  ce qu'il ne sait pas s'ouvrent sous « Voir le détail ».
-- v = @verdict
-- entity = v&.entity
-- treasury = v&.treasury
-- before, highlighted, after = accounting_phrase(v)
-.ui-acc
+/ COMPTABILITÉ, la page du collectif des administrateurs (Michael,
+  2026-10-30) : lisible par n'importe quel administrateur de l'une des
+  structures, comptable ou pas. Les structures côte à côte, une colonne
+  chacune, et trois horizons : aujourd'hui, les trois prochains mois, plus
+  loin. Puis ce qu'il faut trancher ensemble. `?entity=` zoome sur une seule
+  structure et ouvre le détail. Le travail des comptables est en bas, replié.
+  Tous les chiffres viennent de `Finance::Overview`, qui lit les briques
+  existantes ; la vue n'en calcule aucun.
+- full = @focus.present?
+- urgent = @signals.count { |signal| signal.level == :no }
+.ui-acc.ui-adm(data-overview=(full ? "entity" : "all"))
   header.ui-phead
     .ui-phead-t
-      p.ui-over = [entity&.name, l(Date.current, format: "%B %Y")].compact.join(" · ")
+      p.ui-over = [@focus&.entity&.name, l(Date.current, format: "%-d %B %Y")].compact.join(" · ")
       h1.ui-h1 Comptabilité
-    - if @verdicts.size > 1
-      nav.ui-seg(aria-label="Entité")
-        - @verdicts.each do |other|
-          = link_to other.entity.form_label, finance_accounting_path(entity: other.entity.id), class: "ui-seg-i", aria: { current: (other == v ? "page" : nil) }, title: other.entity.name
+      p.ui-adm-lead
+        | Comment va chaque structure, ce qui l’attend, et ce qu’il faut trancher ensemble.
+        - if @signals.any?
+          = " "
+          = link_to "#a-trancher", class: "ui-adm-lead-a", data: { turbo: false } do
+            - if urgent.positive?
+              = "#{urgent} point#{'s' if urgent > 1} à traiter"
+            - else
+              = "#{@signals.size} point#{'s' if @signals.size > 1} à connaître"
+    nav.ui-seg(aria-label="Structure")
+      = link_to "Toutes", finance_accounting_path, class: "ui-seg-i", aria: { current: (full ? nil : "page") }
+      - @overview.entities.each do |health|
+        = link_to health.entity.form_label, finance_accounting_path(entity: health.entity.id), class: "ui-seg-i",
+                  aria: { current: (health == @focus ? "page" : nil) }, title: health.entity.name
 
   = render "finance/shared/page_guide"
 
-  / PEUT-ON DÉPENSER ? La réponse franche, puis le solde vérifié.
-  section.ui-acc-hero(data-spending-verdict=(v&.verdict || "inconnu"))
-    .ui-acc-hero-q
-      p.ui-acc-hero-over Peut-on dépenser ?
-      p.ui-acc-hero-phrase
-        = before
-        - if highlighted
-          mark.ui-hl = highlighted
-        = after
-    - if v && v.verdict != "inconnu"
-      .ui-acc-hero-n
-        b = accounting_euros(v.balance_cents)
-        span(class=("is-stale" if treasury.as_of && (treasury.today - treasury.as_of).to_i > 7)) = accounting_as_of(treasury)
-    - if v
-      details.ui-acc-calc
-        summary.ui-acc-calc-btn
-          span.ui-acc-calc-open Voir le détail
-          span.ui-acc-calc-close Refermer
-        .ui-acc-calc-b
-          = render "finance/accounting/v2/calculation", v: v
+  - cols = { style: "--adm-cols: #{@healths.size}" }
+  section.ui-adm-sec(data-overview-section="today" aria-labelledby="adm-today")
+    .ui-adm-sec-h
+      h2.ui-h2#adm-today Aujourd’hui
+      p Comment va chaque structure ?
+    .ui-adm-cols(*cols)
+      - @healths.each do |health|
+        = render "finance/accounting/v2/health_today", health: health, full: full
 
-  - if v && v.verdict != "inconnu"
-    - low = v.lowest_point
-    - stays = treasury.receivables_in_horizon.size + treasury.late_receivables.size
-    .ui-acc-stats
-      = link_to (v.incoming_cents.positive? ? finance_accounting_verdict_detail_path(entity, "incoming") : finance_treasury_path), class: "ui-card ui-acc-stat", data: (v.incoming_cents.positive? ? { turbo_frame: "modal" } : {}) do
-        span.ui-acc-stat-l = "À encaisser · #{Finance::Treasury::HORIZON_DAYS} jours"
-        b = accounting_euros(v.incoming_cents)
-        span.ui-acc-stat-s = stays.zero? ? "aucun séjour à solder" : "soldes de #{stays} séjour#{'s' if stays > 1}"
-      = link_to (v.outgoing_cents.positive? ? finance_accounting_verdict_detail_path(entity, "outgoing") : finance_payables_path), class: "ui-card ui-acc-stat", data: (v.outgoing_cents.positive? ? { turbo_frame: "modal" } : {}) do
-        span.ui-acc-stat-l = "À payer · #{Finance::Treasury::HORIZON_DAYS} jours"
-        b = accounting_euros(v.outgoing_cents)
-        span.ui-acc-stat-s factures, charges fixes, dettes
-      = link_to (entity.form == "foundation" ? finance_treasury_path : finance_cash_entries_path), class: "ui-card ui-acc-stat" do
-        span.ui-acc-stat-l Point bas projeté
-        b(class=("is-neg" if low.balance_cents.negative?)) = accounting_euros(low.balance_cents)
-        span.ui-acc-stat-s = low.date == treasury.today ? "aujourd’hui" : "le #{l(low.date, format: '%-d %B')}"
-      - stale_count = @days_since_cash_count.nil? || @days_since_cash_count > 7
-      = link_to (stale_count ? new_finance_cash_count_path : finance_cash_counts_path), class: "ui-card ui-acc-stat#{' is-warn' if stale_count}", data: { cash_count_reminder: "" } do
-        span.ui-acc-stat-l Caisse du bar
-        - if @last_cash_count
-          b = accounting_euros(@last_cash_count.counted_cents)
-          span.ui-acc-stat-s = accounting_counted_ago(@days_since_cash_count)
-        - else
-          b —
-          span.ui-acc-stat-s jamais comptée : compter maintenant
+  section.ui-adm-sec(data-overview-section="soon" aria-labelledby="adm-soon")
+    .ui-adm-sec-h
+      h2.ui-h2#adm-soon Les trois prochains mois
+      p = "Jusqu’au #{l(Date.current + Finance::Treasury::HORIZON_DAYS, format: '%-d %B')} : ce qui va rentrer, sortir, et ce que la loi demande."
+    .ui-adm-cols(*cols)
+      - @healths.each do |health|
+        = render "finance/accounting/v2/health_soon", health: health, full: full
 
-  .ui-acc-grid
-    = render "finance/accounting/v2/todo", todo: @todo
+  section.ui-adm-sec(data-overview-section="later" aria-labelledby="adm-later")
+    .ui-adm-sec-h
+      h2.ui-h2#adm-later Plus loin
+      p L’année, le budget, les prêts et ce que vaut chaque structure.
+    .ui-adm-cols(*cols)
+      - @healths.each do |health|
+        = render "finance/accounting/v2/health_later", health: health, full: full
 
-    .ui-acc-side
-      - if treasury
-        section.ui-card.ui-acc-chart(data-treasury-summary="")
-          .ui-card-h
-            h2.ui-h3 = "Trésorerie de #{accounting_entity_short(entity)}"
-            - if entity.form == "foundation"
-              = link_to "Détail", finance_treasury_path, class: "ui-card-link"
-          .ui-card-b
-            = render Charts::BalanceLineComponent.new(history: treasury.history, projection: treasury.projection, today: treasury.today, lowest: (v.lowest_point if v.verdict != "inconnu"), compact: true)
+  section.ui-adm-sec#a-trancher(data-overview-section="signals" aria-labelledby="adm-signals")
+    .ui-adm-sec-h
+      h2.ui-h2#adm-signals Ce qu’on doit trancher ensemble
+      p Ce que Claudy repère dans les chiffres, le plus urgent d’abord.
+    - if @signals.any?
+      ol.ui-card.ui-adm-sig
+        - @signals.each do |signal|
+          li(data-signal-level=signal.level)
+            = overview_level(signal)
+            p
+              - unless full
+                b.ui-adm-sig-e = signal.entity.form_label
+              = signal.text
+            - if signal.path
+              = link_to "Voir", signal.path, class: "ui-card-link"
+    - else
+      p.ui-card.ui-card-b.ui-adm-empty Rien de particulier : les chiffres ne signalent aucun point à trancher.
 
-      section.ui-card.ui-acc-deadlines
-        .ui-card-h
-          h2.ui-h3 Échéances des 30 jours
-          = link_to "Échéancier", finance_compliance_deadlines_path, class: "ui-card-link"
-        - if @entity_deadlines.any?
-          ul.ui-acc-dl
-            - @entity_deadlines.each do |deadline|
-              li(class=("is-late" if deadline.overdue?))
-                b.ui-acc-dl-d = l(deadline.due_on, format: "%-d %b")
-                .ui-acc-dl-m
-                  = link_to deadline.display_title, finance_compliance_deadline_path(deadline)
-                  - sub = [(deadline.payment? ? "paiement" : nil), deadline.note.to_s.squish.truncate(70).presence].compact.join(" · ")
-                  - if sub.present?
-                    small = sub.upcase_first
-                .ui-acc-dl-s = accounting_deadline_side(deadline)
-        - else
-          p.ui-card-b.ui-muted Rien à tenir dans les 30 jours.
+  details.ui-adm-more(data-overview-glossary="")
+    summary
+      span Les mots de cette page
+      = ui_icon(:right, size: 16, css: "ui-adm-more-i")
+    dl.ui-adm-glossary
+      - AccountingOverviewHelper::OVERVIEW_GLOSSARY.each do |word, definition|
+        div
+          dt = word
+          dd = definition
 
-      / Ce qui pèse encore sur l'entité : une dette qu'on ne voit pas est une
-        dette qu'on oublie de compter, un prêt gonfle la banque sans être de la
-        marge.
-      - if @entity_liabilities.any? || @entity_loans
-        section.ui-card.ui-acc-owed(data-accounting-liabilities="")
-          .ui-card-h
-            h2.ui-h3 = "Ce que #{accounting_entity_short(entity)} doit aussi"
-          ul.ui-acc-owed-l
-            - if @entity_liabilities.any?
-              li
-                = link_to finance_liabilities_path do
-                  span
-                    | Dettes et litiges sans facture
-                    small = @entity_liabilities.map(&:label).first(3).join(", ") + (@entity_liabilities.size > 3 ? " …" : "")
-                  b = accounting_euros(@entity_liabilities.sum(&:remaining_cents))
-            - @entity_loans&.lenders&.first(4)&.each do |lender|
-              li(data-accounting-loans="")
-                = link_to finance_ledger_path(general_account_id: lender.account.id, legal_entity_id: entity.id) do
-                  span
-                    = "Prêt de #{lender.name}"
-                    small = [lender.account.code, (lender.long_term? ? "long terme, hors marge" : nil)].compact.join(" · ")
-                  b(class=("is-neg" if lender.owed_cents.negative?)) = accounting_euros(lender.owed_cents)
-
-  / Les repères : le référentiel et les registres, à portée sans encombrer.
-  nav.ui-acc-refs(aria-label="Repères")
-    = link_to finance_general_accounts_path do
-      | Plan comptable
-      span = @accounts_count
-    = link_to finance_ledger_path do
-      | Grand livre
-      span = @entries_count
-    = link_to finance_fiscal_years_path do
-      | Exercices ouverts
-      span = @open_years.size
-    = link_to "Dettes et litiges", finance_liabilities_path
-    = link_to "Guide de la compta", finance_guide_path
+  / Le travail des comptables : les files dans l'ordre, la caisse, les repères.
+    Utile à qui tient les comptes, replié pour qui vient décider.
+  details.ui-adm-more(data-overview-work="")
+    summary
+      span Le travail des comptables
+      small = @todo.items.reject(&:waiting?).count(&:done?).then { |done| "#{done} file#{'s' if done > 1} sur #{@todo.items.reject(&:waiting?).size} à jour" }
+      = ui_icon(:right, size: 16, css: "ui-adm-more-i")
+    .ui-adm-work
+      = render "finance/accounting/v2/todo", todo: @todo
+      .ui-acc-side
+        - stale_count = @days_since_cash_count.nil? || @days_since_cash_count > 7
+        = link_to (stale_count ? new_finance_cash_count_path : finance_cash_counts_path), class: "ui-card ui-acc-stat#{' is-warn' if stale_count}", data: { cash_count_reminder: "" } do
+          span.ui-acc-stat-l Caisse du bar
+          - if @last_cash_count
+            b = accounting_euros(@last_cash_count.counted_cents)
+            span.ui-acc-stat-s = accounting_counted_ago(@days_since_cash_count)
+          - else
+            b —
+            span.ui-acc-stat-s jamais comptée : compter maintenant
+        nav.ui-acc-refs(aria-label="Repères")
+          = link_to finance_general_accounts_path do
+            | Plan comptable
+            span = @accounts_count
+          = link_to finance_ledger_path do
+            | Grand livre
+            span = @entries_count
+          = link_to finance_fiscal_years_path do
+            | Exercices ouverts
+            span = @open_years.size
+          = link_to "Comptes annuels", finance_annual_accounts_path
+          = link_to "Budget", finance_budget_path
+          = link_to "Dettes et litiges", finance_liabilities_path
+          = link_to "Guide de la compta", finance_guide_path

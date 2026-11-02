@@ -1221,6 +1221,87 @@ a.ui-kt-who:hover { text-decoration: underline; text-decoration-color: var(--ui-
   .ui-acc-dl-s { grid-column: 2; }
 }
 
+/* --- Comptabilité, la page du collectif des administrateurs (Michael, 2026-10-30)
+   `finance/accounting/v2/*` : une colonne par structure, une section par
+   horizon (aujourd'hui, trois mois, plus loin), puis les signaux. Les cartes
+   d'une même structure s'alignent d'une section à l'autre. */
+.ui-adm-lead { font-size: 15px; color: var(--ui-ink2); max-width: 62ch; }
+.ui-adm-lead-a { font-weight: 700; color: var(--ui-red-ink); text-decoration: underline; text-decoration-color: currentColor; text-underline-offset: 3px; white-space: nowrap; }
+.ui-adm-sec { margin-top: 30px; }
+.ui-adm-sec-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 14px; }
+.ui-adm-sec-h p { font-size: 14.5px; color: var(--ui-ink3); }
+.ui-adm-cols { display: grid; grid-template-columns: repeat(var(--adm-cols, 3), minmax(0, 1fr)); gap: 18px; align-items: stretch; }
+.ui-adm-ent { display: flex; flex-direction: column; gap: 14px; padding: 18px 20px 18px; min-width: 0; }
+.ui-adm-ent-h { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 10px; }
+.ui-adm-ent-h > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 170px; }
+.ui-adm-ent-n { font-family: var(--ui-f-d); font-size: 18px; font-weight: 700; line-height: 1.25; color: var(--ui-ink); }
+.ui-adm-ent-h small { font-size: 12.5px; color: var(--ui-ink3); }
+.ui-adm-ent-h .ui-st { flex: none; }
+.ui-adm-phrase { font-family: var(--ui-f-d); font-size: 17px; line-height: 1.45; color: var(--ui-ink); text-wrap: pretty; }
+.ui-adm-phrase .ui-hl { padding: 0 .2em; border-radius: 4px; background: var(--ui-yellow-tint); color: var(--ui-teal-deep); font-weight: 700; }
+.ui-adm-figs { display: flex; flex-direction: column; }
+.ui-adm-figs > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 14px; padding: 11px 0; border-top: 1px solid var(--ui-line-soft); }
+.ui-adm-figs dt { font-size: 14px; font-weight: 600; color: var(--ui-ink2); padding-top: 3px; }
+.ui-adm-figs dd { display: contents; }
+.ui-adm-figs dd > b, .ui-adm-figs dd > .ui-adm-amount {
+  grid-column: 2; grid-row: 1; justify-self: end; font-family: var(--ui-f-d); font-size: 21px; font-weight: 700;
+  line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ui-ink);
+}
+.ui-adm-figs dd > small { grid-column: 1 / -1; font-size: 13px; line-height: 1.45; color: var(--ui-ink3); }
+.ui-adm-figs dd > small.is-stale { color: var(--ui-warn-ink); font-weight: 600; }
+.ui-adm-amount { text-decoration: underline; text-decoration-color: var(--ui-line); text-decoration-thickness: 2px; text-underline-offset: 5px; }
+.ui-adm-amount:hover { text-decoration-color: var(--ui-yellow); }
+.ui-adm-figs .ui-adm-amount.is-muted { font-family: var(--ui-f-ui); font-size: 14.5px; color: var(--ui-ink2); }
+.ui-adm-figs .is-neg, .ui-adm-figs .ui-adm-amount.is-neg { color: var(--ui-red-ink); }
+.ui-adm-na { color: var(--ui-ink3) !important; }
+.ui-adm-note { padding: 9px 12px; border-radius: 10px; background: var(--ui-yellow-tint); color: var(--ui-warn-ink); font-size: 13px; font-weight: 600; line-height: 1.45; }
+.ui-adm-empty { font-size: 14px; color: var(--ui-ink3); }
+.ui-adm-zoom { margin-top: auto; align-self: flex-start; }
+.ui-adm-chart { margin: 0 -6px; }
+.ui-adm-chart svg { width: 100%; height: auto; }
+.ui-adm-soon-b { display: flex; flex-direction: column; gap: 14px; }
+[data-overview="entity"] .ui-adm-soon-b { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 28px; align-items: start; }
+@media (max-width: 1100px) { [data-overview="entity"] .ui-adm-soon-b { grid-template-columns: minmax(0, 1fr); } }
+.ui-adm-dl-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-top: 4px; }
+.ui-adm-dl-h h4 { font-size: 14px; font-weight: 700; color: var(--ui-ink); }
+.ui-acc-dl.ui-adm-dl { padding: 0; }
+.ui-adm-dl li { grid-template-columns: 52px minmax(0, 1fr) auto; gap: 10px; padding: 10px 0; }
+.ui-adm-dl .ui-acc-dl-d { font-size: 13.5px; }
+.ui-adm-dl .ui-acc-dl-m a { font-size: 14px; }
+.ui-adm-owed.ui-acc-owed-l { padding: 0; }
+.ui-adm-calc > summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--ui-ink2); text-decoration: underline; text-decoration-color: var(--ui-line); text-underline-offset: 4px; }
+.ui-adm-calc-b.ui-acc-hero { display: block; margin: 12px 0 0; padding: 18px 20px; border-radius: 16px; }
+.ui-adm-calc-b .ui-acc-calc-b { margin-top: 0; padding-top: 0; border-top: 0; }
+
+.ui-adm-sig { padding: 4px 20px; }
+.ui-adm-sig li { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 14px; align-items: baseline; padding: 13px 0; }
+.ui-adm-sig li + li { border-top: 1px solid var(--ui-line-soft); }
+.ui-adm-sig .ui-st { justify-self: start; }
+.ui-adm-sig p { font-size: 15px; line-height: 1.5; color: var(--ui-ink); }
+.ui-adm-sig-e { margin-right: 8px; padding: 1px 8px; border-radius: 6px; background: var(--ui-surface); font-size: 12.5px; font-weight: 700; color: var(--ui-ink2); white-space: nowrap; }
+
+.ui-adm-more { margin-top: 22px; border: 1.5px solid var(--ui-line); border-radius: 18px; background: #fff; }
+.ui-adm-more > summary { display: flex; align-items: center; gap: 12px; padding: 16px 20px; cursor: pointer; list-style: none; font-size: 15px; font-weight: 700; color: var(--ui-ink); }
+.ui-adm-more > summary::-webkit-details-marker { display: none; }
+.ui-adm-more > summary small { font-size: 13px; font-weight: 500; color: var(--ui-ink3); }
+.ui-adm-more-i { margin-left: auto; color: var(--ui-ink3); transition: transform .15s; }
+.ui-adm-more[open] .ui-adm-more-i { transform: rotate(90deg); }
+.ui-adm-glossary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 28px; padding: 4px 20px 20px; }
+.ui-adm-glossary dt { font-size: 14px; font-weight: 700; color: var(--ui-ink); }
+.ui-adm-glossary dd { margin-top: 3px; font-size: 13.5px; line-height: 1.5; color: var(--ui-ink2); }
+.ui-adm-work { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; padding: 0 20px 20px; }
+.ui-adm-work .ui-acc-refs { margin-top: 0; padding-top: 0; border-top: 0; }
+
+@media (max-width: 1100px) {
+  .ui-adm-cols { grid-template-columns: minmax(0, 1fr); }
+  .ui-adm-glossary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ui-adm-work { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .ui-adm-sig li { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .ui-adm-glossary { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* --- Claudy installable (redesign, Michael 2026-10-29) ------------------------
    Le bandeau « Hors ligne » et l'invitation à installer, tous deux cachés
    tant que leur contrôleur ne les montre pas. */

@@ -158,12 +158,13 @@ module Finance
     # et il a sa place dans le guide.
     PAGES = {
       "finance/accounting" => Page.new(
-        "La page d'accueil de la comptabilité : peut-on dépenser, ce qui attend d'être fait, et les chiffres qui " \
-        "pèsent (dettes, prêts, échéances).",
-        ["Commence par « À faire » : chaque ligne mène à la file qu'il faut vider, dans l'ordre du travail.",
-         "Lis « Peut-on dépenser ? » avant toute dépense importante.",
-         "Si un mot t'arrête, le guide (en haut à droite de la barre) l'explique."],
-        %w[a-affecter solde-verifie pret dette]
+        "La page des administrateurs : comment va chaque structure aujourd'hui, ce qui l'attend dans les trois " \
+        "mois, ce qui pèse plus loin, et ce qu'il faut trancher ensemble.",
+        ["Lis d'abord le feu et la phrase de chaque structure : ils disent si on peut dépenser.",
+         "Termine par « Ce qu'on doit trancher ensemble » : c'est l'ordre du jour que proposent les chiffres.",
+         "Clique sur une structure (en haut à droite) pour voir le calcul, toutes les échéances et chaque prêteur.",
+         "Tu tiens les comptes ? « Le travail des comptables », en bas, garde les files dans l'ordre."],
+        %w[a-affecter solde-verifie pret dette echeance]
       ),
       "finance/guide" => Page.new(
         "Le mode d'emploi de la section : comment l'argent circule dans Claudy, ta routine et le lexique.",
