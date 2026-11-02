@@ -2111,10 +2111,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_02_170000) do
 
   create_table "purchase_invoices", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.bigint "credited_invoice_id"
     t.datetime "deleted_at"
     t.text "dispute_reason"
     t.date "due_on"
     t.date "issued_on", null: false
+    t.string "kind", default: "invoice", null: false
     t.bigint "legal_entity_id", null: false
     t.text "notes"
     t.string "number"
@@ -2131,11 +2133,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_02_170000) do
     t.datetime "validated_at"
     t.bigint "validated_by_id"
     t.bigint "validation_team_id"
+    t.index ["credited_invoice_id"], name: "index_purchase_invoices_on_credited_invoice_id"
     t.index ["deleted_at"], name: "index_purchase_invoices_on_deleted_at"
     t.index ["legal_entity_id"], name: "index_purchase_invoices_on_legal_entity_id"
     t.index ["pdf_sha256"], name: "index_purchase_invoices_on_pdf_sha256", unique: true, where: "(deleted_at IS NULL)"
     t.index ["status"], name: "index_purchase_invoices_on_status"
-    t.index ["third_party_id", "number"], name: "index_purchase_invoices_on_third_party_and_number", unique: true, where: "((deleted_at IS NULL) AND (number IS NOT NULL))"
+    t.index ["third_party_id", "kind", "number"], name: "index_purchase_invoices_on_third_party_and_number", unique: true, where: "((deleted_at IS NULL) AND (number IS NOT NULL))"
     t.index ["third_party_id"], name: "index_purchase_invoices_on_third_party_id"
     t.index ["validated_by_id"], name: "index_purchase_invoices_on_validated_by_id"
     t.index ["validation_team_id"], name: "index_purchase_invoices_on_validation_team_id"
@@ -3102,6 +3105,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_02_170000) do
   add_foreign_key "purchase_invoice_lines", "purchase_invoices"
   add_foreign_key "purchase_invoice_lines", "teams"
   add_foreign_key "purchase_invoices", "legal_entities"
+  add_foreign_key "purchase_invoices", "purchase_invoices", column: "credited_invoice_id"
   add_foreign_key "purchase_invoices", "teams", column: "validation_team_id"
   add_foreign_key "purchase_invoices", "third_parties"
   add_foreign_key "purchase_invoices", "users", column: "validated_by_id"

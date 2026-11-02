@@ -20,6 +20,14 @@
 # La comptabilisation n'est PAS un statut : c'est `posted_at`. Un statut qui
 # mélangerait l'état administratif et l'état comptable rendrait impossible de
 # dire « payée mais pas encore passée ».
+#
+# **Les notes de crédit** (Michael, 2026-11-01) : `kind` = `credit_note`. Le
+# montant reste positif, c'est le type qui inverse l'écriture (440000 au débit,
+# charge au crédit). Liée à la facture qu'elle corrige (`credited_invoice`),
+# elle s'impute sur ce qui en reste à payer ; ce qui ne s'y impute pas (facture
+# déjà payée, ou pas de facture liée) attend un remboursement du fournisseur,
+# rapproché d'une ligne bancaire ENTRANTE. Même parcours de statuts : « À
+# payer » se lit alors « À rembourser ».
 # == Schema Information
 #
 # Table name: purchase_invoices
@@ -29,6 +37,7 @@
 #  dispute_reason      :text
 #  due_on              :date
 #  issued_on           :date             not null
+#  kind                :string           default("invoice"), not null
 #  notes               :text
 #  number              :string
 #  paid_on             :date
@@ -42,6 +51,7 @@
 #  validated_at        :datetime
 #  created_at          :datetime         not null
 #  updated_at          :datetime         not null
+#  credited_invoice_id :bigint
 #  legal_entity_id     :bigint           not null
 #  third_party_id      :bigint           not null
 #  validated_by_id     :bigint
@@ -49,17 +59,19 @@
 #
 # Indexes
 #
+#  index_purchase_invoices_on_credited_invoice_id     (credited_invoice_id)
 #  index_purchase_invoices_on_deleted_at              (deleted_at)
 #  index_purchase_invoices_on_legal_entity_id         (legal_entity_id)
 #  index_purchase_invoices_on_pdf_sha256              (pdf_sha256) UNIQUE WHERE (deleted_at IS NULL)
 #  index_purchase_invoices_on_status                  (status)
-#  index_purchase_invoices_on_third_party_and_number  (third_party_id,number) UNIQUE WHERE ((deleted_at IS NULL) AND (number IS NOT NULL))
+#  index_purchase_invoices_on_third_party_and_number  (third_party_id,kind,number) UNIQUE WHERE ((deleted_at IS NULL) AND (number IS NOT NULL))
 #  index_purchase_invoices_on_third_party_id          (third_party_id)
 #  index_purchase_invoices_on_validated_by_id         (validated_by_id)
 #  index_purchase_invoices_on_validation_team_id      (validation_team_id)
 #
 # Foreign Keys
 #
+#  fk_rails_...  (credited_invoice_id => purchase_invoices.id)
 #  fk_rails_...  (legal_entity_id => legal_entities.id)
 #  fk_rails_...  (third_party_id => third_parties.id)
 #  fk_rails_...  (validated_by_id => users.id)
@@ -90,6 +102,12 @@ class PurchaseInvoice < ApplicationRecord
   # Les statuts d'une facture réglée : elle n'est plus jamais échue.
   SETTLED_STATUSES = %w[paid member_paid].freeze
 
+  KINDS = %w[invoice credit_note].freeze
+  KIND_LABELS = {
+    "invoice"     => "Facture",
+    "credit_note" => "Note de crédit"
+  }.freeze
+
   include Commentable
   # Ce que la maison doit (epic #240, phase 4) : `cash_allocations`, le calcul de
   # ce qui reste dû et la notion de retard viennent de là — pour que la file
@@ -109,6 +127,10 @@ class PurchaseInvoice < ApplicationRecord
   belongs_to :third_party
   belongs_to :validation_team, class_name: "Team", optional: true
   belongs_to :validated_by, class_name: "User", optional: true
+  # La facture qu'une note de crédit corrige, et l'inverse.
+  belongs_to :credited_invoice, class_name: "PurchaseInvoice", optional: true
+  has_many :credit_notes, class_name: "PurchaseInvoice", foreign_key: :credited_invoice_id,
+                          inverse_of: :credited_invoice, dependent: :restrict_with_error
   has_many :purchase_invoice_lines, -> { order(:position, :id) }, dependent: :destroy
   # Les relevés de dépôt-vente que cette facture solde (epic #248, phase 3).
   # `nullify` : détacher une facture ne doit jamais effacer le relevé — c'est le
@@ -138,11 +160,13 @@ class PurchaseInvoice < ApplicationRecord
   validate :structured_payment_reference_is_valid
   validate :lines_cover_total_when_leaving_to_process
   validate :frozen_once_payable, on: :update
+  validate :credited_invoice_is_coherent
 
   validates :issued_on, presence: true
   validates :status, inclusion: { in: STATUSES }
+  validates :kind, inclusion: { in: KINDS }
   validates :total_cents, numericality: { only_integer: true, greater_than: 0 }
-  validates :number, uniqueness: { scope: :third_party_id, allow_nil: true,
+  validates :number, uniqueness: { scope: %i[third_party_id kind], allow_nil: true,
                                    message: "existe déjà pour ce tiers" }
   validates :pdf_sha256, uniqueness: { allow_nil: true,
                                        message: "correspond à une pièce déjà déposée" }
@@ -154,7 +178,12 @@ class PurchaseInvoice < ApplicationRecord
   # fin de liste : elles n'ont pas de promesse à tenir.
   scope :by_due_date, -> { order(Arel.sql("purchase_invoices.due_on ASC NULLS LAST"), issued_on: :desc, id: :desc) }
   scope :with_status, ->(status) { where(status: status) }
-  scope :payable, -> { where(status: "to_pay") }
+  scope :invoices, -> { where(kind: "invoice") }
+  scope :credit_notes, -> { where(kind: "credit_note") }
+  # Ce qu'on doit virer : des FACTURES. Une note de crédit « À rembourser »
+  # attend de l'argent qui rentre (`awaiting_refund`).
+  scope :payable, -> { invoices.where(status: "to_pay") }
+  scope :awaiting_refund, -> { credit_notes.where(status: "to_pay") }
   # Ce que le pôle doit trancher (phase 3) : le callout de sa page s'en sert.
   scope :awaiting_validation_by, ->(team) { where(status: "to_validate", validation_team_id: team) }
 
@@ -162,7 +191,18 @@ class PurchaseInvoice < ApplicationRecord
     define_method("#{state}?") { status == state }
   end
 
-  def status_label = STATUS_LABELS.fetch(status, status)
+  def credit_note? = kind == "credit_note"
+  def kind_label = KIND_LABELS.fetch(kind, kind)
+
+  # Pour une note de crédit, « À payer » et « Payée » ne disent rien : elle
+  # attend un remboursement, ou elle est imputée sur sa facture / remboursée.
+  def status_label
+    return STATUS_LABELS.fetch(status, status) unless credit_note?
+    return "À rembourser" if to_pay?
+    return(allocated_cents.positive? ? "Remboursée" : "Imputée") if paid?
+
+    STATUS_LABELS.fetch(status, status)
+  end
   def lines_total_cents = purchase_invoice_lines.sum(&:amount_cents)
   def lines_vat_cents = purchase_invoice_lines.sum(&:vat_cents)
   def balanced? = lines_total_cents == total_cents
@@ -171,13 +211,36 @@ class PurchaseInvoice < ApplicationRecord
   # Ce qui ne se modifie plus depuis le formulaire : une facture comptabilisée,
   # ou payée par un membre (sa note de frais a repris montant, compte et pôle).
   def locked_for_edit? = frozen_content? || member_paid?
-  def double_signature? = total_cents >= DOUBLE_SIGNATURE_CENTS
+  def double_signature? = !credit_note? && total_cents >= DOUBLE_SIGNATURE_CENTS
   def reference = [third_party&.name, number].compact_blank.join(" · ")
+  # Le montant vu du grand livre : une note de crédit réduit les charges.
+  def signed_total_cents = credit_note? ? -total_cents : total_cents
+
+  # --- Les notes de crédit ---------------------------------------------------
+
+  # Ce que les notes de crédit COMPTABILISÉES retirent de cette facture. Une
+  # note encore à traiter n'est qu'une promesse : elle ne réduit rien.
+  def credited_cents
+    return 0 if credit_note?
+
+    credit_notes.where(status: FROZEN_STATUSES).sum(:total_cents)
+  end
+
+  # Ce qu'une note de crédit comptabilisée retire de la facture qu'elle
+  # corrige : au plus ce qui restait à y payer (ce que la banque n'a pas
+  # encore couvert, et que des notes antérieures n'ont pas déjà pris). Le
+  # surplus, le fournisseur nous le rembourse.
+  def imputed_cents
+    return 0 unless credit_note? && credited_invoice && FROZEN_STATUSES.include?(status)
+
+    anterieures = credited_invoice.credit_notes.where(status: FROZEN_STATUSES).where(id: ...id).sum(:total_cents)
+    (credited_invoice.total_cents - credited_invoice.allocated_cents - anterieures).clamp(0, total_cents)
+  end
 
   # Échue = l'échéance est passée et la facture n'est pas réglée. Lu sur le
   # statut, pas sur les affectations (`payable_overdue?`) : la liste en affiche
   # des dizaines, une requête par ligne pour la même réponse serait du gâchis.
-  def overdue?(on = Date.current) = due_on.present? && due_on < on && !SETTLED_STATUSES.include?(status)
+  def overdue?(on = Date.current) = !credit_note? && due_on.present? && due_on < on && !SETTLED_STATUSES.include?(status)
   def days_overdue(on = Date.current) = overdue?(on) ? (on - due_on).to_i : 0
 
   # Les notes de frais qui remboursent cette facture, rejetées et supprimées
@@ -191,13 +254,21 @@ class PurchaseInvoice < ApplicationRecord
   # facture (souvent structurée, +++…+++, qu'il rapproche automatiquement),
   # sinon le numéro de SA facture, c'est ce qu'il cherche pour rapprocher de son
   # côté. À défaut, notre propre référence, qui vaut mieux qu'un virement muet.
-  def payable_amount_cents = total_cents
+  #
+  # Une facture doit son total moins ses notes de crédit ; une note de crédit
+  # « doit » ce que le fournisseur doit encore NOUS rembourser.
+  def payable_amount_cents
+    return total_cents - imputed_cents if credit_note?
+
+    [total_cents - credited_cents, 0].max
+  end
+
   def payable_beneficiary = third_party&.name
   def payable_third_party = third_party
   def payable_communication = payment_reference.presence || number.presence || "Facture ##{id}"
   def payable_due_on = due_on
   def payable_reference = reference.presence || "##{id}"
-  def payable_label = "Facture #{payable_reference}"
+  def payable_label = "#{kind_label} #{payable_reference}"
 
   def payable_path
     Rails.application.routes.url_helpers.finance_purchase_invoice_path(self)
@@ -338,10 +409,24 @@ class PurchaseInvoice < ApplicationRecord
     errors.add(:payment_reference, "a une clé de contrôle fausse : vérifiez les deux derniers chiffres")
   end
 
+  def credited_invoice_is_coherent
+    return if credited_invoice_id.blank?
+
+    unless credit_note?
+      errors.add(:credited_invoice, "ne se donne qu'à une note de crédit")
+      return
+    end
+    return errors.add(:credited_invoice, "est introuvable") if credited_invoice.nil?
+
+    errors.add(:credited_invoice, "doit être une facture, pas une note de crédit") if credited_invoice.credit_note?
+    errors.add(:credited_invoice, "n'est pas du même fournisseur") if credited_invoice.third_party_id != third_party_id
+    errors.add(:credited_invoice, "n'est pas de la même entité") if credited_invoice.legal_entity_id != legal_entity_id
+  end
+
   def frozen_once_payable
     return unless FROZEN_STATUSES.include?(status_was)
 
-    gelees = %w[total_cents third_party_id legal_entity_id issued_on number]
+    gelees = %w[total_cents third_party_id legal_entity_id issued_on number kind credited_invoice_id]
     return if (changed & gelees).empty?
 
     errors.add(:base, "Cette facture est déjà comptabilisée — corrige-la par contre-passation.")

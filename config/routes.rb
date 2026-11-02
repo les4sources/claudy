@@ -274,6 +274,7 @@ Rails.application.routes.draw do
     # Routes nommées AVANT la ressource : sinon `/finance/catalog/print` serait
     # capté par `catalog#show` avec `id = "print"`.
     get "catalog/print", to: "catalog#print", as: :catalog_print
+    get "catalog/bar_sheet", to: "catalog#bar_sheet", as: :catalog_bar_sheet
     get "catalog/suggest_price", to: "catalog#suggest_price", as: :catalog_suggest_price
     resources :catalog do
       resources :prices, only: [:create, :destroy], controller: "catalog_prices"
@@ -438,6 +439,9 @@ Rails.application.routes.draw do
         post :pay_in_cash
         # Payée en magasin par un membre : sa note de frais la rembourse.
         post :paid_by_member
+        # La pièce se remplace quel que soit le statut : ce n'est pas une
+        # donnée comptable, et une facture comptabilisée ne se modifie plus.
+        post :replace_document
       end
     end
     resources :cash_motifs, path: "cash/motifs", except: %i[show destroy] do

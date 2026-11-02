@@ -373,9 +373,10 @@ module Mcp
 
         def ligne_facture(facture)
           reste = facture.to_pay? || facture.paid? ? " · reste #{euros(facture.remaining_cents)}" : ""
-          "Facture ##{facture.id} #{facture.third_party&.name}#{" n° #{facture.number}" if facture.number.present?} · " \
+          lien = " · corrige la facture ##{facture.credited_invoice_id}" if facture.credited_invoice_id
+          "#{facture.kind_label} ##{facture.id} #{facture.third_party&.name}#{" n° #{facture.number}" if facture.number.present?} · " \
             "#{euros(facture.total_cents)} · du #{facture.issued_on}#{" · échéance #{facture.due_on}" if facture.due_on} · " \
-            "#{facture.status_label}#{reste} · #{facture.legal_entity&.name}"
+            "#{facture.status_label}#{reste}#{lien} · #{facture.legal_entity&.name}"
         end
 
         def ligne_note(note)

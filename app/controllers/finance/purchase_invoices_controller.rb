@@ -6,7 +6,8 @@ module Finance
   # blocage implicite, donc invisible, et on découvrait au moment de payer que
   # personne n'avait dit oui.
   class PurchaseInvoicesController < Finance::AccountingBaseController
-    before_action :get_invoice, only: %i[show edit update submit dispute reopen validate_by_team pay_in_cash paid_by_member]
+    before_action :get_invoice, only: %i[show edit update submit dispute reopen validate_by_team pay_in_cash paid_by_member
+                                              replace_document]
     before_action :get_form_collections, only: %i[new create edit update]
 
     breadcrumb "Achats", :finance_purchase_invoices_path, match: :exact
@@ -21,10 +22,15 @@ module Finance
       @overdue = @invoices.select { |invoice| invoice.overdue?(@today) }
       # Les totaux par statut portent sur TOUTES les factures, pas sur le filtre :
       # c'est une boussole, et une boussole qui suit le filtre ne sert à rien.
+      # Les FACTURES par statut ; « À payer » dit ce qui reste à sortir, notes
+      # de crédit imputées et paiements partiels déduits. Les notes de crédit
+      # qui attendent le remboursement du fournisseur ont leur propre encart.
       @totals = PurchaseInvoice::STATUSES.index_with do |status|
-        base = PurchaseInvoice.with_status(status)
+        base = PurchaseInvoice.invoices.with_status(status)
         { count: base.count, cents: base.sum(:total_cents) }
       end
+      @totals["to_pay"][:cents] = PurchaseInvoice.payable.includes(:cash_allocations).sum(&:remaining_cents)
+      @awaiting_refund = PurchaseInvoice.awaiting_refund.includes(:third_party, :cash_allocations, :credited_invoice).to_a
       @third_parties = ThirdParty.actives.suppliers.ordered
       @entities = LegalEntity.actives.ordered
       @teams = Team.ordered
@@ -40,7 +46,7 @@ module Finance
       @versions = @invoice.versions.reorder(created_at: :desc).limit(20)
       # « Payée par un membre » : qui a payé, ou la dépense qu'il a déjà
       # déclarée sur sa note (même montant).
-      if PurchaseInvoices::PaidByMember::OPEN_STATUSES.include?(@invoice.status)
+      if PurchaseInvoices::PaidByMember::OPEN_STATUSES.include?(@invoice.status) && !@invoice.credit_note?
         @humans = Human.ordered_all
         @candidate_lines = PurchaseInvoices::PaidByMember.candidate_lines(@invoice).limit(20)
       end
@@ -53,7 +59,8 @@ module Finance
     def new
       @deadline = linked_deadline
       @invoice = PurchaseInvoice.new(legal_entity: @deadline&.legal_entity || default_entity,
-                                     issued_on: Date.current, due_on: @deadline&.due_on)
+                                     issued_on: Date.current, due_on: @deadline&.due_on,
+                                     kind: params[:kind] == "credit_note" ? "credit_note" : "invoice")
       @mail_attachment = linked_mail_attachment
       prefill_from_mail(@invoice, @mail_attachment) if @mail_attachment
       @invoice.purchase_invoice_lines.build if @invoice.purchase_invoice_lines.empty?
@@ -75,7 +82,7 @@ module Finance
       if @invoice.save
         @deadline&.update(purchase_invoice: @invoice)
         settle_mail_attachment(@mail_attachment, @invoice)
-        redirect_to finance_purchase_invoice_path(@invoice), notice: "Facture enregistrée."
+        redirect_to finance_purchase_invoice_path(@invoice), notice: "#{@invoice.kind_label} enregistrée."
       else
         @invoice.purchase_invoice_lines.build if @invoice.purchase_invoice_lines.empty?
         flash.now[:alert] = doublon_message(@invoice) || @invoice.errors.full_messages.to_sentence
@@ -94,6 +101,24 @@ module Finance
       else
         flash.now[:alert] = doublon_message(@invoice) || @invoice.errors.full_messages.to_sentence
         render :edit, status: :unprocessable_entity
+      end
+    end
+
+    # « Remplacer la pièce » depuis la fiche (Michael, 2026-10-31) : une facture
+    # comptabilisée ne passe plus par le formulaire, mais sa pièce n'est pas
+    # une donnée comptable. Le XML venu du mail se remplace par le PDF sans
+    # contre-passer l'écriture. Le contrôle de doublon (sha256) reste.
+    def replace_document
+      if params.dig(:purchase_invoice, :document).blank?
+        return redirect_to finance_purchase_invoice_path(@invoice), alert: "Choisis d'abord le fichier de la pièce."
+      end
+
+      attach_document(@invoice)
+      if @invoice.save
+        redirect_to finance_purchase_invoice_path(@invoice), notice: "Pièce remplacée."
+      else
+        redirect_to finance_purchase_invoice_path(@invoice),
+                    alert: doublon_message(@invoice) || @invoice.errors.full_messages.to_sentence
       end
     end
 
@@ -203,7 +228,9 @@ module Finance
         "Facture envoyée en validation — #{recipients.size} membre(s) du pôle la retrouveront " \
           "dans le récapitulatif de lundi matin."
       else
-        "Facture prête à payer, écriture générée au journal des achats."
+        return "Facture prête à payer, écriture générée au journal des achats." unless invoice.credit_note?
+
+        "Note de crédit #{invoice.status_label.downcase}, écriture générée au journal des achats."
       end
     end
 
@@ -286,6 +313,9 @@ module Finance
       @entities = LegalEntity.actives.ordered
       @teams = Team.ordered
       @general_accounts = GeneralAccount.actives.ordered
+      # Les factures qu'une note de crédit peut corriger. Le fournisseur se tape
+      # dans la recherche ; le modèle refuse un autre fournisseur.
+      @creditable_invoices = PurchaseInvoice.invoices.includes(:third_party).ordered.limit(500)
     end
 
     # Le sha256 est calculé À L'ARRIVÉE de la pièce (décision 5) : c'est la seule
@@ -294,9 +324,13 @@ module Finance
       file = params.dig(:purchase_invoice, :document)
       return if file.blank?
 
-      invoice.document.attach(file)
+      # L'empreinte AVANT `attach` : sur une facture enregistrée sans autre
+      # changement, `attach` sauve tout de suite et lit le fichier jusqu'au
+      # bout — l'empreinte prise après était celle d'un fichier vide, et
+      # l'enregistrement immédiat passait à côté du contrôle de doublon.
       invoice.pdf_sha256 = Digest::SHA256.hexdigest(file.tempfile.read)
       file.tempfile.rewind
+      invoice.document.attach(file)
     end
 
     def doublon_message(invoice)
@@ -307,7 +341,7 @@ module Finance
 
       return unless invoice.errors[:number].any?
 
-      existante = PurchaseInvoice.find_by(third_party_id: invoice.third_party_id, number: invoice.number)
+      existante = PurchaseInvoice.find_by(third_party_id: invoice.third_party_id, kind: invoice.kind, number: invoice.number)
       "Ce numéro existe déjà pour ce tiers#{lien(existante)}." if existante
     end
 
@@ -319,6 +353,7 @@ module Finance
 
     def invoice_params
       params.require(:purchase_invoice).permit(
+        :kind, :credited_invoice_id,
         :legal_entity_id, :third_party_id, :number, :issued_on, :due_on, :total_euros, :payment_reference,
         :requires_validation, :validation_team_id, :notes, :amounts_include_vat,
         purchase_invoice_lines_attributes: %i[id general_account_id team_id analytic_account_id

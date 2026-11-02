@@ -10,7 +10,7 @@ module Mcp
         include Commun
 
         AVEC = {
-          "facture_achat" => "payer une facture d'achat « à payer » (ligne sortante ; `facture`, `montant` facultatif)",
+          "facture_achat" => "payer une facture d'achat « à payer » (ligne sortante), ou rapprocher le remboursement d'une note de crédit fournisseur « à rembourser » (ligne entrante) ; `facture`, `montant` facultatif",
           "note_de_frais" => "rembourser une note en traitement (ligne sortante ; `note`, `montant` facultatif)",
           "releve_porteur" => "payer un relevé de porteur d'activité émis, aussi quand le porteur a été payé sur " \
                               "facture, en un ou plusieurs virements (ligne sortante ; `releve`, `montant` facultatif)",

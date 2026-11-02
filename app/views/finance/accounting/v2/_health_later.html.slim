@@ -1,0 +1,73 @@
+/ PLUS LOIN, une structure : le budget de l'année et celui qu'on prépare, les
+  prêts à rendre, les dettes qui tombent après les trois mois, et ce qu'elle
+  vaut (fonds propres du bilan provisoire). En vue d'une structure, les
+  prêteurs et les dettes un par un.
+- e = health.entity
+article.ui-card.ui-adm-ent(data-entity-later=e.id)
+  header.ui-adm-ent-h
+    h3.ui-adm-ent-n = e.name
+  dl.ui-adm-figs
+    div(data-fig="budget")
+      dt = "Budget #{health.today.year}"
+      dd
+        - if health.budget?
+          - planned = health.budget.budget
+          = link_to overview_signed(planned.net_cents), finance_budget_path(entity_id: e.id, year: health.today.year), class: "ui-adm-amount#{' is-neg' if planned.net_cents.negative?}"
+          small
+            = "prévu : #{accounting_euros(planned.revenue_cents)} de recettes, #{accounting_euros(planned.expense_cents)} de dépenses"
+            - if health.books?
+              br
+              = "réel à ce jour : #{overview_signed(health.result_cents)}"
+        - else
+          b.ui-adm-na —
+          small = "pas de budget voté pour #{health.today.year}"
+    div(data-fig="next-budget")
+      dt = "Budget #{health.next_year}"
+      dd
+        - if health.next_budget?
+          - planned = health.next_budget.budget
+          = link_to overview_signed(planned.net_cents), finance_budget_path(entity_id: e.id, year: health.next_year), class: "ui-adm-amount#{' is-neg' if planned.net_cents.negative?}"
+          small = "#{accounting_euros(planned.revenue_cents)} de recettes, #{accounting_euros(planned.expense_cents)} de dépenses prévues"
+        - else
+          = link_to "À préparer", finance_budget_path(entity_id: e.id, year: health.next_year), class: "ui-adm-amount is-muted"
+          small brouillon prérempli avec les 12 derniers mois
+    div(data-fig="loans")
+      dt Prêts à rendre
+      dd
+        b = accounting_euros(health.loans_cents)
+        small
+          - if health.loans_cents.positive?
+            = [("#{accounting_euros(health.short_term_loans_cents)} à court terme" if health.short_term_loans_cents.positive?),
+               ("#{accounting_euros(health.long_term_loans_cents)} à long terme" if health.long_term_loans_cents.positive?)].compact.join(", ")
+          - else
+            | aucun prêt en cours
+    div(data-fig="liabilities-later")
+      dt Dettes après trois mois
+      dd
+        b = accounting_euros(health.liabilities_later_cents)
+        small = health.liabilities.any? ? "#{health.liabilities.size} dette#{'s' if health.liabilities.size > 1} ou litige#{'s' if health.liabilities.size > 1} sans facture en tout" : "aucune dette sans facture"
+    div(data-fig="equity")
+      dt Ce qu’elle vaut
+      dd
+        - if health.equity_cents.nil?
+          b.ui-adm-na —
+          small pas de bilan dans Claudy
+        - else
+          = link_to accounting_euros(health.equity_cents), finance_annual_accounts_path, class: "ui-adm-amount#{' is-neg' if health.equity_cents.negative?}"
+          small = health.equity_cents.negative? ? "elle doit plus qu’elle ne possède (bilan provisoire)" : "ce qu’elle possède moins ce qu’elle doit (bilan provisoire)"
+  - if full && (health.lenders.any? || health.liabilities.any?)
+    ul.ui-acc-owed-l.ui-adm-owed
+      - health.liabilities.each do |liability|
+        li
+          = link_to finance_liabilities_path do
+            span
+              = liability.label
+              small = ["Dette ou litige sans facture", (l(liability.expected_on, format: "%B %Y") if liability.expected_on)].compact.join(" · ")
+            b = accounting_euros(liability.remaining_cents)
+      - health.lenders.each do |lender|
+        li
+          = link_to finance_ledger_path(general_account_id: lender.account.id, legal_entity_id: e.id) do
+            span
+              = lender.named? ? "Prêt de #{lender.name}" : lender.name
+              small = [lender.account.code, (lender.long_term? ? "long terme" : "court terme")].join(" · ")
+            b = accounting_euros(lender.owed_cents)

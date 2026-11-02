@@ -119,13 +119,17 @@ module Teams
     # encore validées (une facture n'entre au grand livre qu'au passage « À
     # payer ») et les notes de frais pas encore traitées, pour leur part
     # ventilée sur le pôle.
+    # Une note de crédit fournisseur allège la charge à venir (2026-11-01).
+    SIGNED_LINE_SQL = Arel.sql("CASE WHEN purchase_invoices.kind = 'credit_note' " \
+                               "THEN -purchase_invoice_lines.amount_cents ELSE purchase_invoice_lines.amount_cents END")
+
     def upcoming_invoices_cents
       @upcoming_invoices_cents ||=
         PurchaseInvoiceLine.joins(:purchase_invoice)
                            .where(team_id: team_ids)
                            .where(purchase_invoices: { status: %w[to_process to_validate],
                                                        issued_on: period, deleted_at: nil })
-                           .sum(:amount_cents)
+                           .sum(SIGNED_LINE_SQL)
     end
 
     # La part de ces factures qui attend la validation d'un pôle : le reste est
@@ -135,7 +139,7 @@ module Teams
         PurchaseInvoiceLine.joins(:purchase_invoice)
                            .where(team_id: team_ids)
                            .where(purchase_invoices: { status: "to_validate", issued_on: period, deleted_at: nil })
-                           .sum(:amount_cents)
+                           .sum(SIGNED_LINE_SQL)
     end
 
     def upcoming_expense_reports_cents
@@ -158,7 +162,7 @@ module Teams
                        .includes(:third_party, :validation_team).to_a
     end
 
-    def invoices_to_validate_cents = invoices_to_validate.sum(&:total_cents)
+    def invoices_to_validate_cents = invoices_to_validate.sum(&:signed_total_cents)
 
     # Le budget de chaque pôle pour une année : ses lignes du budget détaillé
     # quand l'année en a (étape 4 du redressement), sinon ses deux montants

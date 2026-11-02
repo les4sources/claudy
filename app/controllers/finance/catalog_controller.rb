@@ -77,6 +77,15 @@ module Finance
       render layout: "print"
     end
 
+    # Fiche du bar du mois, à imprimer et poser au bar : une ligne par article
+    # actif du canal Bar, une colonne par compte sourcier (`Catalog::BarSheet`).
+    # `month=AAAA-MM`, le mois en cours par défaut.
+    def bar_sheet
+      @sheet = Catalog::BarSheet.new(month: Catalog::BarSheet.parse_month(params[:month]))
+
+      render layout: "print"
+    end
+
     # Prérempli du formulaire de palier : le générateur PROPOSE, l'humain
     # décide. Répond en JSON pour que la saisie du prix d'achat mette à jour les
     # champs sans recharger la page.
