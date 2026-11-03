@@ -3,7 +3,8 @@ module Pricing
   # MOINS CHÈRE (epic #234, décision 5 — « on ne paie jamais plus pour moins »).
   #
   # Entrée : des occupations `{ key:, date:, period: }` (une par jour et par
-  # espace, périodes « journee » / « soiree » / « journee_et_soiree »).
+  # espace, périodes « journee » / « demi_journee » / « soiree » /
+  # « journee_et_soiree »).
   # Sortie : des `Segment`s, chacun soit un jour à l'unité, soit un forfait avec
   # sa plage de dates — de quoi écrire une ligne de devis lisible.
   #
@@ -16,6 +17,9 @@ module Pricing
   #     minimum la soirée du vendredi, le samedi journée + soirée et la journée
   #     du dimanche.
   #
+  # Une demi-journée compte comme un jour pour les forfaits : un forfait de
+  # journées la couvre quand il revient moins cher (« jamais plus pour moins »).
+  #
   # Les forfaits multi-jours ne portent que des JOURNÉES : une soirée posée sur
   # un jour couvert par un forfait s'ajoute au « forfait soir » de la grille de
   # ce soir-là (`Pricing::Catalog.hall_evening_supplement_cents`).
@@ -23,7 +27,7 @@ module Pricing
   # La recherche est une programmation dynamique sur les jours triés : chaque
   # position retient le coût minimal du reste, donc l'optimum global.
   class HallSchedule
-    DAY_PERIODS     = %w[journee journee_et_soiree].freeze
+    DAY_PERIODS     = %w[journee demi_journee journee_et_soiree].freeze
     EVENING_PERIODS = %w[soiree journee_et_soiree].freeze
 
     # Un morceau du découpage. `package` est nil pour un jour à l'unité.

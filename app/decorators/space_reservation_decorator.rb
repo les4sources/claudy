@@ -15,6 +15,8 @@ class SpaceReservationDecorator < ApplicationDecorator
       "soirée"
     when "day"
       "journée"
+    when "halfday"
+      "demi-journée"
     when "see_notes"
       "voir notes"
     when "fullday"

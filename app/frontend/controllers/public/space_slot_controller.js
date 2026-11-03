@@ -1,7 +1,9 @@
 import { Controller } from "@hotwired/stimulus"
 
 // Cellule de la grille « Espaces » du funnel B2C. Gère un seul créneau
-// (un espace × un jour). Clic = cycle — → Journée → Soirée → J+S → —.
+// (un espace × un jour). Clic = cycle — → Journée → Demi-journée → Soirée
+// → J+S → —. La demi-journée (matin ou après-midi) suit la journée : c'est
+// le choix le plus proche, au prix de la soirée.
 // Un input[type=hidden] synchronisé transmet la valeur au formulaire.
 //
 // L'état est porté par l'attribut `data-slot` du bouton ; tout le dessin vit
@@ -9,8 +11,10 @@ import { Controller } from "@hotwired/stimulus"
 // transportait une table de classes Tailwind que la légende du template
 // recopiait à la main — deux endroits à garder d'accord pour une seule vérité,
 // et trois teintes (bleu, violet, sarcelle) étrangères à la charte.
-const PERIODS = ["", "journee", "soiree", "journee_et_soiree"]
-const LABELS = { "": "—", journee: "Jour", soiree: "Soir", journee_et_soiree: "J+S" }
+const PERIODS = ["", "journee", "demi_journee", "soiree", "journee_et_soiree"]
+const LABELS = { "": "—", journee: "Jour", demi_journee: "½ jour", soiree: "Soir", journee_et_soiree: "J+S" }
+// Nom accessible de l'état : « ½ jour » se lit mal à voix haute.
+const SPOKEN = { demi_journee: "demi-journée" }
 
 export default class extends Controller {
   static targets = ["button", "input"]
@@ -50,7 +54,7 @@ export default class extends Controller {
     if (!btn.getAttribute("data-label-base") && base) btn.setAttribute("data-label-base", base)
     const stem = btn.getAttribute("data-label-base")
     if (stem) {
-      const suffix = known === "" ? "aucun créneau" : LABELS[known].toLowerCase()
+      const suffix = known === "" ? "aucun créneau" : (SPOKEN[known] || LABELS[known].toLowerCase())
       btn.setAttribute("aria-label", `${stem} — ${suffix}`)
     }
   }

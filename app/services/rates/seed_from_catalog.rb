@@ -113,7 +113,8 @@ module Rates
 
     PERIOD_LABELS = {
       "journee"           => "journée",
-      "soiree"            => "soirée",
+      # La demi-journée lit ce même tarif (`Pricing::Catalog::HALF_DAY_PRICED_AS`).
+      "soiree"            => "demi-journée / soirée",
       "journee_et_soiree" => "journée + soirée",
       "deux_jours"        => "2 jours",
       "cinq_jours"        => "5 jours",

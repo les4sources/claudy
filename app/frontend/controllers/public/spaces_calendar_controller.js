@@ -13,6 +13,7 @@ import { Controller } from "@hotwired/stimulus"
 // `spaces-calendar:set`, que `space_slot_controller` traite comme un clic — une
 // seule écriture de l'état, un seul endroit qui redessine.
 const DAY_PERIODS = ["journee", "journee_et_soiree"]
+const HALF_DAY_PERIODS = ["demi_journee"]
 const EVENING_PERIODS = ["soiree", "journee_et_soiree"]
 
 export default class extends Controller {
@@ -88,10 +89,12 @@ export default class extends Controller {
 
       const periods = cells.map((cell) => this.periodOf(cell))
       const days = periods.filter((p) => DAY_PERIODS.includes(p)).length
+      const halfDays = periods.filter((p) => HALF_DAY_PERIODS.includes(p)).length
       const evenings = periods.filter((p) => EVENING_PERIODS.includes(p)).length
 
       const parts = []
       if (days > 0) parts.push(count(days, "journée"))
+      if (halfDays > 0) parts.push(count(halfDays, "demi-journée"))
       if (evenings > 0) parts.push(`+ ${count(evenings, "soirée")}`)
 
       const first = chosen[0].dataset.dayLabel

@@ -52,6 +52,7 @@ class SpaceBookingDecorator < ApplicationDecorator
           when "2h" then "two_hours"
           when "evening" then "evening"
           when "day" then "day"
+          when "halfday" then "halfday"
           when "fullday" then "fullday"
           when "see_notes" then "see_notes"
           else "unspecified"

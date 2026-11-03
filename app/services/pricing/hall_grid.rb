@@ -4,7 +4,8 @@ module Pricing
   # 18h30** : la JOURNÉE du vendredi appartient donc encore à la grille semaine,
   # sa SOIRÉE au week-end.
   #
-  #   Semaine  : journée du lundi au vendredi, soirée du lundi au jeudi.
+  #   Semaine  : journée (ou demi-journée) du lundi au vendredi, soirée du
+  #              lundi au jeudi.
   #   Week-end : soirée du vendredi, samedi et dimanche (journée et soirée).
   #
   # Le seul cas que la décision 4 ne tranche pas est « journée + soirée » un
@@ -17,13 +18,16 @@ module Pricing
 
     WEEKEND_WDAYS = [6, 0].freeze # samedi, dimanche
     FRIDAY = 5
+    # Occupations de JOUR : la demi-journée (matin ou après-midi) se tient avant
+    # 18h30, elle reste donc en semaine un vendredi, comme la journée.
+    DAYTIME_PERIODS = %w[journee demi_journee].freeze
 
     # Grille d'une occupation (date + période).
     def weekend?(date, period)
       return false if date.nil?
       return true  if WEEKEND_WDAYS.include?(date.wday)
 
-      date.wday == FRIDAY && period.to_s != "journee"
+      date.wday == FRIDAY && !DAYTIME_PERIODS.include?(period.to_s)
     end
 
     # « Journée + soirée » un vendredi : à cheval sur les deux grilles.
