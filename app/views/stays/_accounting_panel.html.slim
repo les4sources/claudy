@@ -6,6 +6,15 @@
 / l'option vide, on ne pourrait ni la lire ni la choisir.
 .border-t.border-gray-200.pt-4
   .text-xs.font-semibold.uppercase.tracking-wide.text-gray-500 Comptabilité
+  / Virement signalé par le client depuis sa page, pas encore arrivé (Michael,
+    2026-11-03) : le montant qu'il dit avoir viré, et ce qu'il manque si c'est
+    une partie seulement.
+  - if @stay.transfer_notice_pending?
+    .mt-2.rounded-md.border.border-amber-200.bg-amber-50.px-3.py-2.text-sm.text-amber-900(data-stay-transfer-notice="true")
+      | Virement signalé par le client le #{@stay.formatted_transfer_notified_on} : #{@stay.formatted_transfer_notified_amount}
+      - if @stay.transfer_shortfall_cents.positive?
+        |  (partiel, il manque #{@stay.formatted_transfer_shortfall})
+      | . Pas encore arrivé sur le compte.
   = form_with url: update_invoice_status_stay_path(@stay), method: :patch, data: { controller: "auto-submit", action: "change->auto-submit#submit" }, class: "mt-2" do
     label.block.text-sm.text-gray-600 for="stay_#{@stay.id}_invoice_status" Statut de facturation
     .relative.mt-1(data-controller="searchable-select")

@@ -31,15 +31,35 @@
         button(type="button" class=copy_button_classes data-controller="copy" data-copy-value-value=@stay.transfer_communication data-copy-label-value=t("public.stays.transfer.copied") data-action="copy#copy") = t("public.stays.transfer.copy")
       p.mt-1.text-xs(class="text-moss") = t("public.stays.transfer.communication_hint")
 
+  / Virement partiel (Michael, 2026-11-03) : le client dit combien il a viré,
+    prérempli avec le montant demandé, et peut le corriger tant que le virement
+    n'est pas arrivé.
+  - input_classes = "block w-36 rounded-xl border-bark bg-white px-3 py-2 text-right font-mono text-sm text-ink focus:border-forest focus:ring-forest"
   .mt-5.border-t.pt-4(class="border-bark")
     - if @stay.transfer_notice_pending?
       p.text-sm.text-green-800(data-stay-transfer-notified="true")
         = t("public.stays.transfer.notified", amount: @stay.formatted_transfer_notified_amount, date: @stay.formatted_transfer_notified_on)
+      - if @stay.transfer_shortfall_cents.positive?
+        p.mt-1.text-sm.text-ink(data-stay-transfer-shortfall="true")
+          = t("public.stays.transfer.shortfall", amount: @stay.formatted_transfer_shortfall)
+      details.mt-3(data-stay-transfer-correct="true")
+        summary.cursor-pointer.select-none.text-xs.font-medium.text-forest.underline = t("public.stays.transfer.correct_toggle")
+        = form_with url: public_stay_transfer_notice_path(@stay.token), method: :post, data: { turbo: false }, class: "mt-3 flex flex-wrap items-end gap-3" do
+          div
+            label.block.text-xs.font-medium.text-ink(for="stay_transfer_amount_correct") = t("public.stays.transfer.amount_label")
+            .mt-1.flex.items-center.gap-2
+              = text_field_tag :amount, @stay.transfer_amount_field_value(@stay.object.transfer_notified_cents.to_i),
+                  id: "stay_transfer_amount_correct", inputmode: "decimal", autocomplete: "off", required: true, class: input_classes
+              span.text-sm.text-ink €
+          = submit_tag t("public.stays.transfer.correct_cta"), class: "cursor-pointer inline-flex items-center rounded-xl border border-forest bg-white px-4 py-2 text-sm font-semibold text-forest shadow-sm hover:bg-sand"
     - else
-      .sm:flex.sm:items-center.sm:gap-4
-        = button_to t("public.stays.transfer.notify_cta"),
-                    public_stay_transfer_notice_path(@stay.token),
-                    method: :post,
-                    form: { class: "sm:flex-shrink-0", data: { turbo: false } },
-                    class: "inline-flex items-center rounded-xl border border-forest bg-white px-5 py-2.5 text-sm font-semibold text-forest shadow-sm hover:bg-sand"
-        p.mt-2.text-xs.sm:mt-0(class="text-moss") = t("public.stays.transfer.notify_hint")
+      = form_with url: public_stay_transfer_notice_path(@stay.token), method: :post, data: { turbo: false } do
+        .flex.flex-wrap.items-end.gap-3
+          div
+            label.block.text-xs.font-medium.text-ink(for="stay_transfer_amount") = t("public.stays.transfer.amount_label")
+            .mt-1.flex.items-center.gap-2
+              = text_field_tag :amount, @stay.transfer_amount_field_value,
+                  id: "stay_transfer_amount", inputmode: "decimal", autocomplete: "off", required: true, class: input_classes
+              span.text-sm.text-ink €
+          = submit_tag t("public.stays.transfer.notify_cta"), class: "cursor-pointer inline-flex items-center rounded-xl border border-forest bg-white px-5 py-2.5 text-sm font-semibold text-forest shadow-sm hover:bg-sand"
+        p.mt-2.text-xs(class="text-moss") = t("public.stays.transfer.notify_hint")

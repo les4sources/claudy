@@ -73,8 +73,12 @@ nl:
         copy: "Kopiëren"
         copied: "Gekopieerd!"
         notify_cta: "Ik heb de overschrijving verstuurd"
-        notify_hint: "Eén klik volstaat: wij verwittigen onze boekhouding."
+        notify_hint: "Slechts een deel overgeschreven? Vul het verstuurde bedrag in: wij verwittigen onze boekhouding."
+        amount_label: "Overgeschreven bedrag"
         notified: "Bedankt! U meldde ons op %{date} een overschrijving van %{amount}. Ze verschijnt bij uw betalingen zodra ze op onze rekening staat."
+        shortfall: "Er blijft nog %{amount} te betalen."
+        correct_toggle: "Klopt het bedrag niet? Corrigeer het"
+        correct_cta: "Bedrag corrigeren"
       balance:
         heading: "Saldo van uw verblijf"
         lodging_and_spaces: "Verblijf & ruimtes"

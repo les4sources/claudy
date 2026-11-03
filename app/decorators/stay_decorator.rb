@@ -1046,6 +1046,25 @@ class StayDecorator < ApplicationDecorator
     h.l(object.transfer_notified_at.to_date, format: :long)
   end
 
+  # Virement partiel (Michael, 2026-11-03) : ce qu'il manque entre le montant
+  # demandé sur la page et celui que le client dit avoir viré. Zéro quand le
+  # virement couvre la demande (ou la dépasse).
+  def transfer_shortfall_cents
+    return 0 if object.transfer_notified_cents.nil?
+
+    [transfer_amount_cents - object.transfer_notified_cents, 0].max
+  end
+
+  def formatted_transfer_shortfall
+    h.number_to_currency(transfer_shortfall_cents / 100.0)
+  end
+
+  # Le champ « Montant viré » se tape à la belge (« 150,50 ») : pas de
+  # type="number", qui refuse la virgule selon le navigateur.
+  def transfer_amount_field_value(cents = transfer_amount_cents)
+    h.number_with_precision(cents / 100.0, precision: 2, delimiter: "")
+  end
+
   private
 
   def money(cents)
