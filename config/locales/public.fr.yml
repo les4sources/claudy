@@ -69,8 +69,12 @@ fr:
         copy: "Copier"
         copied: "Copié !"
         notify_cta: "J'ai envoyé le virement"
-        notify_hint: "Un clic suffit : nous prévenons notre comptabilité."
+        notify_hint: "Vous n'avez viré qu'une partie ? Indiquez le montant envoyé : nous prévenons notre comptabilité."
+        amount_label: "Montant viré"
         notified: "Merci ! Vous nous avez signalé un virement de %{amount} le %{date}. Il apparaîtra dans vos paiements dès qu'il arrive sur notre compte."
+        shortfall: "Il restera %{amount} à verser."
+        correct_toggle: "Le montant n'est pas le bon ? Corriger"
+        correct_cta: "Corriger le montant"
       balance:
         heading: "Solde de votre séjour"
         lodging_and_spaces: "Hébergement & espaces"

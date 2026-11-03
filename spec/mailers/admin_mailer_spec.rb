@@ -94,6 +94,19 @@ RSpec.describe AdminMailer, type: :mailer do
       expect(mail.subject).to include("Dupont")
     end
 
+    it "signale un virement partiel et ce qu'il manque" do
+      mail = described_class.transfer_announced(stay)
+
+      expect(mail.subject).to include("Virement annoncé (partiel")
+      expect(mail.body.decoded).to include("il manque 560,00")
+    end
+
+    it "dit quand le client a corrigé le montant" do
+      mail = described_class.transfer_announced(stay, corrected: true)
+
+      expect(mail.subject).to include("montant corrigé)")
+    end
+
     it "donne la communication attendue et le lien du séjour" do
       body = described_class.transfer_announced(stay).body.decoded
 

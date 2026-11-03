@@ -35,6 +35,13 @@ RSpec.describe "Public::StayTransferNotices (virement sur /sejour/:token)", type
       expect(response.body).to include(ERB::Util.html_escape(I18n.t("public.stays.transfer.notify_cta")))
     end
 
+    it "préremplit le montant viré avec le montant demandé" do
+      get "/sejour/#{stay.token}"
+
+      expect(response.body).to include('id="stay_transfer_amount"')
+      expect(response.body).to include('value="485,00"')
+    end
+
     it "propose le montant de l'acompte demandé quand un paiement est en attente" do
       Payment.create!(stay: stay, amount_cents: 14_500, status: "pending", payment_method: "card")
 
@@ -98,6 +105,53 @@ RSpec.describe "Public::StayTransferNotices (virement sur /sejour/:token)", type
       end
       expect(ActionMailer::Base.deliveries.size).to eq(2)
       expect(stay.reload.transfer_notified_cents).to eq(34_000)
+    end
+
+    # Michael 2026-11-03 — une cliente avait viré une partie seulement et le
+    # bouton annonçait d'office le montant demandé.
+    it "retient le montant viré par le client, virgule belge comprise" do
+      post "/sejour/#{stay.token}/virement-envoye", params: { amount: "150,50" }
+
+      expect(stay.reload.transfer_notified_cents).to eq(15_050)
+      mail = ActionMailer::Base.deliveries.last
+      expect(mail.subject).to include("Virement annoncé (partiel")
+      expect(mail.subject).to include("150,50")
+      expect(mail.body.decoded).to include("il manque 334,50")
+
+      follow_redirect!
+      expect(response.body).to include('data-stay-transfer-shortfall="true"')
+      expect(response.body).to include("334,50")
+    end
+
+    it "lit les milliers et le symbole euro" do
+      post "/sejour/#{stay.token}/virement-envoye", params: { amount: "1 250,00 €" }
+      expect(stay.reload.transfer_notified_cents).to eq(125_000)
+    end
+
+    it "retombe sur le montant demandé quand le champ est illisible ou nul" do
+      post "/sejour/#{stay.token}/virement-envoye", params: { amount: "0" }
+
+      expect(stay.reload.transfer_notified_cents).to eq(48_500)
+      expect(ActionMailer::Base.deliveries.last.subject).to include("Virement annoncé :")
+    end
+
+    it "laisse corriger le montant signalé, et prévient la compta une fois" do
+      post "/sejour/#{stay.token}/virement-envoye"
+      post "/sejour/#{stay.token}/virement-envoye", params: { amount: "200" }
+      post "/sejour/#{stay.token}/virement-envoye", params: { amount: "200,00" }
+
+      expect(stay.reload.transfer_notified_cents).to eq(20_000)
+      expect(ActionMailer::Base.deliveries.size).to eq(2)
+      expect(ActionMailer::Base.deliveries.last.subject).to include("montant corrigé)")
+      expect(ActionMailer::Base.deliveries.last.body.decoded).to include("a corrigé le montant")
+    end
+
+    it "propose de corriger le montant une fois le virement signalé" do
+      post "/sejour/#{stay.token}/virement-envoye", params: { amount: "200" }
+      follow_redirect!
+
+      expect(response.body).to include('data-stay-transfer-correct="true"')
+      expect(response.body).to include('value="200,00"')
     end
 
     it "n'écrit à personne sur une demande encore en attente" do

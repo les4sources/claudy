@@ -1,11 +1,21 @@
 p Salut la team,
 
 p
-  |
-    Ici Claudy. Un client nous dit qu'il a envoyé un virement depuis la page de son séjour.
+  - if @corrected
+    |
+      Ici Claudy. Le client a corrigé le montant du virement qu'il nous avait signalé depuis la page de son séjour.
+  - else
+    |
+      Ici Claudy. Un client nous dit qu'il a envoyé un virement depuis la page de son séjour.
+
+- if @shortfall
+  p
+    strong Virement partiel : il manque #{@shortfall} sur les #{@requested} demandés.
 
 p
   | Montant annoncé : #{@amount}
+  br
+  | Montant demandé sur la page : #{@requested}
   br
   | Client : #{@client}
   - if @dates
