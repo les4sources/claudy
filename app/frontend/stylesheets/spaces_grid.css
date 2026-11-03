@@ -43,6 +43,14 @@
   border-color: var(--p-accent);
   color: #8A4E1E;
 }
+/* Demi-journée : la teinte de la journée, en pointillé — la moitié du jour,
+   lisible sans la couleur grâce au libellé « ½ jour ». */
+.funnel-slot[data-slot="demi_journee"] {
+  background: var(--p-surface);
+  border-color: var(--p-accent);
+  border-style: dashed;
+  color: #8A4E1E;
+}
 .funnel-slot[data-slot="soiree"] {
   background: var(--p-primary-tint);
   border-color: var(--p-primary);

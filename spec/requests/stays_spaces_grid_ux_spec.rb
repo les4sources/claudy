@@ -84,7 +84,7 @@ RSpec.describe "Séjours — UX de la grille Espaces (epic #234, Phase 3)", type
     it "les dérive du catalogue et mentionne le forfait 5 jours" do
       get compose_grids_stays_path, params: { arrival_date: lundi.iso8601, departure_date: vendredi.iso8601 }
 
-      expect(response.body).to include("140 €/j · 90 €/soir · 525 € les 5 jours")
+      expect(response.body).to include("140 €/j · 90 €/½ j ou soir · 525 € les 5 jours")
     end
 
     it "suit Paramètres > Tarifs sans redéploiement" do

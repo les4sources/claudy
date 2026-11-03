@@ -42,7 +42,7 @@ RSpec.describe "Public::Reservations — UX de la grille Espaces (epic #234, Pha
   # En public, plus de tarif sous chaque salle (Michael, 2026-10-03 : « trop
   # d'info ») : le devis le donne en direct et la page Tarifs reste à un clic.
   it "renvoie aux tarifs sans les détailler sous chaque salle" do
-    expect(response.body).not_to include("140 €/j · 90 €/soir · 525 € les 5 jours")
+    expect(response.body).not_to include("140 €/j · 90 €/½ j ou soir · 525 € les 5 jours")
     expect(response.body).not_to include("140€/j · 90€/soir (sem.)")
     expect(response.body).to include("Voir les tarifs")
   end

@@ -14,12 +14,13 @@ module SpacesGridHelper
   # s'insèrent dans une phrase (« lun 8 → ven 12 »), pas dans un en-tête.
   SUMMARY_SHORT_DAYS = %w[dim lun mar mer jeu ven sam].freeze
 
-  # Périodes qui comptent pour une journée / pour une soirée. « Journée et
-  # soirée » compte dans les deux : c'est une journée ET une soirée.
-  DAY_PERIODS     = %w[journee journee_et_soiree].freeze
-  EVENING_PERIODS = %w[soiree journee_et_soiree].freeze
+  # Périodes qui comptent pour une journée / une demi-journée / une soirée.
+  # « Journée et soirée » compte dans deux : c'est une journée ET une soirée.
+  DAY_PERIODS      = %w[journee journee_et_soiree].freeze
+  HALF_DAY_PERIODS = %w[demi_journee].freeze
+  EVENING_PERIODS  = %w[soiree journee_et_soiree].freeze
 
-  # « 140 € /j · 90 € /soir · 525 € les 5 jours » — tarifs SEMAINE, comme le dit
+  # « 140 € /j · 90 € /½ j ou soir · 525 € les 5 jours » — tarifs SEMAINE, comme le dit
   # le sous-titre de la section. Le forfait 5 jours n'existe pas pour tous les
   # espaces : il est simplement omis quand le catalogue ne le porte pas.
   def space_rate_hint(kind)
@@ -29,7 +30,8 @@ module SpacesGridHelper
 
     parts = []
     parts << "#{compact_eur(day)}/j"          if day
-    parts << "#{compact_eur(evening)}/soir"   if evening
+    # Demi-journée et soirée : un seul prix sur le site, une seule mention ici.
+    parts << "#{compact_eur(evening)}/½ j ou soir" if evening
     parts << "#{compact_eur(package)} les 5 jours" if package
     parts.join(" · ")
   end
@@ -43,9 +45,11 @@ module SpacesGridHelper
     return nil if chosen.empty?
 
     counts = []
-    day_count     = periods.count { |p| DAY_PERIODS.include?(p) }
-    evening_count = periods.count { |p| EVENING_PERIODS.include?(p) }
+    day_count      = periods.count { |p| DAY_PERIODS.include?(p) }
+    half_day_count = periods.count { |p| HALF_DAY_PERIODS.include?(p) }
+    evening_count  = periods.count { |p| EVENING_PERIODS.include?(p) }
     counts << summary_count(day_count, "journée")           if day_count.positive?
+    counts << summary_count(half_day_count, "demi-journée") if half_day_count.positive?
     counts << "+ #{summary_count(evening_count, 'soirée')}" if evening_count.positive?
 
     first = summary_day_label(chosen.first.first)

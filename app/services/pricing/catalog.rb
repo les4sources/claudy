@@ -165,7 +165,12 @@ module Pricing
     # Salles & cuisine pro — tarifs semaine.
     # Source de vérité : https://www.les4sources.be/sejours/tarifs (relevé le
     # 2026-09-06, epic #234 décision 3). Périodes :
-    # "journee" | "soiree" | "journee_et_soiree".
+    # "journee" | "demi_journee" | "soiree" | "journee_et_soiree".
+    #
+    # La demi-journée (matin OU après-midi) n'a pas de ligne à elle : le site
+    # la range avec la soirée, au même prix (« Demi-journée / Soirée »). Elle lit
+    # donc le tarif « soiree » (`HALF_DAY_PRICED_AS`), y compris la ligne de
+    # Paramètres > Tarifs : un seul montant à tenir pour les deux.
     #
     # `journee_et_soiree` = journée + « forfait soir » du site (prolongation
     # jusqu'à 23 h) : petite +30, grande +60, les deux salles +90. La cuisine pro
@@ -244,6 +249,12 @@ module Pricing
       "cuisine_pro"  => { "deux_jours" => 28_500, "forfait_weekend" => 29_000 }.freeze,
       "deux_salles"  => { "deux_jours" => 94_000, "forfait_weekend" => 99_000 }.freeze
     }.freeze
+
+    # Période « demi-journée » (Michael, 2026-11-03) : même tarif que la soirée,
+    # semaine comme week-end — mais c'est une occupation de JOUR (grille de la
+    # journée un vendredi, couverte par les forfaits de journées).
+    HALF_DAY_PERIOD    = "demi_journee".freeze
+    HALF_DAY_PRICED_AS = "soiree".freeze
 
     # Alias rétrocompatible — rate du forfait journée par kind.
     HALL_PER_DAY_CENTS = HALL_RATES.transform_values { |r| r["journee"] }.freeze
@@ -399,6 +410,7 @@ module Pricing
     # Barème d'un espace pour une période, tarif semaine ou week-end.
     # Retourne nil si l'espace ou la période n'existe pas au catalogue.
     def hall_rate_cents(kind, period, weekend: false)
+      period = HALF_DAY_PRICED_AS if period.to_s == HALF_DAY_PERIOD
       # Un espace sans grille week-end retombe sur son tarif semaine (parité
       # avec le comportement historique de PricingModel).
       weekend  = weekend && HALL_RATES_WEEKEND.key?(kind.to_s)

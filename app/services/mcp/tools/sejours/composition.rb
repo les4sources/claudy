@@ -8,7 +8,7 @@ module Mcp
       # n'est réécrite ici : on ne fait que remplir le même brouillon.
       module Composition
         ESPACES = %w[grande_salle petite_salle cuisine_pro].freeze
-        PERIODES = %w[journee soiree journee_et_soiree].freeze
+        PERIODES = %w[journee demi_journee soiree journee_et_soiree].freeze
 
         PROPRIETES = {
           hebergement: { type: "string",

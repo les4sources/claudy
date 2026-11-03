@@ -25,6 +25,7 @@ module FunnelTimelineHelper
   SPACE_NAMES = { "grande_salle" => "Grande Salle", "petite_salle" => "Petite Salle", "cuisine_pro" => "Cuisine pro" }.freeze
   SLOT_SPANS = {
     "journee" => [0, 1, "Journée", %i[sun]],
+    "demi_journee" => [0, 1, "Demi-journée", %i[sun]],
     "soiree" => [1, 2, "Soirée", %i[moon]],
     "journee_et_soiree" => [0, 2, "Journée + soirée", %i[sun moon]]
   }.freeze

@@ -35,7 +35,7 @@
 
   / --- Espaces (salles / cuisine pro) -------------------------------------
   - space_kind_options = [["Grande salle", "grande_salle"], ["Petite salle", "petite_salle"], ["Cuisine pro", "cuisine_pro"]]
-  - period_options = [["Journée", "journee"], ["Soirée", "soiree"], ["Journée + soirée", "journee_et_soiree"]]
+  - period_options = [["Journée", "journee"], ["Demi-journée", "demi_journee"], ["Soirée", "soiree"], ["Journée + soirée", "journee_et_soiree"]]
   - existing_halls = Array(@draft&.halls).map { |h| h.respond_to?(:symbolize_keys) ? h.symbolize_keys : h }
   - space_rows = existing_halls + Array.new([3 - existing_halls.size, 1].max) { {} }
   / Grille date-par-date (issue parité funnel) : dès que le séjour a des dates,
@@ -51,7 +51,7 @@
       = stay_form_section_marker((creneaux_espaces.any? || existing_halls.any?), creneaux_espaces.size)
     .px-5.pb-5.space-y-4
       - if use_space_grid
-        p.text-sm.text-gray-500 Cliquez une cellule pour réserver un espace — journée, soirée ou les deux — pour chaque jour du séjour, du jour d'arrivée au jour de départ.
+        p.text-sm.text-gray-500 Clique une cellule pour réserver un espace — journée, demi-journée, soirée ou journée + soirée — pour chaque jour du séjour, du jour d'arrivée au jour de départ.
         = render "public/reservations/spaces_calendar", param_root: "stay", draft: @draft, days: @stay_days
       - else
         p.text-sm.text-gray-500 Ajoutez une salle ou la cuisine pro (date + période). Un séjour peut être composé d'espaces seuls, sans hébergement.
