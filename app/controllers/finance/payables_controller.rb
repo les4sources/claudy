@@ -20,6 +20,7 @@ module Finance
       @without_iban = @rows.reject(&:payable_ready?)
       @expected = queue.expected_payments
       @not_ready = not_ready_invoices
+      @unencoded = Finance::UnencodedMailInvoices.new(legal_entity: @entity)
       # Déjà payée par une sortie passée au 440000 sans elle, ou encodée deux
       # fois (Michael, 2026-11-05, VOO) : à voir AVANT de repayer.
       factures = @rows.grep(PurchaseInvoice)
