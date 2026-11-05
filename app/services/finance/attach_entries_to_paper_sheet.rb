@@ -17,12 +17,19 @@ module Finance
   # puisque le verrou refuse toute mise à jour). Réenregistrer ensuite la
   # fiche à l'écran retrouve ces écritures par leur clé : aucun doublon.
   #
+  # L'article se retrouve par le libellé exact (sans casse ni accents), sinon
+  # par un seul article dont le nom commence par le libellé ou inversement
+  # (« Lupulus fruit » → « Lupulus Fruité »). Une écriture sans article est
+  # rattachée quand même, HORS CATALOGUE : elle compte dans le total de la
+  # fiche mais n'a pas de cellule dans la matrice (clé `sheet:<fiche>:<compte>:
+  # libre:<écriture>`, que l'encodage ne touche jamais).
+  #
   # Essai à blanc par défaut ; `apply: true` écrit. Rejouable : une écriture
   # déjà rattachée n'est plus candidate.
   class AttachEntriesToPaperSheet
     Line = Struct.new(:entry, :item, :quantity, :unit_price_cents, :reason, keyword_init: true)
     Report = Struct.new(:sheet, :attached, :unmatched, :conflicts, :applied, keyword_init: true) do
-      def total_cents = attached.sum { |line| line.entry.amount_cents }
+      def total_cents = (attached + unmatched).sum { |line| line.entry.amount_cents }
     end
 
     def initialize(month:, channel: "bar", apply: false, whodunnit: nil)
@@ -39,7 +46,7 @@ module Finance
       report = Report.new(sheet: sheet, attached: [], unmatched: [], conflicts: [], applied: false)
 
       classify(report)
-      return report unless @apply && report.attached.any?
+      return report unless @apply && (report.attached.any? || report.unmatched.any?)
 
       write(report)
       report.applied = true
@@ -61,10 +68,11 @@ module Finance
       taken = {}
 
       candidates.each do |entry|
-        matches = entry.catalog_item_id ? items.select { |item| item.id == entry.catalog_item_id } : by_name[normalize(entry.label)].to_a
+        matches = matches_for(entry, items, by_name)
         if matches.size != 1
-          reason = matches.empty? ? "aucun article du catalogue à ce nom" : "plusieurs articles à ce nom"
-          report.unmatched << Line.new(entry: entry, reason: reason)
+          reason = matches.empty? ? "aucun article du catalogue à ce nom" : "plusieurs articles possibles : #{matches.map(&:name).join(', ')}"
+          report.unmatched << Line.new(entry: entry, reason: reason, quantity: entry.quantity,
+                                       unit_price_cents: entry.unit_price_cents)
           next
         end
 
@@ -78,6 +86,19 @@ module Finance
         taken[cell] = entry
         quantity, unit_price = quantity_for(entry, item)
         report.attached << Line.new(entry: entry, item: item, quantity: quantity, unit_price_cents: unit_price)
+      end
+    end
+
+    def matches_for(entry, items, by_name)
+      return items.select { |item| item.id == entry.catalog_item_id } if entry.catalog_item_id
+
+      label = normalize(entry.label)
+      exact = by_name[label].to_a
+      return exact if exact.any? || label.blank?
+
+      items.select do |item|
+        name = normalize(item.name)
+        name.start_with?(label) || label.start_with?(name)
       end
     end
 
@@ -97,8 +118,7 @@ module Finance
       PaperTrail.request(whodunnit: @whodunnit || "paper_sheet:rattacher") do
         ApplicationRecord.transaction do
           sheet = report.sheet
-          all_quantities = report.attached.all?(&:quantity)
-          sheet.entry_mode = all_quantities ? "quantity" : "amount"
+          sheet.entry_mode = report.attached.all?(&:quantity) ? "quantity" : "amount" if report.attached.any?
           sheet.status = "encoded"
           sheet.encoded_at ||= Time.current
           sheet.notes = [sheet.notes.presence, trace(report)].compact.join("\n\n")
@@ -121,14 +141,22 @@ module Finance
               updated_at: Time.current
             )
           end
+
+          report.unmatched.each do |line|
+            line.entry.update_columns(paper_sheet_id: sheet.id,
+                                      idempotency_key: "sheet:#{sheet.id}:#{line.entry.member_account_id}:libre:#{line.entry.id}",
+                                      updated_at: Time.current)
+          end
         end
       end
     end
 
     def trace(report)
-      "#{report.attached.size} écriture(s) déjà au grand livre rattachée(s) le " \
+      lines = report.attached + report.unmatched
+      "#{lines.size} écriture(s) déjà au grand livre rattachée(s) le " \
         "#{Date.current.strftime("%d/%m/%Y")} (#{format('%.2f', report.total_cents / 100.0).tr('.', ',')} €), " \
-        "sans changer leur montant : ##{report.attached.map { |line| line.entry.id }.minmax.join(' à #')}."
+        "sans changer leur montant : ##{lines.map { |line| line.entry.id }.minmax.join(' à #')}" \
+        "#{report.unmatched.any? ? " (dont #{report.unmatched.size} hors catalogue)" : ''}."
     end
 
     def normalize(text) = I18n.transliterate(text.to_s).downcase.gsub(/[^a-z0-9]+/, " ").strip

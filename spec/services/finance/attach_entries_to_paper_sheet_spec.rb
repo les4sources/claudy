@@ -78,17 +78,43 @@ RSpec.describe Finance::AttachEntriesToPaperSheet do
     expect(report.sheet.reload.entry_mode).to eq("amount")
   end
 
-  it "laisse de côté un libellé sans article et un doublon de cellule" do
+  it "laisse de côté un doublon de cellule" do
     bar_entry(ada, "Moinette", 201)
     doublon = bar_entry(ada, "Moinette", 402)
-    inconnu = bar_entry(ada, "Anières", 300)
 
     report = run(apply: true)
 
-    expect(report.unmatched.map(&:entry)).to eq([inconnu])
     expect(report.conflicts.map(&:entry)).to eq([doublon])
-    expect(inconnu.reload.paper_sheet_id).to be_nil
     expect(doublon.reload.paper_sheet_id).to be_nil
+  end
+
+  it "retrouve un article dont le nom commence par le libellé (« Lupulus fruit » → « Lupulus Fruité »)" do
+    fruite = CatalogItem.create!(name: "Lupulus Fruité", channel: "bar", unit: "piece")
+    fruite.catalog_prices.create!(active_from: Date.new(2023, 1, 1), member_price_cents: 205)
+    entry = bar_entry(ada, "Lupulus fruit", 410)
+
+    run(apply: true)
+
+    expect(entry.reload.catalog_item_id).to eq(fruite.id)
+    expect(entry.quantity).to eq(2)
+  end
+
+  it "rattache hors catalogue une écriture sans article : comptée dans le total, jamais réencodée" do
+    bar_entry(ada, "Moinette", 201)
+    inconnu = bar_entry(ada, "Anières", 300, locked_at: Time.current)
+
+    report = run(apply: true)
+    sheet = report.sheet.reload
+
+    expect(report.unmatched.map(&:entry)).to eq([inconnu])
+    expect(inconnu.reload.paper_sheet_id).to eq(sheet.id)
+    expect(inconnu.catalog_item_id).to be_nil
+    expect(inconnu.amount_cents).to eq(300)
+    expect(sheet.total_cents).to eq(501)
+
+    expect do
+      Finance::EncodePaperSheet.new(sheet: sheet, cells: { ada.id => { moinette.id => "1" } }).run!
+    end.not_to change(AccountEntry, :count)
   end
 
   it "ignore les règlements, les autres postes et les autres mois" do
