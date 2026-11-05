@@ -335,7 +335,22 @@ class PurchaseInvoice < ApplicationRecord
     validation_team.humans.where.not(email: [nil, ""]).distinct
   end
 
+  # « TVA manquante » parle du TIERS, pas de la pièce : on le relit à chaque
+  # lecture, sinon le drapeau posé à l'encodage restait affiché après qu'on a
+  # complété le numéro de TVA du fournisseur (Trois Petits Poids, 2026-11-05).
+  # Les autres drapeaux (numéro, pièce jointe) sont ceux de la facture et se
+  # recalculent à chaque enregistrement.
+  def quality_flags
+    flags = Array(super) - ["no_vat_number"]
+    flags.unshift("no_vat_number") if missing_third_party_vat_number?
+    flags
+  end
+
   private
+
+  def missing_third_party_vat_number?
+    third_party.present? && third_party.vat_number.blank?
+  end
 
   def saved_change_to_awaiting_validation?
     before, after = saved_change_to_status
@@ -350,7 +365,7 @@ class PurchaseInvoice < ApplicationRecord
   # on la marque, et quelqu'un corrige le tiers quand il a le temps.
   def flag_quality
     flags = []
-    flags << "no_vat_number" if third_party.present? && third_party.vat_number.blank?
+    flags << "no_vat_number" if missing_third_party_vat_number?
     flags << "no_number" if number.blank?
     flags << "no_document" unless document.attached?
     self.quality_flags = flags
