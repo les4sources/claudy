@@ -91,10 +91,10 @@
             div
               p.text-sm.text-gray-800
                 - if match.invoice.credit_note?
-                  strong = "Remboursement de la #{match.invoice.payable_label.downcase_first}"
+                  strong = "Remboursement de la #{match.invoice.payable_label.downcase_first} du #{l(match.invoice.issued_on, format: "%-d %B %Y")}"
                   = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} que nous doit #{match.third_party&.name}"
                 - else
-                  strong = "Paiement de #{match.invoice.payable_label}"
+                  strong = "Paiement de #{match.invoice.payable_label} du #{l(match.invoice.issued_on, format: "%-d %B %Y")}"
                   = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus à #{match.third_party&.name}"
               p.mt-0.5.text-xs.text-gray-500
                 = match.reason
