@@ -6,6 +6,7 @@ require "rails_helper"
 # et la vue Sourciers gardent l'ancien calendrier.
 RSpec.describe "Agenda en rubans", type: :request do
   include Devise::Test::IntegrationHelpers
+  include ActiveSupport::Testing::TimeHelpers
 
   let(:human) { Human.create!(name: "Malau Hulet", email: "malau@les4sources.be") }
   let(:user) { User.create!(email: "agenda-v2@les4sources.be", password: "password123", human_id: human.id, new_interface: true) }
@@ -127,6 +128,27 @@ RSpec.describe "Agenda en rubans", type: :request do
     expect(note.at_css(".ui-postit-pink").text.squish).to eq("Matin : bain d’ânes pour un groupe de plaines")
     day = doc.css(".ui-ag-desk .ui-ag-day").find { |link| link["aria-label"] == "Mercredi 21 octobre" }
     expect(day.at_css(".ui-ag-day-w")["title"]).to eq("Veille : Steph")
+  end
+
+  it "propose d'ajouter un séjour aussi sur un jour passé" do
+    # Un séjour s'encode souvent après coup (Michael, 2026-11-05).
+    travel_to Date.new(2026, 10, 28) do
+      get "/", params: { date: month.iso8601, jour: "2026-10-21" }
+    end
+
+    link = Nokogiri::HTML(response.body).css(".ui-ag-panel-act a").find { |a| a.text.squish == "Séjour ce jour-là" }
+    expect(link).to be_present
+    expect(link["href"]).to eq("/stays/new?date=2026-10-21")
+  end
+
+  it "garde le « + » de l'ancien calendrier sur un jour passé" do
+    user.update!(new_interface: false)
+
+    travel_to Date.new(2026, 10, 28) do
+      get "/", params: { date: month.iso8601 }
+    end
+
+    expect(Nokogiri::HTML(response.body).css("a[href='/stays/new?date=2026-10-21']").map(&:text)).to include("+")
   end
 
   it "montre les événements et les repas sans séjour, filtrables par sorte" do
