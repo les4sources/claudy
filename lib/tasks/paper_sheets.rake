@@ -32,10 +32,10 @@ namespace :paper_sheets do
     end
 
     puts
-    puts "À rattacher : #{report.attached.size} écriture(s), #{euros.call(report.total_cents)}"
+    puts "À rattacher : #{report.attached.size + report.unmatched.size} écriture(s), #{euros.call(report.total_cents)}"
 
     if report.unmatched.any?
-      puts "\nSans article du catalogue (laissées telles quelles) :"
+      puts "\nHors catalogue (rattachées aussi, comptées dans le total, sans case dans la matrice) :"
       report.unmatched.each do |line|
         puts "  ##{line.entry.id}  #{line.entry.member_account.code}  #{euros.call(line.entry.amount_cents)}  #{line.entry.label} — #{line.reason}"
       end
