@@ -64,6 +64,14 @@ module Mcp
           details << "Contestée : #{facture.dispute_reason}" if facture.dispute_reason.present?
           details << "Défauts : #{facture.quality_flags.join(', ')} (no_document = pièce PDF à joindre dans Claudy)" if facture.quality_flags.present?
           details << "Notes : #{facture.notes}" if facture.notes.present?
+          doublons = facture.probable_duplicates.map { |autre| "##{autre.id} #{autre.reference} (#{autre.status_label.downcase}, #{facture.duplicate_reason(autre)})" }
+          details << "⚠ Doublon probable de : #{doublons.join(' ; ')} → geste_facture_achat defaire_passation" if doublons.any?
+          if facture.to_pay? && !facture.credit_note?
+            orphelins = ::Finance::OrphanSupplierPayments.new(invoices: [facture]).for(facture).map do |c|
+              "  ligne ##{c.cash_entry.id} du #{c.cash_entry.entry_date} · #{c.reason} (#{c.confidence} %)"
+            end
+            details << "Déjà payée ? Sortie affectée au 440000 sans facture :\n#{orphelins.join("\n")}\n→ geste_facture_achat relier_paiement" if orphelins.any?
+          end
           if facture.credit_note?
             details << "Imputée sur la facture ##{facture.credited_invoice_id} : #{euros(facture.imputed_cents)}" if facture.credited_invoice_id
           else

@@ -50,6 +50,28 @@ RSpec.describe Finance::MatchPurchaseInvoices do
       expect(matches.first.confidence).to eq(70)
     end
 
+    it "propose d'abord la facture dont la ligne cite la communication structurée" do
+      montant_match = facture(tiers: luminus, total: 1_815, number: "L-1")
+      citee = facture(total: 1_815, number: "V-1")
+      citee.update_column(:payment_reference, "+++453/7084/34944+++")
+      entry = ligne(amount_cents: -1_815)
+      entry.update!(communication: "101 453708434944")
+
+      matches = described_class.new.for_entry(entry)
+
+      expect(matches.map(&:invoice)).to eq([citee, montant_match])
+      expect(matches.first.confidence).to eq(99)
+    end
+
+    it "ne colle pas deux nombres de la ligne pour y trouver une communication" do
+      citee = facture(total: 1_815, number: "V-1")
+      citee.update_column(:payment_reference, "+++453/7084/34944+++")
+      entry = ligne(amount_cents: -9_999)
+      entry.update!(communication: "4537 08434944")
+
+      expect(described_class.new.for_entry(entry)).to be_empty
+    end
+
     it "classe l'IBAN avant le montant quand les deux répondent" do
       iban_match = facture(total: 30_000, number: "A-1")
       montant_match = facture(tiers: luminus, total: 45_000, number: "L-9")

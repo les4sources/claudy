@@ -243,6 +243,31 @@ class PurchaseInvoice < ApplicationRecord
   def overdue?(on = Date.current) = !credit_note? && due_on.present? && due_on < on && !SETTLED_STATUSES.include?(status)
   def days_overdue(on = Date.current) = overdue?(on) ? (on - due_on).to_i : 0
 
+  # Les doublons probables (Michael, 2026-11-05, VOO #26 = #11) : la même pièce
+  # encodée deux fois, depuis deux mails ou par deux personnes, sans PDF pour
+  # que l'empreinte la reconnaisse. Même fournisseur, même type, même montant,
+  # et le même jour ou la même communication structurée (certains fournisseurs
+  # gardent une communication fixe par client : le montant seul ne suffit
+  # pas). Une facture contestée n'est plus le doublon de personne : c'est ainsi
+  # qu'on l'écarte. Une INFORMATION, jamais un blocage (décision 7) : deux
+  # abonnements au même prix le même jour existent.
+  def probable_duplicates
+    return PurchaseInvoice.none if third_party_id.blank? || total_cents.blank?
+
+    meme = PurchaseInvoice.where(third_party_id: third_party_id, kind: kind, total_cents: total_cents)
+                          .where.not(status: "disputed")
+    meme = meme.where.not(id: id) if persisted?
+    criteres = meme.where(issued_on: issued_on)
+    criteres = criteres.or(meme.where(payment_reference: payment_reference)) if payment_reference.present?
+    criteres.order(:id)
+  end
+
+  def duplicate_reason(other)
+    return "même communication #{payment_reference}" if payment_reference.present? && other.payment_reference == payment_reference
+
+    "même montant, même date"
+  end
+
   # Les notes de frais qui remboursent cette facture, rejetées et supprimées
   # exclues : une note rejetée ne rembourse personne.
   def settling_expense_reports

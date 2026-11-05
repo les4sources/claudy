@@ -64,7 +64,13 @@ module Mcp
           avec = arguments["avec"].to_s
           raise Error, "avec : #{AVEC.keys.join(', ')}." unless AVEC.key?(avec)
           raise Error, "Cette ligne est exclue." if entry.status == "excluded"
-          raise Error, "Cette ligne est comptabilisée : annule d'abord sa passation." if entry.posted?
+          if entry.posted?
+            if avec == "facture_achat"
+              raise Error, "Cette ligne est comptabilisée. Si elle est au 440000 sans facture, relie-la depuis la facture " \
+                           "(geste_facture_achat relier_paiement) ; sinon annule d'abord sa passation."
+            end
+            raise Error, "Cette ligne est comptabilisée : annule d'abord sa passation."
+          end
 
           cible, quoi = cible!(avec, arguments)
           montant = arguments["montant"].present? ? cents!(arguments["montant"], "montant").abs : nil

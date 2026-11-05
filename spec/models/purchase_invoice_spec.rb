@@ -193,4 +193,38 @@ RSpec.describe PurchaseInvoice do
       expect(facture("").tap(&:valid?).payable_communication).to eq("F-9")
     end
   end
+
+  # Michael, 2026-11-05 : VOO #26 encodée une seconde fois, sans PDF, depuis
+  # un autre mail. Une information, jamais un blocage.
+  describe "#probable_duplicates" do
+    let!(:voo) { ThirdParty.create!(name: "Voo", kind: "supplier") }
+
+    def voo_invoice(number:, reference: "+++471/0019/55561+++", issued_on: Date.new(2026, 10, 8), total: 6_776)
+      described_class.create!(legal_entity: entity, third_party: voo, number: number, issued_on: issued_on,
+                              total_cents: total, payment_reference: reference)
+    end
+
+    it "reconnaît la même pièce : même fournisseur, même montant, même communication ou même date" do
+      originale = voo_invoice(number: "822603532892")
+      doublon = voo_invoice(number: nil, issued_on: Date.new(2026, 10, 9))
+
+      expect(doublon.probable_duplicates).to eq([originale])
+      expect(doublon.duplicate_reason(originale)).to include("+++471/0019/55561+++")
+    end
+
+    it "ignore un autre montant, et une facture contestée n'est plus le doublon de personne" do
+      voo_invoice(number: "A", total: 1_815)
+      contestee = voo_invoice(number: "B")
+      contestee.update_columns(status: "disputed")
+
+      expect(voo_invoice(number: "C").probable_duplicates).to be_empty
+    end
+
+    it "ne prend pas le mois suivant d'une communication fixe pour un doublon s'il change de montant" do
+      voo_invoice(number: "oct")
+      novembre = voo_invoice(number: "nov", issued_on: Date.new(2026, 11, 8), total: 6_990)
+
+      expect(novembre.probable_duplicates).to be_empty
+    end
+  end
 end

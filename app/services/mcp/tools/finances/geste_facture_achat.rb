@@ -14,6 +14,12 @@ module Mcp
           "contester" => "bloquer la facture avec un motif (motif obligatoire) ; si elle attendait la validation, c'est le " \
                          "refus du pôle et la comptabilité est prévenue par email",
           "rouvrir" => "la remettre « à traiter » après correction (payée par un membre : la détache de sa note de frais)",
+          "defaire_passation" => "une facture « à payer » qui n'a reçu aucun paiement (doublon, pas pour nous, erreur) : " \
+                                 "son écriture d'achat est contre-passée, puis elle est contestée avec le motif (`puis` = " \
+                                 "contestee, défaut) ou remise « à traiter » pour correction (`puis` = a_traiter) ; motif obligatoire",
+          "relier_paiement" => "une facture « à payer » déjà payée par une ligne affectée au 440000 SANS la facture (règle " \
+                               "d'affectation, domiciliation) : relie cette affectation à la facture, qui passe payée, sans " \
+                               "repayer ; `ligne` (facultatif : l'aperçu sans ligne liste les candidates)",
           "payer_en_especes" => "le fournisseur est payé en caisse : crée la sortie de caisse affectée et comptabilisée",
           "payee_par_membre" => "un membre l'a payée en magasin et se la fait rembourser : la dépense va sur sa note de " \
                                 "frais (`membre`, ajoutée à sa note enregistrée ou à une nouvelle) ou se relie à celle " \
@@ -44,6 +50,10 @@ module Mcp
                  geste: { type: "string", enum: GESTES.keys },
                  date: DATE.merge(description: "Pour payer_en_especes : la date du paiement. Défaut : aujourd'hui."),
                  caisse: { type: "string", description: "Pour payer_en_especes : la caisse, s'il y en a plusieurs." },
+                 puis: { type: "string", enum: %w[contestee a_traiter],
+                         description: "Pour defaire_passation : contestee (défaut, la facture sort de la file) ou a_traiter (à corriger)." },
+                 ligne: { type: %w[integer string],
+                          description: "Pour relier_paiement : la ligne de trésorerie (#id) qui a payé la facture." },
                  membre: { type: "string", description: "Pour payee_par_membre : le membre qui a payé (nom, ou « moi »)." },
                  depense: { type: ["integer", "string"],
                             description: "Pour payee_par_membre : la ligne de note de frais (#id) qu'il a déjà déclarée pour " \
@@ -90,6 +100,14 @@ module Mcp
             when "rouvrir"
               ::PurchaseInvoices::Advance.new(purchase_invoice: facture, whodunnit: whodunnit).reopen!
               "Facture remise en traitement : #{ligne_facture(facture.reload)}"
+            when "defaire_passation"
+              ::PurchaseInvoices::Unpost.new(purchase_invoice: facture, reason: @motif, outcome: d[:issue],
+                                             whodunnit: whodunnit).run!
+              "Écriture d'achat contre-passée : #{ligne_facture(facture.reload)}"
+            when "relier_paiement"
+              resultat = ::Finance::LinkOrphanPayment.new(purchase_invoice: facture, allocation: CashAllocation.find(d[:affectation]),
+                                                          whodunnit: whodunnit).run!
+              "Paiement relié : #{ligne_facture(resultat.invoice)}\n#{ligne_tresorerie(resultat.cash_entry)}"
             when "payer_en_especes"
               ::PurchaseInvoices::PayInCash.new(purchase_invoice: facture, paid_on: d[:date], cash_account: CashAccount.find(d[:caisse]),
                                                 whodunnit: whodunnit).run!
@@ -134,7 +152,7 @@ module Mcp
 
         def plan_contester(facture, _arguments)
           motif!({ "motif" => @motif })
-          raise Error, "Cette facture est déjà comptabilisée : elle se corrige par contre-passation." if facture.frozen_content?
+          raise Error, "Cette facture est déjà comptabilisée : défais d'abord sa passation (geste defaire_passation)." if facture.frozen_content?
           raise Error, "Elle est payée par un membre : rouvre-la d'abord." if facture.member_paid?
 
           if facture.to_validate?
@@ -148,7 +166,7 @@ module Mcp
         end
 
         def plan_rouvrir(facture, _arguments)
-          raise Error, "Cette facture est déjà comptabilisée : elle se corrige par contre-passation." if facture.frozen_content?
+          raise Error, "Cette facture est déjà comptabilisée : défais d'abord sa passation (geste defaire_passation)." if facture.frozen_content?
           raise Error, "Elle est déjà à traiter." if facture.to_process?
 
           if facture.member_paid?
@@ -158,6 +176,43 @@ module Mcp
           end
 
           ["→ À TRAITER (le motif de contestation est effacé).", {}]
+        end
+
+        def plan_defaire_passation(facture, arguments)
+          motif!({ "motif" => @motif })
+          refus = ::PurchaseInvoices::Unpost.refusal_for(facture)
+          raise Error, refus if refus
+
+          issue = arguments["puis"] == "a_traiter" ? "to_process" : "disputed"
+          doublons = facture.probable_duplicates.map { |autre| "##{autre.id} (#{autre.status_label.downcase})" }
+          resume = "→ Écriture d'achat contre-passée (les deux restent au grand livre), puis " \
+                   "#{issue == 'disputed' ? "CONTESTÉE, motif « #{@motif} » : elle sort de la file « À payer »" : 'À TRAITER, pour correction'}."
+          resume += "\nDoublon probable de : #{doublons.join(', ')}." if doublons.any?
+          [resume, { issue: issue }]
+        end
+
+        def plan_relier_paiement(facture, arguments)
+          raise Error, "Seule une facture « à payer » se relie à un paiement." unless facture.to_pay? && !facture.credit_note?
+
+          candidates = ::Finance::OrphanSupplierPayments.new(invoices: [facture]).for(facture)
+          raise Error, "Aucune sortie affectée au 440000 sans facture ne correspond (même structure, montant exact de #{euros(facture.remaining_cents)})." if candidates.empty?
+
+          if arguments["ligne"].blank?
+            liste = candidates.map { |c| "  ligne ##{c.cash_entry.id} du #{c.cash_entry.entry_date} · #{c.reason} (#{c.confidence} %)" }
+            raise Error, "Donne la ligne (`ligne`) parmi les candidates :\n#{liste.join("\n")}"
+          end
+
+          ligne_id = id!(arguments["ligne"], "ligne")
+          candidate = candidates.find { |c| c.cash_entry.id == ligne_id }
+          raise Error, "La ligne ##{ligne_id} n'est pas une candidate pour cette facture." if candidate.nil?
+
+          entry = candidate.cash_entry
+          ecriture = entry.posted? && candidate.allocation.third_party_id != facture.third_party_id &&
+                     !MonthClosing.closed?(entry.entry_date)
+          ["Relier l'affectation ##{candidate.allocation.id} (#{euros(candidate.allocation.amount_cents)} → 440000) de la " \
+           "ligne ##{entry.id} du #{entry.entry_date} à la facture (#{candidate.reason}). Elle passe PAYÉE. " +
+           (ecriture ? "L'écriture de la ligne est contre-passée puis repassée pour y poser le tiers #{facture.third_party&.name}." : "Rien ne change au grand livre."),
+           { affectation: candidate.allocation.id }]
         end
 
         def plan_payee_par_membre(facture, arguments)

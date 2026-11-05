@@ -7,7 +7,7 @@ module Finance
   # personne n'avait dit oui.
   class PurchaseInvoicesController < Finance::AccountingBaseController
     before_action :get_invoice, only: %i[show edit update submit dispute reopen validate_by_team pay_in_cash paid_by_member
-                                              replace_document]
+                                              replace_document unpost link_payment]
     before_action :get_form_collections, only: %i[new create edit update]
 
     breadcrumb "Achats", :finance_purchase_invoices_path, match: :exact
@@ -51,6 +51,13 @@ module Finance
         @candidate_lines = PurchaseInvoices::PaidByMember.candidate_lines(@invoice).limit(20)
       end
       @settling_reports = @invoice.settling_expense_reports.includes(:human).to_a if @invoice.member_paid?
+      # Encodée deux fois ? Déjà payée par une ligne passée au 440000 sans
+      # elle ? (Michael, 2026-11-05, VOO.)
+      @duplicates = @invoice.probable_duplicates.includes(:third_party).to_a
+      return unless @invoice.to_pay?
+
+      @orphan_payments = Finance::OrphanSupplierPayments.new(invoices: [@invoice]).for(@invoice)
+      @unpost_refusal = PurchaseInvoices::Unpost.refusal_for(@invoice)
     end
 
     # Depuis une échéance de paiement de l'échéancier (« Encoder la facture ») :
@@ -213,6 +220,30 @@ module Finance
       end
       redirect_to finance_purchase_invoice_path(@invoice), notice: notice
     rescue PurchaseInvoices::Advance::AlreadyPayable, ActiveRecord::RecordInvalid => e
+      redirect_to finance_purchase_invoice_path(@invoice), alert: e.message
+    end
+
+    # Défaire la passation d'une facture « À payer » sans paiement : un
+    # doublon, une facture qui n'est pas pour nous, une erreur à corriger.
+    def unpost
+      outcome = params[:outcome] == "disputed" ? "disputed" : "to_process"
+      PurchaseInvoices::Unpost.new(purchase_invoice: @invoice, reason: params[:reason], outcome: outcome,
+                                   whodunnit: current_user&.email).run!
+      notice = outcome == "disputed" ? "Écriture contre-passée, facture contestée : elle sort de la file « À payer »." : "Écriture contre-passée, facture remise en traitement."
+      redirect_to finance_purchase_invoice_path(@invoice), notice: notice
+    rescue PurchaseInvoices::Unpost::Refused, Accounting::PostDocument::MissingFiscalYear,
+           Accounting::ReverseEntry::AlreadyReversed, ActiveRecord::RecordInvalid => e
+      redirect_to finance_purchase_invoice_path(@invoice), alert: e.message
+    end
+
+    # Relier le paiement déjà passé au 440000 sans la facture.
+    def link_payment
+      allocation = CashAllocation.find_by(id: params[:allocation_id])
+      result = Finance::LinkOrphanPayment.new(purchase_invoice: @invoice, allocation: allocation,
+                                              whodunnit: current_user&.email).run!
+      redirect_to finance_purchase_invoice_path(@invoice),
+                  notice: "Paiement du #{l(result.cash_entry.entry_date, format: :short)} relié : facture #{result.invoice.status_label.downcase}."
+    rescue Finance::LinkOrphanPayment::Refused, ActiveRecord::RecordInvalid => e
       redirect_to finance_purchase_invoice_path(@invoice), alert: e.message
     end
 
