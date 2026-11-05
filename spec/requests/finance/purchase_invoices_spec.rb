@@ -242,6 +242,17 @@ RSpec.describe "Comptabilité > Achats", type: :request do
 
       expect(response.body).to include("TVA manquante")
     end
+
+    it "retire l'alerte dès que le numéro de TVA du fournisseur est complété" do
+      facture = cree_facture(tiers: luminus, number: "L-1")
+      luminus.update!(vat_number: "BE0425528904")
+
+      get finance_purchase_invoices_path
+
+      expect(response.body).to include("L-1")
+      expect(response.body).not_to include("TVA manquante")
+      expect(facture.reload.quality_flags).not_to include("no_vat_number")
+    end
   end
 
   describe "POST /finance/purchases/:id/submit" do
