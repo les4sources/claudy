@@ -345,6 +345,9 @@ Rails.application.routes.draw do
     # La file « À payer » (epic #240, phase 4) : tout ce que la maison doit et
     # qui attend son virement, toutes dettes confondues.
     get "payables", to: "payables#index", as: :payables
+    # Le fichier de virements SEPA (pain.001.001.03) des dettes cochées, pour
+    # l'import de Triodos Internet Banking (2026-11-05). Ne paie rien.
+    post "payables/sepa", to: "payables#sepa", as: :payables_sepa
     # Dettes et litiges sans facture (2026-10-13) : la taxe d'Yvoir, un
     # arriéré, une contestation — ce qui pèse sur la trésorerie avant d'avoir
     # une facture. Pas de `show` : tout tient dans la liste.

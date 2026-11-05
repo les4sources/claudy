@@ -55,59 +55,121 @@
       p.text-xs(class="mt-0.5 #{@without_iban.any? ? 'text-amber-800' : 'text-gray-500'}")
         | Le virement ne peut pas partir tant que le tiers n'a pas de compte.
 
-  .overflow-hidden.rounded-xl.bg-white.ring-1.ring-gray-200
-    ul.divide-y.divide-gray-100
-      - @rows.each do |row|
-        li.px-5.py-4(class="#{row.payable_overdue? ? 'bg-red-50/60' : ''}")
-          .flex.flex-wrap.items-start.justify-between.gap-4
-            .min-w-0
-              p.flex.flex-wrap.items-center.gap-2
-                = link_to row.payable_beneficiary, row.payable_path, class: "font-medium text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
-                / Sans filtre, chaque ligne dit quelle structure paie : c'est
-                  elle qui choisit le compte en banque d'où part le virement.
-                - if @entity.nil? && row.payable_legal_entity
-                  span.rounded-full.bg-gray-100.text-xs.font-medium.text-gray-600(class="px-2 py-0.5")= row.payable_legal_entity.name
-                - if row.payable_overdue?
-                  span.rounded-full.bg-red-100.text-xs.font-semibold.text-red-700(class="px-2 py-0.5")
-                    = "en retard de #{row.payable_days_late} j"
+  / Le fichier de virements SEPA (Michael, 2026-11-05) : on coche, Claudy
+    écrit le fichier pain.001 que la banque en ligne importe. Une structure par
+    fichier, d'où les cases qui n'apparaissent qu'une structure choisie. Le
+    fichier NE PAIE RIEN : la dette reste ici jusqu'au rapprochement du relevé.
+  - sepa = @entity && @sepa_accounts.present?
+  div(data-controller=("sepa-selection" if sepa))
+    - if @entity.nil?
+      p.mb-4.text-sm.text-gray-600
+        | Pour préparer un fichier de virements SEPA à importer dans la banque en ligne, choisis d'abord une structure : un fichier par compte débiteur.
+    - elsif !sepa
+      .mb-5.rounded-xl.border.border-amber-200.p-4.text-sm.text-amber-900(class="bg-amber-50/60")
+        = "Pas de fichier SEPA possible : #{@entity.name} n'a pas de compte bancaire avec un IBAN valide. "
+        = link_to "Ajoute l'IBAN du compte", finance_cash_accounts_path, class: "font-medium underline"
+    - else
+      = form_with url: finance_payables_sepa_path, method: :post, id: "sepa-form", data: { turbo: false },
+                  class: "mb-5 rounded-xl border border-blue-200 bg-blue-50/60 p-4" do
+        = hidden_field_tag :legal_entity_id, @entity.id
+        .flex.flex-wrap.items-start.justify-between.gap-4
+          .min-w-0(class="max-w-xl")
+            p.text-sm.font-semibold.text-blue-900 Fichier de virements SEPA
+            p.mt-1.text-xs.text-blue-900
+              | Coche les virements à faire et génère le fichier. Dans Triodos Internet Banking : Opérations › Importation, puis autorise le lot.
+            p.mt-1.text-xs.text-blue-900
+              | Le fichier ne paie rien dans Claudy : chaque dette reste ici jusqu'à ce que le relevé ramène son virement et que tu le rapproches dans « À affecter ».
+          .flex.flex-wrap.items-end.gap-3
+            - if @sepa_accounts.one?
+              div
+                p.text-xs.font-medium.text-gray-700 Depuis le compte
+                = hidden_field_tag :cash_account_id, @sepa_accounts.first.id
+                p.mt-1.text-sm.text-gray-900
+                  = @sepa_accounts.first.name
+                  span.ml-2.font-mono.text-xs.text-gray-600= CashAccount.format_iban(@sepa_accounts.first.iban)
+            - else
+              div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un compte…" class="relative w-72")
+                = label_tag :cash_account_id, "Depuis le compte", class: "text-xs font-medium text-gray-700"
+                = select_tag :cash_account_id,
+                             options_for_select(@sepa_accounts.map { |a| ["#{a.name} — #{CashAccount.format_iban(a.iban)}", a.id] }, @sepa_accounts.first.id),
+                             class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+                = render "shared/searchable_select_search", label: "Chercher un compte"
+            div
+              = label_tag :execution_date, "Exécution le", class: "text-xs font-medium text-gray-700"
+              = date_field_tag :execution_date, Date.current, min: Date.current, class: "mt-1 block rounded-md border-gray-300 text-sm shadow-sm"
+        .mt-4.flex.flex-wrap.items-center.justify-between.gap-3.border-t.border-blue-100.pt-3
+          p.text-sm.text-blue-900
+            span.font-semibold(data-sepa-selection-target="count") Aucun virement coché
+            span.mx-1 ·
+            span.font-semibold(data-sepa-selection-target="total") 0,00 €
+          .flex.items-center.gap-2
+            button.rounded-md.border.border-blue-300.bg-white.px-3.py-2.text-sm.font-medium.text-blue-800(type="button" class="hover:bg-blue-50" data-sepa-selection-target="toggle" data-action="sepa-selection#toggleAll") Tout cocher
+            button.rounded-md.bg-blue-600.px-4.py-2.text-sm.font-semibold.text-white.shadow-sm(type="submit" class="hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50" data-sepa-selection-target="submit") Générer le fichier SEPA
+
+    .overflow-hidden.rounded-xl.bg-white.ring-1.ring-gray-200
+      ul.divide-y.divide-gray-100
+        - @rows.each do |row|
+          - problem = sepa && @sepa_problems[sepa_key(row)]
+          li.px-5.py-4(class="#{row.payable_overdue? ? 'bg-red-50/60' : ''}")
+            .flex.flex-wrap.items-start.justify-between.gap-4
+              .flex.min-w-0.items-start.gap-3
+                - if sepa
+                  / La case appartient au formulaire du haut (`form=`) : la liste
+                    n'est pas dans le formulaire, ses boutons « Copier » non plus.
+                  input.mt-1.h-4.w-4.rounded.border-gray-300.text-blue-600(type="checkbox" name="payables[]" value=sepa_key(row) form="sepa-form"
+                    disabled=problem.present? title=problem aria-label="Mettre #{row.payable_beneficiary} dans le fichier SEPA"
+                    class="#{problem ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}"
+                    data-cents=row.remaining_cents data-sepa-selection-target="checkbox" data-action="sepa-selection#refresh")
+                .min-w-0
+                  p.flex.flex-wrap.items-center.gap-2
+                    = link_to row.payable_beneficiary, row.payable_path, class: "font-medium text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+                    / Sans filtre, chaque ligne dit quelle structure paie : c'est
+                      elle qui choisit le compte en banque d'où part le virement.
+                    - if @entity.nil? && row.payable_legal_entity
+                      span.rounded-full.bg-gray-100.text-xs.font-medium.text-gray-600(class="px-2 py-0.5")= row.payable_legal_entity.name
+                    - if row.payable_overdue?
+                      span.rounded-full.bg-red-100.text-xs.font-semibold.text-red-700(class="px-2 py-0.5")
+                        = "en retard de #{row.payable_days_late} j"
+                    - if row.partially_paid?
+                      span.rounded-full.bg-amber-100.text-xs.font-medium.text-amber-800(class="px-2 py-0.5")
+                        = "déjà rapproché : #{humanized_money_with_symbol(Money.new(row.allocated_cents, 'EUR'))}"
+                    - unless row.payable_ready?
+                      span.rounded-full.bg-amber-100.text-xs.font-medium.text-amber-800(class="px-2 py-0.5") sans IBAN
+                    - if row.is_a?(PurchaseInvoice)
+                      - row.compliance_deadlines.each do |deadline|
+                        = link_to "échéancier : #{deadline.display_title}", finance_compliance_deadline_path(deadline),
+                                  class: "rounded-full bg-blue-100 text-xs font-medium text-blue-800 hover:bg-blue-200 px-2 py-0.5"
+                  p.mt-1.text-sm.text-gray-600
+                    = row.payable_label
+                    - if row.payable_due_on
+                      span.mx-1 ·
+                      = "échéance le #{l(row.payable_due_on, format: :long)}"
+                    - else
+                      span.mx-1 ·
+                      span.text-gray-400 sans échéance
+                  - if problem
+                    p.mt-1.text-xs.font-medium.text-amber-800 = "Pas dans le fichier SEPA : #{problem}"
+                  / IBAN et communication COPIABLES : on les recopie à l'œil dans
+                    l'interface de la banque, et une faute de frappe sur un IBAN
+                    envoie l'argent ailleurs.
+                  .mt-2.flex.flex-wrap.items-center.gap-x-4.gap-y-2.text-xs
+                    - if row.payable_iban.present?
+                      .flex.items-center.gap-2
+                        span.font-mono.text-gray-700 = row.payable_iban
+                        button.rounded-md.bg-gray-100.font-medium.text-gray-700(class="px-2 py-0.5 hover:bg-gray-200" type="button" data-controller="copy" data-copy-value-value=row.payable_iban data-action="copy#copy") Copier l'IBAN
+                    - if row.payable_communication.present?
+                      .flex.items-center.gap-2
+                        span.text-gray-700
+                          = "communication : "
+                          span.font-mono = row.payable_communication
+                        button.rounded-md.bg-gray-100.font-medium.text-gray-700(class="px-2 py-0.5 hover:bg-gray-200" type="button" data-controller="copy" data-copy-value-value=row.payable_communication data-action="copy#copy") Copier
+              .text-right
+                p.text-lg.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(row.payable_amount_cents, "EUR"))
                 - if row.partially_paid?
-                  span.rounded-full.bg-amber-100.text-xs.font-medium.text-amber-800(class="px-2 py-0.5")
-                    = "déjà rapproché : #{humanized_money_with_symbol(Money.new(row.allocated_cents, 'EUR'))}"
-                - unless row.payable_ready?
-                  span.rounded-full.bg-amber-100.text-xs.font-medium.text-amber-800(class="px-2 py-0.5") sans IBAN
-                - if row.is_a?(PurchaseInvoice)
-                  - row.compliance_deadlines.each do |deadline|
-                    = link_to "échéancier : #{deadline.display_title}", finance_compliance_deadline_path(deadline),
-                              class: "rounded-full bg-blue-100 text-xs font-medium text-blue-800 hover:bg-blue-200 px-2 py-0.5"
-              p.mt-1.text-sm.text-gray-600
-                = row.payable_label
-                - if row.payable_due_on
-                  span.mx-1 ·
-                  = "échéance le #{l(row.payable_due_on, format: :long)}"
-                - else
-                  span.mx-1 ·
-                  span.text-gray-400 sans échéance
-              / IBAN et communication COPIABLES : on les recopie à l'œil dans
-                l'interface de la banque, et une faute de frappe sur un IBAN
-                envoie l'argent ailleurs.
-              .mt-2.flex.flex-wrap.items-center.gap-x-4.gap-y-2.text-xs
-                - if row.payable_iban.present?
-                  .flex.items-center.gap-2
-                    span.font-mono.text-gray-700 = row.payable_iban
-                    button.rounded-md.bg-gray-100.font-medium.text-gray-700(class="px-2 py-0.5 hover:bg-gray-200" type="button" data-controller="copy" data-copy-value-value=row.payable_iban data-action="copy#copy") Copier l'IBAN
-                - if row.payable_communication.present?
-                  .flex.items-center.gap-2
-                    span.text-gray-700
-                      = "communication : "
-                      span.font-mono = row.payable_communication
-                    button.rounded-md.bg-gray-100.font-medium.text-gray-700(class="px-2 py-0.5 hover:bg-gray-200" type="button" data-controller="copy" data-copy-value-value=row.payable_communication data-action="copy#copy") Copier
-            .text-right
-              p.text-lg.font-semibold.text-gray-900 = humanized_money_with_symbol(Money.new(row.payable_amount_cents, "EUR"))
-              - if row.partially_paid?
-                p.text-xs.text-amber-700
-                  = "reste #{humanized_money_with_symbol(Money.new(row.remaining_cents, 'EUR'))}"
-              p.mt-1
-                = link_to "Ouvrir", row.payable_path, class: "text-xs text-blue-500 hover:text-blue-700"
+                  p.text-xs.text-amber-700
+                    = "reste #{humanized_money_with_symbol(Money.new(row.remaining_cents, 'EUR'))}"
+                p.mt-1
+                  = link_to "Ouvrir", row.payable_path, class: "text-xs text-blue-500 hover:text-blue-700"
 
 / Les factures reçues pas encore « à payer » (Michael, 2026-10-30). Hors
   total : sans ventilation ni validation, pas d'écriture, donc pas de dette au
