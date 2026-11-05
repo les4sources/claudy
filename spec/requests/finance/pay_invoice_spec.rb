@@ -32,7 +32,7 @@ RSpec.describe "Payer une facture d'achat", type: :request do
 
       get finance_unallocated_cash_entries_path
 
-      expect(response.body).to include("Paiement de Facture Antargaz · F-1")
+      expect(response.body).to include("Paiement de Facture Antargaz · F-1 du 1 juin 2026")
       expect(response.body).to include("Payer cette facture")
       expect(response.body).to include("% de confiance")
     end
