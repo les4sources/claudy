@@ -252,4 +252,78 @@ end
       expect(Finance::PayableQueue.new.rows).to be_empty
     end
   end
+
+  # Michael (2026-11-05) : cocher des factures validées et générer le fichier
+  # pain.001 que Triodos Internet Banking importe.
+  describe "fichier de virements SEPA" do
+    let!(:triodos) do
+      build_cash_account(entity, build_general_account(code: "550000", name: "Triodos"), name: "Fondation — Triodos")
+        .tap { |a| a.update!(iban: "BE91523000000176") }
+    end
+
+    it "ne propose les cases qu'une structure choisie" do
+      facture
+
+      get finance_payables_path
+
+      expect(response.body).to include("choisis d'abord une structure")
+      expect(response.body).not_to include('name="payables[]"')
+    end
+
+    it "coche une case par dette exploitable et dit pourquoi les autres n'y sont pas" do
+      ok = facture(number: "OK-1")
+      facture(number: "SANS-IBAN", tiers: sans_compte)
+
+      get finance_payables_path(legal_entity_id: entity.id)
+
+      page = Nokogiri::HTML(response.body)
+      boxes = page.css("input[name='payables[]']")
+      expect(boxes.size).to eq(2)
+      expect(boxes.reject { |b| b["disabled"] }.map { |b| b["value"] }).to eq(["PurchaseInvoice:#{ok.id}"])
+      expect(response.body).to include("Pas dans le fichier SEPA : Pas d&#39;IBAN")
+      expect(response.body).to include("Générer le fichier SEPA", "BE91 5230 0000 0176")
+    end
+
+    it "signale une structure sans compte bancaire avec IBAN" do
+      triodos.update_column(:iban, nil)
+      facture
+
+      get finance_payables_path(legal_entity_id: entity.id)
+
+      expect(response.body).to include("Pas de fichier SEPA possible")
+    end
+
+    it "télécharge le fichier des dettes cochées, sans les marquer payées" do
+      a = facture(number: "F-A", total: 12_000)
+      facture(number: "F-B", total: 3_000)
+
+      post finance_payables_sepa_path, params: { legal_entity_id: entity.id, cash_account_id: triodos.id,
+                                                 execution_date: Date.current.iso8601, payables: ["PurchaseInvoice:#{a.id}"] }
+
+      expect(response).to have_http_status(:ok)
+      expect(response.media_type).to eq("application/xml")
+      expect(response.headers["Content-Disposition"]).to include("attachment", "virements-fondation-les-4-sources")
+      doc = Nokogiri::XML(response.body).tap(&:remove_namespaces!)
+      expect(doc.xpath("//CdtTrfTxInf").size).to eq(1)
+      expect(doc.at("InstdAmt").text).to eq("120.00")
+      expect(a.reload.status).to eq("to_pay")
+    end
+
+    it "revient sur l'écran avec la raison quand rien n'est exploitable" do
+      b = facture(tiers: sans_compte)
+
+      post finance_payables_sepa_path, params: { legal_entity_id: entity.id, cash_account_id: triodos.id,
+                                                 payables: ["PurchaseInvoice:#{b.id}"] }
+
+      expect(response).to redirect_to(finance_payables_path(legal_entity_id: entity.id))
+      expect(flash[:alert]).to include("Pas d'IBAN")
+    end
+
+    it "exige une structure" do
+      post finance_payables_sepa_path, params: { payables: [] }
+
+      expect(response).to redirect_to(finance_payables_path)
+      expect(flash[:alert]).to include("structure")
+    end
+  end
 end

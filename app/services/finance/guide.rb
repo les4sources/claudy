@@ -329,7 +329,8 @@ module Finance
       ),
       "finance/payables" => Page.new(
         "Tout ce que la maison doit virer, toutes dettes confondues, par échéance.",
-        ["Fais les virements dans la banque en ligne, avec la communication indiquée.",
+        ["Choisis la structure, coche les virements et génère le fichier SEPA ; importe-le dans la banque en ligne (Triodos : Opérations › Importation) puis autorise-le.",
+         "Sinon, fais les virements à la main dans la banque en ligne, avec la communication indiquée.",
          "Au prochain relevé, rapproche chaque virement de sa dette dans « À affecter » : elle passe alors payée."],
         %w[rapprocher facture-achat note-de-frais]
       ),
