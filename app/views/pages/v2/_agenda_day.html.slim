@@ -100,7 +100,7 @@ section.ui-card.ui-ag-panel(aria-labelledby="ag-day-title")
         = link_to new_note_path(date: date.iso8601), class: "ui-btn ui-btn-s", data: { turbo_frame: "modal" } do
           = ui_icon(:pencil, size: 15)
           | Note
-        - if date >= Date.current
-          = link_to new_stay_path(date: date.iso8601), class: "ui-btn ui-btn-s", data: { turbo_frame: "_top" } do
-            = ui_icon(:plus, size: 15)
-            | Séjour ce jour-là
+        / Aussi sur un jour passé : on encode souvent un séjour après coup (Michael, 2026-11-05).
+        = link_to new_stay_path(date: date.iso8601), class: "ui-btn ui-btn-s", data: { turbo_frame: "_top" } do
+          = ui_icon(:plus, size: 15)
+          | Séjour ce jour-là

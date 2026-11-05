@@ -146,10 +146,9 @@
                   <%# Saisies rapides (séjour, note) : réservées à qui peut écrire hors des sections ouvertes aux rôles. %>
                   <% if section_writable?(:full) %>
                   <div class="flex">
-                    <% if Date.today <= day %>
-                      <%# Saisie rapide datée : un seul « + » — le séjour est le point d'entrée unique, sa composition se choisit dans le form. %>
-                      <%= link_to "+", new_stay_path(date: day.iso8601), title: "Nouveau séjour à cette date", class: "mr-2 px-1 text-blue-700 hover:text-blue-900 font-semibold" %>
-                    <% end %>
+                    <%# Saisie rapide datée : un seul « + » — le séjour est le point d'entrée unique, sa composition se choisit dans le form.
+                        Aussi sur un jour passé : on encode souvent un séjour après coup (Michael, 2026-11-05). %>
+                    <%= link_to "+", new_stay_path(date: day.iso8601), title: "Nouveau séjour à cette date", class: "mr-2 px-1 text-blue-700 hover:text-blue-900 font-semibold" %>
 
                     <%= link_to new_note_path(date: day.strftime("%Y-%m-%d")), data: { turbo_frame: "modal" } do %>
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mt-1 w-4 h-4">
