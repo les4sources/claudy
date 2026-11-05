@@ -136,6 +136,13 @@
                     - unless row.payable_ready?
                       span.rounded-full.bg-amber-100.text-xs.font-medium.text-amber-800(class="px-2 py-0.5") sans IBAN
                     - if row.is_a?(PurchaseInvoice)
+                      - if (paiement = @orphan_payments[row.id]&.first)
+                        = link_to "déjà payée ? ligne du #{l(paiement.cash_entry.entry_date, format: :short)}", row.payable_path,
+                                  title: "#{paiement.reason} : la relier depuis la fiche de la facture",
+                                  class: "rounded-full bg-green-100 text-xs font-semibold text-green-800 hover:bg-green-200 px-2 py-0.5"
+                      - if (doublon = @duplicates[row.id]&.first)
+                        = link_to "doublon probable de ##{doublon.id}", row.payable_path,
+                                  class: "rounded-full bg-amber-100 text-xs font-semibold text-amber-800 hover:bg-amber-200 px-2 py-0.5"
                       - row.compliance_deadlines.each do |deadline|
                         = link_to "échéancier : #{deadline.display_title}", finance_compliance_deadline_path(deadline),
                                   class: "rounded-full bg-blue-100 text-xs font-medium text-blue-800 hover:bg-blue-200 px-2 py-0.5"

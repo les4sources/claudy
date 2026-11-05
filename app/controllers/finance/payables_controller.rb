@@ -20,6 +20,11 @@ module Finance
       @without_iban = @rows.reject(&:payable_ready?)
       @expected = queue.expected_payments
       @not_ready = not_ready_invoices
+      # Déjà payée par une sortie passée au 440000 sans elle, ou encodée deux
+      # fois (Michael, 2026-11-05, VOO) : à voir AVANT de repayer.
+      factures = @rows.grep(PurchaseInvoice)
+      @orphan_payments = Finance::OrphanSupplierPayments.new(invoices: factures).by_invoice
+      @duplicates = factures.to_h { |invoice| [invoice.id, invoice.probable_duplicates.to_a] }.select { |_, list| list.any? }
       load_sepa
     end
 

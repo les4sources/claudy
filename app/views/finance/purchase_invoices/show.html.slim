@@ -20,6 +20,18 @@
     - if @invoice.validated_by
       = " — #{@invoice.validated_by.display_name}"
 
+/ Encodée deux fois (Michael, 2026-11-05, VOO #26 = #11) : sans PDF,
+  l'empreinte ne la reconnaît pas. Une information, jamais un blocage.
+- if @duplicates.any?
+  .mb-4.rounded-lg.border.border-amber-200.bg-amber-50.px-4.py-3.text-sm.text-amber-900
+    strong Doublon probable.
+    = " "
+    - @duplicates.each_with_index do |other, index|
+      = ", " if index.positive?
+      = link_to "Facture ##{other.id}#{" n° #{other.number}" if other.number.present?}", finance_purchase_invoice_path(other), class: "font-medium underline"
+      = " (#{other.status_label.downcase}, #{@invoice.duplicate_reason(other)})"
+    = ". Si c'est la même pièce, défais celle-ci et conteste-la comme doublon."
+
 / Qui a dit oui, et quand. Une validation sans nom ne vaut pas grand-chose le
   jour où quelqu'un demande qui a engagé la dépense.
 - if @invoice.validated_at.present?
@@ -113,6 +125,25 @@
                   = "communication : "
                   span.font-mono = @invoice.payable_communication
                 button.rounded-md.bg-white.font-medium.text-gray-700.ring-1.ring-gray-300(class="px-2 py-0.5 hover:bg-gray-100" type="button" data-controller="copy" data-copy-value-value=@invoice.payable_communication data-action="copy#copy") Copier
+
+            / Déjà payée par une ligne passée au 440000 SANS la facture (une
+              règle d'affectation a pris la domiciliation) : on relie, on ne
+              repaie pas (Michael, 2026-11-05).
+            - if @orphan_payments.present?
+              .mt-3.rounded-lg.border.border-green-200.bg-green-50.px-3.py-3
+                p.text-sm.font-medium.text-green-900 Déjà payée ?
+                p.mt-1.text-xs.text-green-900
+                  | Cette sortie est affectée au 440000 sans facture. La relier solde la facture, sans repayer ni rien ajouter au grand livre.
+                ul.mt-2.space-y-2
+                  - @orphan_payments.each do |candidate|
+                    - entry = candidate.cash_entry
+                    li.flex.flex-wrap.items-center.justify-between.gap-2.rounded-md.bg-white.px-3.py-2.ring-1.ring-green-200
+                      .min-w-0.text-xs
+                        p.font-medium.text-gray-900
+                          = link_to "Ligne ##{entry.id} du #{l(entry.entry_date, format: :short)}", finance_cash_entry_path(entry), class: "text-blue-500 hover:text-blue-700"
+                          = " · #{number_to_currency(entry.amount_cents / 100.0)} · #{entry.counterparty_name.presence || entry.label}"
+                        p.text-gray-500= "#{candidate.reason} (#{candidate.confidence} %)"
+                      = button_to "Relier ce paiement", link_payment_finance_purchase_invoice_path(@invoice), method: :post, params: { allocation_id: candidate.allocation.id }, class: "rounded-md border border-transparent bg-green-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-800"
 
             /  Le règlement en ESPÈCES : le fournisseur du marché repart avec ses
                billets. Le bouton crée une vraie sortie de caisse affectée sur le
@@ -245,6 +276,19 @@
             | Comptabilisée. Le fournisseur nous doit encore #{number_to_currency(@invoice.remaining_cents / 100.0)} : son virement se rapproche depuis « À affecter ».
           - else
             | Prête à payer : elle est dans la file « À payer ».
+        / Défaire la passation (Michael, 2026-11-05) : un doublon, une facture
+          qui n'est pas pour nous. L'écriture d'achat est contre-passée.
+        - if @unpost_refusal.nil?
+          details.rounded-md.border.border-gray-200.px-3.py-2(open=@duplicates.any?)
+            summary.cursor-pointer.select-none.text-sm.text-gray-700 Défaire la passation…
+            = form_with url: unpost_finance_purchase_invoice_path(@invoice), method: :post, class: "mt-2 space-y-2" do
+              label.block.text-xs.font-medium.text-gray-500(for="unpost_reason") Pourquoi ?
+              = text_field_tag :reason, (@duplicates.any? ? "Doublon de la facture ##{@duplicates.first.id}" : nil), id: "unpost_reason", required: true, placeholder: "Doublon de la facture #…", class: "w-full rounded-md border-gray-300 text-sm shadow-sm"
+              p.text-xs.text-gray-400 L'écriture d'achat est contre-passée (les deux restent au grand livre).
+              button.w-full.rounded-md.border.border-red-200.bg-red-50.px-4.py-2.text-sm.font-medium.text-red-800.shadow-sm(type="submit" name="outcome" value="disputed" class="hover:bg-red-100") Contester (doublon, pas pour nous)
+              button.w-full.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="submit" name="outcome" value="to_process" class="hover:bg-gray-50") Remettre en traitement pour la corriger
+        - else
+          p.text-xs.text-gray-400= @unpost_refusal
       - elsif @invoice.credit_note?
         p.text-sm.text-gray-600 #{@invoice.status_label} le #{l(@invoice.paid_on, format: :short)}.
       - else
