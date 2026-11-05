@@ -1,8 +1,8 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
-           title: @invoice.reference.presence || "Facture ##{@invoice.id}",
+           title: [("Note de crédit" if @invoice.credit_note?), @invoice.reference.presence || "Facture ##{@invoice.id}"].compact.join(" · "),
            links: [(link_to("Modifier", edit_finance_purchase_invoice_path(@invoice), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") unless @invoice.locked_for_edit?),
-                   link_to("🔁 Cette charge revient", new_finance_recurring_expense_path(recurring_expense: RecurringExpense.prefill_from(@invoice)), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"),
+                   (link_to("🔁 Cette charge revient", new_finance_recurring_expense_path(recurring_expense: RecurringExpense.prefill_from(@invoice)), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") unless @invoice.credit_note?),
                    link_to("Toutes les factures", finance_purchase_invoices_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")].compact
 
 / Le garde des 5 000 € est une INFORMATION, jamais un blocage (décision 7) :
@@ -20,6 +20,18 @@
     - if @invoice.validated_by
       = " — #{@invoice.validated_by.display_name}"
 
+/ Encodée deux fois (Michael, 2026-11-05, VOO #26 = #11) : sans PDF,
+  l'empreinte ne la reconnaît pas. Une information, jamais un blocage.
+- if @duplicates.any?
+  .mb-4.rounded-lg.border.border-amber-200.bg-amber-50.px-4.py-3.text-sm.text-amber-900
+    strong Doublon probable.
+    = " "
+    - @duplicates.each_with_index do |other, index|
+      = ", " if index.positive?
+      = link_to "Facture ##{other.id}#{" n° #{other.number}" if other.number.present?}", finance_purchase_invoice_path(other), class: "font-medium underline"
+      = " (#{other.status_label.downcase}, #{@invoice.duplicate_reason(other)})"
+    = ". Si c'est la même pièce, défais celle-ci et conteste-la comme doublon."
+
 / Qui a dit oui, et quand. Une validation sans nom ne vaut pas grand-chose le
   jour où quelqu'un demande qui a engagé la dépense.
 - if @invoice.validated_at.present?
@@ -34,11 +46,13 @@
     .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
       .flex.flex-wrap.items-start.justify-between.gap-3
         div
-          p.text-2xl.font-semibold.text-gray-900= number_to_currency(@invoice.total_cents / 100.0)
+          - if @invoice.credit_note?
+            span.inline-flex.items-center.rounded-full.bg-purple-100.px-2.py-0.5.text-xs.font-medium.text-purple-800 Note de crédit
+          p.text-2xl.font-semibold.text-gray-900= number_to_currency(@invoice.signed_total_cents / 100.0)
           p.mt-1.text-sm.text-gray-500
             = @invoice.third_party.name
             - if @invoice.number.present?
-              = " · facture #{@invoice.number}"
+              = " · #{@invoice.credit_note? ? 'note de crédit' : 'facture'} #{@invoice.number}"
             = " · #{l(@invoice.issued_on, format: :short)}"
           - if @invoice.due_on
             p.text-xs.text-gray-400 Échéance le #{l(@invoice.due_on, format: :short)}
@@ -47,10 +61,42 @@
               | Communication :
               span.ml-1.font-mono.text-gray-600= @invoice.payment_reference
           p.mt-1.text-xs.text-gray-400= @invoice.legal_entity.name
+          / Le lien entre une note de crédit et la facture qu'elle corrige, dans
+            les deux sens.
+          - if @invoice.credited_invoice
+            p.mt-1.text-xs.text-gray-500
+              | Corrige
+              = " "
+              = link_to "la facture #{@invoice.credited_invoice.number.presence || "##{@invoice.credited_invoice.id}"}", finance_purchase_invoice_path(@invoice.credited_invoice), class: "text-blue-500 hover:text-blue-700"
+              = " du #{l(@invoice.credited_invoice.issued_on, format: :short)}"
+          - @invoice.credit_notes.each do |note|
+            p.mt-1.text-xs.text-gray-500
+              = link_to "Note de crédit #{note.number.presence || "##{note.id}"}", finance_purchase_invoice_path(note), class: "text-blue-500 hover:text-blue-700"
+              = " · #{number_to_currency(-note.total_cents / 100.0)} · #{note.status_label.downcase}"
         = render "finance/purchase_invoices/status_badge", invoice: @invoice
 
-      - if @invoice.to_pay? || @invoice.paid?
+      - if @invoice.credit_note? && (@invoice.to_pay? || @invoice.paid?)
         .mt-4.border-t.border-gray-100.pt-3.text-sm
+          - if @invoice.credited_invoice
+            .flex.items-center.justify-between
+              span.text-gray-500 Imputé sur la facture
+              span.font-medium.text-gray-900= number_to_currency(@invoice.imputed_cents / 100.0)
+          .flex.items-center.justify-between
+            span.text-gray-500 Remboursé
+            span.font-medium.text-gray-900= number_to_currency(@invoice.allocated_cents / 100.0)
+          .flex.items-center.justify-between
+            span.text-gray-500 Reste à rembourser
+            span.font-semibold.text-gray-900= number_to_currency(@invoice.remaining_cents / 100.0)
+          - if @invoice.to_pay?
+            p.mt-2.text-xs.text-gray-400
+              | Le fournisseur nous doit ce montant. Son virement se rapproche depuis « À affecter » : Claudy le propose quand l'IBAN ou le montant correspondent.
+
+      - elsif @invoice.to_pay? || @invoice.paid?
+        .mt-4.border-t.border-gray-100.pt-3.text-sm
+          - if @invoice.credited_cents.positive?
+            .flex.items-center.justify-between
+              span.text-gray-500 Notes de crédit
+              span.font-medium.text-gray-900= number_to_currency(-@invoice.credited_cents / 100.0)
           .flex.items-center.justify-between
             span.text-gray-500 Rapproché
             span.font-medium.text-gray-900= number_to_currency(@invoice.allocated_cents / 100.0)
@@ -79,6 +125,25 @@
                   = "communication : "
                   span.font-mono = @invoice.payable_communication
                 button.rounded-md.bg-white.font-medium.text-gray-700.ring-1.ring-gray-300(class="px-2 py-0.5 hover:bg-gray-100" type="button" data-controller="copy" data-copy-value-value=@invoice.payable_communication data-action="copy#copy") Copier
+
+            / Déjà payée par une ligne passée au 440000 SANS la facture (une
+              règle d'affectation a pris la domiciliation) : on relie, on ne
+              repaie pas (Michael, 2026-11-05).
+            - if @orphan_payments.present?
+              .mt-3.rounded-lg.border.border-green-200.bg-green-50.px-3.py-3
+                p.text-sm.font-medium.text-green-900 Déjà payée ?
+                p.mt-1.text-xs.text-green-900
+                  | Cette sortie est affectée au 440000 sans facture. La relier solde la facture, sans repayer ni rien ajouter au grand livre.
+                ul.mt-2.space-y-2
+                  - @orphan_payments.each do |candidate|
+                    - entry = candidate.cash_entry
+                    li.flex.flex-wrap.items-center.justify-between.gap-2.rounded-md.bg-white.px-3.py-2.ring-1.ring-green-200
+                      .min-w-0.text-xs
+                        p.font-medium.text-gray-900
+                          = link_to "Ligne ##{entry.id} du #{l(entry.entry_date, format: :short)}", finance_cash_entry_path(entry), class: "text-blue-500 hover:text-blue-700"
+                          = " · #{number_to_currency(entry.amount_cents / 100.0)} · #{entry.counterparty_name.presence || entry.label}"
+                        p.text-gray-500= "#{candidate.reason} (#{candidate.confidence} %)"
+                      = button_to "Relier ce paiement", link_payment_finance_purchase_invoice_path(@invoice), method: :post, params: { allocation_id: candidate.allocation.id }, class: "rounded-md border border-transparent bg-green-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-800"
 
             /  Le règlement en ESPÈCES : le fournisseur du marché repart avec ses
                billets. Le bouton crée une vraie sortie de caisse affectée sur le
@@ -142,16 +207,35 @@
           object.w-full.rounded-lg.border.border-gray-200(data=url_for(@invoice.document) type="application/pdf" height="420")
             p.p-3.text-sm.text-gray-500
               = link_to "Ouvrir la pièce", url_for(@invoice.document), class: "text-blue-500 underline"
-        - else
+        - elsif @invoice.document.image?
           = image_tag url_for(@invoice.document), class: "w-full rounded-lg border border-gray-200"
+        - else
+          / Un XML (facture électronique venue du mail) ne s'affiche pas en image.
+          p.text-sm.text-gray-600
+            | Pièce au format #{@invoice.document.filename.extension.upcase}, sans aperçu.
+            = " "
+            = link_to "L'ouvrir", url_for(@invoice.document), target: "_blank", rel: "noopener", class: "text-blue-500 underline"
         p.mt-2.text-xs.text-gray-400= @invoice.document.filename.to_s
       - else
         p.text-sm.text-gray-400 Aucune pièce déposée.
+      / Quel que soit le statut : une facture comptabilisée ne passe plus par
+        « Modifier », mais sa pièce n'est pas une donnée comptable.
+      details.mt-3(open=!@invoice.document.attached?)
+        summary.cursor-pointer.select-none.text-sm.text-blue-500.hover:underline
+          = @invoice.document.attached? ? "Remplacer la pièce…" : "Déposer la pièce…"
+        = form_with url: replace_document_finance_purchase_invoice_path(@invoice), method: :post, multipart: true,
+                    class: "mt-2 space-y-2 rounded-md border border-gray-200 bg-gray-50 p-3" do
+          = file_field_tag "purchase_invoice[document]", accept: "application/pdf,image/*", required: true,
+                           class: "block w-full text-sm text-gray-700", aria: { label: "Fichier de la pièce" }
+          = submit_tag (@invoice.document.attached? ? "Remplacer la pièce" : "Déposer la pièce"),
+                       class: "inline-flex items-center rounded-md border border-transparent px-3 py-1.5 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
+          - if @invoice.frozen_content?
+            p.text-xs.text-gray-500 La facture reste comptabilisée : seule la pièce change, l'écriture ne bouge pas.
 
     .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-3
       h3.text-xs.uppercase.tracking-wide.text-gray-400 Et maintenant ?
       - if @invoice.to_process? || @invoice.disputed?
-        = button_to "Envoyer au paiement", submit_finance_purchase_invoice_path(@invoice), method: :post, class: "w-full rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
+        = button_to (@invoice.credit_note? ? "Comptabiliser la note de crédit" : "Envoyer au paiement"), submit_finance_purchase_invoice_path(@invoice), method: :post, class: "w-full rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
         - if @invoice.requires_validation?
           p.text-xs.text-gray-400
             | Cette facture demande l'aval du pôle #{@invoice.validation_team&.name || "concerné"} : elle s'arrêtera à « À valider ».
@@ -188,7 +272,25 @@
             | Aucune note de frais valable ne rembourse plus cette facture (note rejetée ou supprimée) : remets-la en traitement.
       - elsif @invoice.to_pay?
         p.text-sm.text-gray-600
-          | Prête à payer. La file « À payer » et le virement arrivent en phase 4 de l'epic #240.
+          - if @invoice.credit_note?
+            | Comptabilisée. Le fournisseur nous doit encore #{number_to_currency(@invoice.remaining_cents / 100.0)} : son virement se rapproche depuis « À affecter ».
+          - else
+            | Prête à payer : elle est dans la file « À payer ».
+        / Défaire la passation (Michael, 2026-11-05) : un doublon, une facture
+          qui n'est pas pour nous. L'écriture d'achat est contre-passée.
+        - if @unpost_refusal.nil?
+          details.rounded-md.border.border-gray-200.px-3.py-2(open=@duplicates.any?)
+            summary.cursor-pointer.select-none.text-sm.text-gray-700 Défaire la passation…
+            = form_with url: unpost_finance_purchase_invoice_path(@invoice), method: :post, class: "mt-2 space-y-2" do
+              label.block.text-xs.font-medium.text-gray-500(for="unpost_reason") Pourquoi ?
+              = text_field_tag :reason, (@duplicates.any? ? "Doublon de la facture ##{@duplicates.first.id}" : nil), id: "unpost_reason", required: true, placeholder: "Doublon de la facture #…", class: "w-full rounded-md border-gray-300 text-sm shadow-sm"
+              p.text-xs.text-gray-400 L'écriture d'achat est contre-passée (les deux restent au grand livre).
+              button.w-full.rounded-md.border.border-red-200.bg-red-50.px-4.py-2.text-sm.font-medium.text-red-800.shadow-sm(type="submit" name="outcome" value="disputed" class="hover:bg-red-100") Contester (doublon, pas pour nous)
+              button.w-full.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="submit" name="outcome" value="to_process" class="hover:bg-gray-50") Remettre en traitement pour la corriger
+        - else
+          p.text-xs.text-gray-400= @unpost_refusal
+      - elsif @invoice.credit_note?
+        p.text-sm.text-gray-600 #{@invoice.status_label} le #{l(@invoice.paid_on, format: :short)}.
       - else
         p.text-sm.text-gray-600 Payée le #{l(@invoice.paid_on, format: :short)}.
 

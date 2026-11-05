@@ -75,6 +75,21 @@ RSpec.describe Reservations::Builder, "espaces (epic #66, Phase 2)" do
       expect(decorated.duration).not_to include("non précisée")
     end
 
+    it "persiste la demi-journée en « halfday », affichée « demi-journée »" do
+      builder = described_class.new(draft: draft(halls: [hall(period: "demi_journee")]), admin: true, source: "manual")
+      expect(builder.run).to be(true)
+
+      reservation = builder.space_booking.space_reservations.first
+      expect(reservation.duration).to eq("halfday")
+      expect(reservation.decorate.duration).to eq("demi-journée")
+      expect(SpaceBookingDecorator.new(builder.space_booking).duration).to eq("demi-journée")
+      # Grande Salle, demi-journée en semaine = 190 €.
+      expect(builder.space_booking.price_cents).to eq(19_000)
+      # Et l'édition retrouve la période de pricing.
+      halls = Stays::DraftReconstructor.call(builder.stay).halls
+      expect(halls.map { |h| h[:period] }).to eq(["demi_journee"])
+    end
+
     it "borne from/to_date aux dates RÉELLEMENT occupées, pas à la fenêtre du séjour" do
       middle_day = arrival + 1
       builder = described_class.new(

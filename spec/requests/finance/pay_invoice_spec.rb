@@ -32,7 +32,7 @@ RSpec.describe "Payer une facture d'achat", type: :request do
 
       get finance_unallocated_cash_entries_path
 
-      expect(response.body).to include("Paiement de Facture Antargaz · F-1")
+      expect(response.body).to include("Paiement de Facture Antargaz · F-1 du 1 juin 2026")
       expect(response.body).to include("Payer cette facture")
       expect(response.body).to include("% de confiance")
     end
@@ -125,6 +125,52 @@ RSpec.describe "Payer une facture d'achat", type: :request do
       get finance_purchase_invoice_path(facture.reload)
 
       expect(response.body).not_to include("Payée en caisse")
+    end
+  end
+
+  # Michael, 2026-11-05 : VOO payée par domiciliation, la ligne passée au
+  # 440000 par une règle sans la facture ; et la même facture encodée deux fois.
+  describe "déjà payée, ou encodée deux fois" do
+    def sortie_orpheline
+      entry = build_cash_entry(banque, amount_cents: -12_000, entry_date: Date.new(2026, 6, 20), label: "ANTARGAZ")
+      entry.update!(counterparty_name: "ANTARGAZ SA")
+      allocate(entry, account: fournisseurs, amount_cents: -12_000, entity: entity)
+      Accounting::PostCashEntry.new(cash_entry: entry.reload).run!
+      entry.reload
+    end
+
+    it "montre la sortie passée au 440000 sans facture, et la relie en un clic" do
+      entry = sortie_orpheline
+
+      get finance_purchase_invoice_path(facture)
+      expect(response.body).to include("Déjà payée ?", "Ligne ##{entry.id}", "Relier ce paiement")
+
+      get finance_payables_path
+      expect(response.body).to include("déjà payée ?")
+
+      post link_payment_finance_purchase_invoice_path(facture, allocation_id: entry.cash_allocations.sole.id)
+
+      expect(facture.reload).to be_paid
+      expect(entry.cash_allocations.sole.third_party).to eq(antargaz)
+    end
+
+    it "signale le doublon et le défait en le contestant" do
+      originale = facture
+      doublon = PurchaseInvoice.create!(legal_entity: entity, third_party: antargaz, issued_on: Date.new(2026, 6, 1),
+                                        total_cents: 12_000)
+      doublon.purchase_invoice_lines.create!(general_account: charges, amount_cents: 12_000)
+      PurchaseInvoices::Advance.new(purchase_invoice: doublon).submit!
+
+      get finance_purchase_invoice_path(doublon)
+      expect(response.body).to include("Doublon probable", "Facture ##{originale.id}", "Défaire la passation")
+
+      get finance_payables_path
+      expect(response.body).to include("doublon probable de ##{originale.id}")
+
+      post unpost_finance_purchase_invoice_path(doublon, reason: "Doublon de la facture ##{originale.id}", outcome: "disputed")
+
+      expect(doublon.reload).to have_attributes(status: "disputed", dispute_reason: "Doublon de la facture ##{originale.id}")
+      expect(PurchaseInvoice.payable).to eq([originale])
     end
   end
 end

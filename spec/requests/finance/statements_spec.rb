@@ -62,6 +62,66 @@ RSpec.describe "Finances > Décomptes", type: :request do
     end
   end
 
+  # 2026-11-02 — les décomptes d'octobre 2026 émis le 27, avant le bar et les
+  # charges du 31.
+  describe "émis trop tôt" do
+    include ActiveSupport::Testing::TimeHelpers
+
+    before { sign_in user }
+
+    it "n'offre pas l'émission avant la fin du mois" do
+      travel_to(Date.new(2026, 7, 20)) do
+        add_entry(Date.new(2026, 7, 10), 1500)
+
+        get finance_statements_path(month: "2026-07")
+        expect(response.body).to include("n&#39;est pas terminé").or include("n'est pas terminé")
+        expect(response.body).not_to include("Émettre les décomptes sélectionnés")
+
+        post issue_finance_statements_path(month: "2026-07"), params: { member_account_ids: [account.id] }
+        expect(AccountStatement.count).to eq(0)
+      end
+    end
+
+    it "régénère un décompte jamais envoyé avec les lignes arrivées depuis" do
+      add_entry(Date.new(2026, 7, 10), 1500)
+      statement = Finance::IssueStatement.new(member_account: account, month: "2026-07").run!
+      add_entry(Date.new(2026, 7, 31), 700)
+
+      get finance_statements_path(month: "2026-07")
+      expect(response.body).to include("Grand livre").and include("Régénérer")
+
+      post regenerate_finance_statement_path(statement)
+
+      nouveau = AccountStatement.for_month(Date.new(2026, 7, 1)).sole
+      expect(nouveau.id).not_to eq(statement.id)
+      expect(nouveau.closing_balance_cents).to eq(2200)
+      follow_redirect!
+      expect(response.body).to include("régénéré")
+    end
+
+    it "annule un décompte jamais envoyé" do
+      add_entry(Date.new(2026, 7, 10), 1500)
+      statement = Finance::IssueStatement.new(member_account: account, month: "2026-07").run!
+
+      post cancel_finance_statement_path(statement)
+
+      expect(AccountStatement.for_month(Date.new(2026, 7, 1))).to be_empty
+      expect(account.account_entries.reload.none?(&:locked?)).to be(true)
+    end
+
+    it "refuse de régénérer un décompte déjà envoyé" do
+      add_entry(Date.new(2026, 7, 10), 1500)
+      statement = Finance::IssueStatement.new(member_account: account, month: "2026-07").run!
+      statement.update!(status: "sent", sent_at: Time.current)
+
+      post regenerate_finance_statement_path(statement)
+
+      expect(statement.reload.deleted_at).to be_nil
+      follow_redirect!
+      expect(response.body).to include("déjà été envoyé")
+    end
+  end
+
   describe "envoi et relance" do
     before { sign_in user }
 

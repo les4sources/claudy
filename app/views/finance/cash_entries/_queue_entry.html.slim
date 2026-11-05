@@ -90,14 +90,18 @@
           .flex.flex-wrap.items-center.justify-between.gap-2
             div
               p.text-sm.text-gray-800
-                strong = "Paiement de #{match.invoice.payable_label}"
-                = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus à #{match.third_party&.name}"
+                - if match.invoice.credit_note?
+                  strong = "Remboursement de la #{match.invoice.payable_label.downcase_first} du #{l(match.invoice.issued_on, format: "%-d %B %Y")}"
+                  = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} que nous doit #{match.third_party&.name}"
+                - else
+                  strong = "Paiement de #{match.invoice.payable_label} du #{l(match.invoice.issued_on, format: "%-d %B %Y")}"
+                  = " — #{humanized_money_with_symbol(Money.new(match.due_cents, 'EUR'))} dus à #{match.third_party&.name}"
               p.mt-0.5.text-xs.text-gray-500
                 = match.reason
                 = " (#{match.confidence} % de confiance)"
               p.mt-0.5.text-xs
-                = link_to "Voir la facture", finance_purchase_invoice_path(match.invoice), class: "text-blue-500 hover:text-blue-700"
-            = button_to "Payer cette facture", pay_invoice_finance_cash_entry_path(entry, purchase_invoice_id: match.invoice.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
+                = link_to (match.invoice.credit_note? ? "Voir la note de crédit" : "Voir la facture"), finance_purchase_invoice_path(match.invoice), class: "text-blue-500 hover:text-blue-700"
+            = button_to (match.invoice.credit_note? ? "Rapprocher ce remboursement" : "Payer cette facture"), pay_invoice_finance_cash_entry_path(entry, purchase_invoice_id: match.invoice.id), method: :post, class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:opacity-90", form: { class: "inline" }
 
     / Une note de frais ou de mission qui attend son virement (epic #241,
       phase 3). Même forme que la facture juste au-dessus : c'est le même geste
@@ -232,10 +236,10 @@
                 button.inline-flex.items-center.rounded-md.border.border-transparent.px-3.py-1.5.text-xs.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit") Enregistrer le règlement
 
     / Une facture de VENTE qui attend son encaissement (epic #240, phase 6).
-      Une ligne ENTRANTE du montant exact d'une facture émise, ou venant de
-      l'IBAN déjà appris pour ce client. LA PROPOSITION N'A RIEN ÉCRIT —
-      c'est ce bouton qui ventile la recette et fait passer la facture en
-      « payée ». Aucune écriture de vente n'est générée (décision 8).
+      Une ligne ENTRANTE qui cite son numéro, du montant de ce qui reste dû, ou
+      venant de l'IBAN connu du client. LA PROPOSITION N'A RIEN ÉCRIT — c'est
+      ce bouton qui rapproche : ventilation du séjour pour une facture de
+      séjour, 400000 du tiers pour une facture passée au journal Ventes.
     - ventes = @sales_invoice_matches[entry.id]
     - if ventes.present?
       - ventes.first(2).each do |match|
@@ -245,6 +249,9 @@
               p.text-sm.text-gray-800
                 strong = "Facture de vente #{match.invoice.number}"
                 = " — #{humanized_money_with_symbol(Money.new(match.invoice.total_cents, 'EUR'))} du #{l(match.invoice.issued_on, format: :short)}"
+                = " · #{match.invoice.customer_name}" if match.invoice.customer_name
+                - if match.invoice.remaining_cents != match.invoice.total_cents
+                  = " · reste dû #{humanized_money_with_symbol(Money.new(match.invoice.remaining_cents, 'EUR'))}"
               p.mt-0.5.text-xs.text-gray-500
                 = match.reason
                 = " (#{match.confidence} % de confiance)"

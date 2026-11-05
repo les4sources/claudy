@@ -274,6 +274,7 @@ Rails.application.routes.draw do
     # Routes nommées AVANT la ressource : sinon `/finance/catalog/print` serait
     # capté par `catalog#show` avec `id = "print"`.
     get "catalog/print", to: "catalog#print", as: :catalog_print
+    get "catalog/bar_sheet", to: "catalog#bar_sheet", as: :catalog_bar_sheet
     get "catalog/suggest_price", to: "catalog#suggest_price", as: :catalog_suggest_price
     resources :catalog do
       resources :prices, only: [:create, :destroy], controller: "catalog_prices"
@@ -344,6 +345,9 @@ Rails.application.routes.draw do
     # La file « À payer » (epic #240, phase 4) : tout ce que la maison doit et
     # qui attend son virement, toutes dettes confondues.
     get "payables", to: "payables#index", as: :payables
+    # Le fichier de virements SEPA (pain.001.001.03) des dettes cochées, pour
+    # l'import de Triodos Internet Banking (2026-11-05). Ne paie rien.
+    post "payables/sepa", to: "payables#sepa", as: :payables_sepa
     # Dettes et litiges sans facture (2026-10-13) : la taxe d'Yvoir, un
     # arriéré, une contestation — ce qui pèse sur la trésorerie avant d'avoir
     # une facture. Pas de `show` : tout tient dans la liste.
@@ -438,6 +442,13 @@ Rails.application.routes.draw do
         post :pay_in_cash
         # Payée en magasin par un membre : sa note de frais la rembourse.
         post :paid_by_member
+        # Défaire la passation d'une facture sans paiement (doublon…) et
+        # relier un paiement passé au 440000 sans elle (Michael, 2026-11-05).
+        post :unpost
+        post :link_payment
+        # La pièce se remplace quel que soit le statut : ce n'est pas une
+        # donnée comptable, et une facture comptabilisée ne se modifie plus.
+        post :replace_document
       end
     end
     resources :cash_motifs, path: "cash/motifs", except: %i[show destroy] do
@@ -527,7 +538,14 @@ Rails.application.routes.draw do
     # depuis la file Facturation — jamais dans le vide.
     # `edit`/`update` corrigent ce qui a été mal saisi (numéro, date, montant,
     # PDF) sans toucher au lien vers ce qu'elle facture.
-    resources :sales_invoices, path: "sales", only: %i[index show new create edit update destroy]
+    resources :sales_invoices, path: "sales", only: %i[index show new create edit update destroy] do
+      # Reprise : rattacher les écritures de vente déjà au grand livre.
+      collection do
+        get :attachable, path: "rattacher"
+        post :attach, path: "rattacher"
+        post :attach_all, path: "rattacher/tout"
+      end
+    end
 
     resources :general_accounts, path: "chart_of_accounts", except: [:show]
     # Les comptes de trésorerie à l'écran (Michael, 2026-10-19) : l'IBAN seul s'y
@@ -553,6 +571,8 @@ Rails.application.routes.draw do
         post :send_email
         post :remind
         post :mark_settled
+        post :regenerate
+        post :cancel
       end
     end
 

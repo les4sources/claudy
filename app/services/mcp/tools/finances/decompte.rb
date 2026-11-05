@@ -2,7 +2,8 @@ module Mcp
   module Tools
     module Finances
       # Finances > Décomptes (StatementsController) : émettre les décomptes
-      # d'un mois, les envoyer par email, relancer, marquer réglé.
+      # d'un mois, les envoyer par email, relancer, marquer réglé, et régénérer
+      # ou annuler un décompte émis trop tôt, tant qu'il n'est pas parti.
       #
       # Rien ne part tout seul, comme à l'écran : chaque émission, envoi ou
       # relance est un geste explicite.
@@ -10,7 +11,10 @@ module Mcp
         include Commun
 
         GESTES = {
-          "emettre" => "émettre le décompte du mois : il FIGE le solde et VERROUILLE les lignes du mois",
+          "emettre" => "émettre le décompte du mois (une fois le mois terminé) : il FIGE le solde et VERROUILLE les lignes du mois",
+          "regenerer" => "remplacer un décompte émis mais jamais envoyé par un décompte qui reprend tout ce que le grand livre " \
+                         "porte aujourd'hui sur le mois",
+          "annuler" => "supprimer un décompte émis mais jamais envoyé et déverrouiller ses lignes (le compte revient « à émettre »)",
           "envoyer" => "envoyer le décompte par email au compte",
           "relancer" => "envoyer un email de relance",
           "marquer_regle" => "encaisser ce qui reste dû (règlement « moyen non précisé ») et marquer réglé"
@@ -46,6 +50,8 @@ module Mcp
           decomptes = Array(arguments["decomptes"]).map { |ref| decompte!(ref) }
           raise Error, "Donne les décomptes (identifiants rendus par decomptes)." if decomptes.empty?
 
+          return plan_regeneration(geste, decomptes, arguments) if %w[regenerer annuler].include?(geste)
+
           lignes = decomptes.map { |s| send("ligne_#{geste}", s) }
           Plan.new(resume: lignes.join("\n"), empreinte: [decomptes.map { |s| etat_de(s) }, signature(arguments)],
                    donnees: { geste: geste, ids: decomptes.map(&:id) })
@@ -54,6 +60,7 @@ module Mcp
         def appliquer(plan)
           d = plan.donnees
           return emettre(d) if d[:geste] == "emettre"
+          return regenerer(d) if %w[regenerer annuler].include?(d[:geste])
 
           AccountStatement.where(id: d[:ids]).includes(member_account: :human).map do |statement|
             send(d[:geste], statement)
@@ -127,6 +134,50 @@ module Mcp
           end
         end
 
+        # Régénérer, c'est annuler puis réémettre, tout ou rien : l'aperçu le
+        # joue à blanc pour montrer le nouveau solde à côté de l'ancien.
+        def plan_regeneration(geste, decomptes, arguments)
+          reemettre = geste == "regenerer"
+          lignes = simuler do
+            decomptes.map do |statement|
+              couvertes = statement.account_entries.count
+              resultat = ::Finance::RegenerateStatement.new(statement: AccountStatement.find(statement.id),
+                                                            whodunnit: whodunnit, reissue: reemettre).run!
+              if reemettre
+                "#{entete(statement)} → nouveau solde #{euros(resultat.statement.closing_balance_cents)} " \
+                  "(ouverture #{euros(resultat.statement.opening_balance_cents)}, + #{euros(resultat.statement.debits_cents)}, " \
+                  "#{euros(resultat.statement.credits_cents)})"
+              else
+                "#{entete(statement)} → annulé, #{couvertes} ligne(s) déverrouillée(s)"
+              end
+            rescue ::Finance::IssueStatement::Refused => e
+              "#{entete(statement)} : REFUSÉ — #{e.message}"
+            end
+          end
+          titre = reemettre ? "Régénérer" : "Annuler"
+          Plan.new(resume: "#{titre} #{decomptes.size} décompte(s) (rien n'est envoyé) :\n#{lignes.join("\n")}",
+                   empreinte: [decomptes.map { |s| etat_de(s) }, lignes, signature(arguments)],
+                   donnees: { geste: geste, ids: decomptes.map(&:id) })
+        end
+
+        def regenerer(d)
+          reemettre = d[:geste] == "regenerer"
+          AccountStatement.where(id: d[:ids]).includes(member_account: :human).map do |statement|
+            metier! do
+              resultat = ::Finance::RegenerateStatement.new(statement: statement, whodunnit: whodunnit, reissue: reemettre).run!
+              if reemettre
+                "Décompte ##{resultat.statement.id} émis à la place du ##{statement.id} : #{statement.member_account.code} " \
+                  "#{statement.member_account.name}, #{euros(resultat.previous[:closing_balance_cents])} → " \
+                  "#{euros(resultat.statement.closing_balance_cents)}"
+              else
+                "Décompte ##{statement.id} annulé : #{statement.member_account.code} #{statement.member_account.name}"
+              end
+            end
+          rescue Error => e
+            "#{statement.member_account.code} #{statement.member_account.name} : refusé — #{e.message}"
+          end.join("\n")
+        end
+
         def plan_emission(arguments)
           mois = mois!(arguments["mois"], defaut: Date.current.beginning_of_month)
           comptes = if arguments["tous"]
@@ -141,8 +192,9 @@ module Mcp
             comptes.map do |compte|
               s = ::Finance::IssueStatement.new(member_account: MemberAccount.find(compte.id), month: mois, whodunnit: whodunnit).run!
               "#{compte.code} #{compte.name} : ouverture #{euros(s.opening_balance_cents)}, + #{euros(s.debits_cents)}, " \
-                "#{euros(s.credits_cents)} → solde #{euros(s.closing_balance_cents)}"
-            rescue ::Finance::IssueStatement::RecurringChargesMissing, ::Finance::IssueStatement::AlreadyIssued => e
+                "#{euros(s.credits_cents)} → solde #{euros(s.closing_balance_cents)}" \
+                "#{' ⚠ aucune ligne de bar ce mois-ci : la feuille de bar est-elle saisie ?' if ::Finance::IssueStatement.bar_missing?(compte, mois)}"
+            rescue ::Finance::IssueStatement::Refused => e
               "#{compte.code} #{compte.name} : REFUSÉ — #{e.message}"
             end
           end

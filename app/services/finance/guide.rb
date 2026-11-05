@@ -84,8 +84,9 @@ module Finance
                "l'argent qui sort. Chaque écriture a autant au débit qu'au crédit : c'est la « partie double ». Claudy " \
                "les génère, tu n'as jamais à les taper."),
       Term.new("decompte", "Décompte",
-               "Le relevé mensuel du compte courant d'un habitant : ce qu'il doit et ce qu'il a payé. Il s'émet puis " \
-               "s'envoie, depuis la section Comptes."),
+               "Le relevé mensuel du compte courant d'un habitant : ce qu'il doit et ce qu'il a payé. Il s'émet une fois " \
+               "le mois terminé (bar et charges posés), puis s'envoie, depuis la section Comptes. Tant qu'il n'est pas " \
+               "envoyé, il se régénère ; une ligne arrivée après son envoi passe sur le décompte suivant."),
       Term.new("dette", "Dette ou litige",
                "Une somme que la maison doit, ou risque de devoir, sans facture encodée : une taxe réclamée, un arriéré, " \
                "une contestation. On la note pour que la trésorerie ne paraisse pas meilleure qu'elle n'est."),
@@ -158,12 +159,13 @@ module Finance
     # et il a sa place dans le guide.
     PAGES = {
       "finance/accounting" => Page.new(
-        "La page d'accueil de la comptabilité : peut-on dépenser, ce qui attend d'être fait, et les chiffres qui " \
-        "pèsent (dettes, prêts, échéances).",
-        ["Commence par « À faire » : chaque ligne mène à la file qu'il faut vider, dans l'ordre du travail.",
-         "Lis « Peut-on dépenser ? » avant toute dépense importante.",
-         "Si un mot t'arrête, le guide (en haut à droite de la barre) l'explique."],
-        %w[a-affecter solde-verifie pret dette]
+        "La page des administrateurs : comment va chaque structure aujourd'hui, ce qui l'attend dans les trois " \
+        "mois, ce qui pèse plus loin, et ce qu'il faut trancher ensemble.",
+        ["Lis d'abord le feu et la phrase de chaque structure : ils disent si on peut dépenser.",
+         "Termine par « Ce qu'on doit trancher ensemble » : c'est l'ordre du jour que proposent les chiffres.",
+         "Clique sur une structure (en haut à droite) pour voir le calcul, toutes les échéances et chaque prêteur.",
+         "Tu tiens les comptes ? « Le travail des comptables », en bas, garde les files dans l'ordre."],
+        %w[a-affecter solde-verifie pret dette echeance]
       ),
       "finance/guide" => Page.new(
         "Le mode d'emploi de la section : comment l'argent circule dans Claudy, ta routine et le lexique.",
@@ -327,7 +329,8 @@ module Finance
       ),
       "finance/payables" => Page.new(
         "Tout ce que la maison doit virer, toutes dettes confondues, par échéance.",
-        ["Fais les virements dans la banque en ligne, avec la communication indiquée.",
+        ["Choisis la structure, coche les virements et génère le fichier SEPA ; importe-le dans la banque en ligne (Triodos : Opérations › Importation) puis autorise-le.",
+         "Sinon, fais les virements à la main dans la banque en ligne, avec la communication indiquée.",
          "Au prochain relevé, rapproche chaque virement de sa dette dans « À affecter » : elle passe alors payée."],
         %w[rapprocher facture-achat note-de-frais]
       ),
@@ -351,9 +354,11 @@ module Finance
       ),
       "finance/sales_invoices" => Page.new(
         "Les factures émises dans OkiOki : ce qu'elles facturent et si elles sont payées.",
-        ["Une facture s'enregistre depuis ce qu'elle facture, sur la page Accueil › Facturation, avec son " \
-         "numéro OkiOki.",
-         "Son paiement se rapproche depuis « À affecter »."],
+        ["La facture d'un séjour s'enregistre depuis la page Accueil › Facturation, avec son numéro OkiOki. " \
+         "Toute autre facture, avec « Nouvelle facture » : son tiers et ses lignes, et l'écriture part au journal Ventes.",
+         "Une vente déjà au grand livre (reprise Winbooks, journal tenu à la main) se met au registre avec " \
+         "« Rattacher des écritures existantes » : aucune nouvelle écriture.",
+         "Son paiement se rapproche depuis « À affecter », en un ou plusieurs virements."],
         %w[facture-vente rapprocher]
       ),
       "finance/expense_reports" => Page.new(

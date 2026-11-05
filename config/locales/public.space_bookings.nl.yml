@@ -49,6 +49,7 @@ nl:
         two_hours: "2 uur"
         evening: "avond"
         day: "dag"
+        halfday: "halve dag"
         fullday: "dag + avond"
         see_notes: "zie notities"
         unspecified: "periode niet gepreciseerd"

@@ -84,6 +84,9 @@
 - if @stay_choices
   = render "finance/cash_entries/stay_choice", entry: @entry, stay_choices: @stay_choices, proposed_stay_id: @proposed_stay_id
 
+- if @sales_invoice_choices.present?
+  = render "finance/cash_entries/sales_invoice_choice", entry: @entry, choices: @sales_invoice_choices, proposed_id: @proposed_sales_invoice_id
+
 - unless @entry.posted? || @entry.status == "excluded"
   .p-4.bg-white.rounded-lg.border.border-gray-100
     h4.mb-3.text-sm.font-semibold.text-gray-900 Affecter le reste

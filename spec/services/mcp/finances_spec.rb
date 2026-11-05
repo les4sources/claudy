@@ -221,6 +221,36 @@ RSpec.describe Mcp::Server, "finances" do
     expect(entry.reload).to be_posted
   end
 
+  # Michael, 2026-11-05 : VOO #26 doublon de #11, et #10 payée par une
+  # domiciliation que la règle « Orange Belgium » avait mise au 440000 seule.
+  it "défait un doublon « à payer » et relie la facture à une sortie passée au 440000 sans elle" do
+    voo = ThirdParty.create!(name: "Voo", kind: "supplier")
+    factures = Array.new(2) do |i|
+      f = PurchaseInvoice.create!(legal_entity: entity, third_party: voo, number: (i.zero? ? "411281108745" : nil),
+                                  issued_on: jour, total_cents: 1_815, payment_reference: "+++453/7084/34944+++")
+      f.purchase_invoice_lines.create!(general_account: energie, amount_cents: 1_815)
+      PurchaseInvoices::Advance.new(purchase_invoice: f).submit!
+    end
+    originale, doublon = factures
+
+    expect(texte(outil("factures_achat", { "facture" => doublon.id }))).to include("Doublon probable de : ##{originale.id}")
+    expect(outil("geste_facture_achat", { "facture" => doublon.id, "geste" => "defaire_passation" })[:isError]).to be(true)
+    confirme("geste_facture_achat", { "facture" => doublon.id, "geste" => "defaire_passation",
+                                      "motif" => "Doublon de la facture ##{originale.id}" })
+    expect(doublon.reload).to have_attributes(status: "disputed", posted_at: nil)
+
+    entry = ligne(-1_815, label: "ORANGE BELGIUM", communication: "101 453708434944")
+    entry.cash_allocations.create!(general_account: fournisseurs, amount_cents: -1_815, legal_entity: entity)
+    Accounting::PostCashEntry.new(cash_entry: entry.reload).run!
+
+    expect(texte(outil("factures_achat", { "facture" => originale.id }))).to include("Déjà payée ?", "ligne ##{entry.id}")
+    expect(outil("rapprocher_ligne", { "ligne" => entry.id, "avec" => "facture_achat", "facture" => originale.id })[:content].first[:text])
+      .to include("relier_paiement")
+    confirme("geste_facture_achat", { "facture" => originale.id, "geste" => "relier_paiement", "ligne" => entry.id })
+    expect(originale.reload).to be_paid
+    expect(entry.reload).to be_posted
+  end
+
   it "envoie en validation au pôle et refuse de valider à qui n'en est pas" do
     seb = Human.create!(name: "Seb", email: "seb@example.com")
     technique.team_memberships.create!(human: seb)
@@ -344,7 +374,7 @@ RSpec.describe Mcp::Server, "finances" do
     compte = MemberAccount.create!(kind: "household", household: menage, name: "Chevêche", contact_email: "cheveche@example.com")
     RecurringCharge.create!(member_account: compte, label: "Forfait dôme", basis: "flat", amount_cents: 5_000,
                             flow: "dome", starts_on: Date.new(2023, 1, 1))
-    mois = jour.strftime("%Y-%m")
+    mois = jour.prev_month.strftime("%Y-%m") # un décompte s'émet une fois le mois terminé
 
     expect(texte(outil("generer_charges_recurrentes", { "mois" => mois }))).to include("1 écriture(s) à créer", "Forfait dôme")
     confirme("generer_charges_recurrentes", { "mois" => mois })
@@ -360,6 +390,28 @@ RSpec.describe Mcp::Server, "finances" do
       confirme("decompte", { "geste" => "envoyer", "decomptes" => [statement.id] })
     end.to change { ActionMailer::Base.deliveries.size }.by(1)
     expect(statement.reload.status).to eq("sent")
+  end
+
+  it "régénère un décompte émis trop tôt, puis refuse une fois envoyé" do
+    menage = Household.create!(name: "Chevêche", kind: "resident", moved_in_on: Date.new(2023, 1, 1))
+    compte = MemberAccount.create!(kind: "household", household: menage, name: "Chevêche", contact_email: "cheveche@example.com")
+    mois = jour.prev_month.beginning_of_month
+    compte.account_entries.create!(entry_date: mois + 7, amount_cents: 10_000, label: "Batch cooking")
+    statement = Finance::IssueStatement.new(member_account: compte, month: mois).run!
+    compte.account_entries.create!(entry_date: mois.end_of_month, amount_cents: 2_500, flow: "bar", label: "Bar")
+
+    expect(texte(outil("decomptes", { "mois" => mois.strftime("%Y-%m") }))).to include("GRAND LIVRE 125,00 €", "à régénérer")
+    apercu = texte(outil("decompte", { "geste" => "regenerer", "decomptes" => [statement.id] }))
+    expect(apercu).to include("nouveau solde 125,00 €")
+    expect(statement.reload.deleted_at).to be_nil
+
+    confirme("decompte", { "geste" => "regenerer", "decomptes" => [statement.id] })
+    nouveau = AccountStatement.for_month(mois).sole
+    expect(nouveau.closing_balance_cents).to eq(12_500)
+    expect(nouveau.id).not_to eq(statement.id)
+
+    nouveau.update!(status: "sent", sent_at: Time.current)
+    expect(texte(outil("decompte", { "geste" => "annuler", "decomptes" => [nouveau.id] }))).to include("REFUSÉ", "déjà été envoyé")
   end
 
   it "enregistre une session de batch cooking et la supprime" do

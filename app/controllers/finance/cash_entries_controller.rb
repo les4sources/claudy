@@ -113,6 +113,7 @@ module Finance
       @events = recent_events
       charger_artisans
       charger_sejours
+      charger_factures_vente
     end
 
     # Le détail d'une ligne, ouvert en modale depuis la file « À affecter »
@@ -330,22 +331,34 @@ module Finance
       apres_affectation(@entry, finance_cash_entry_path(@entry), alert: e.message)
     end
 
-    # Encaisser une facture de vente depuis une ligne entrante (epic #240,
-    # phase 6). La ventilation en recettes est celle d'aujourd'hui — seul le
-    # `document` des allocations change, et c'est lui qui fait passer la facture
-    # en « payée ». AUCUNE écriture de vente n'est générée (décision 8).
+    # Encaisser une facture de vente depuis une ligne (epic #240, phase 6 ;
+    # toute facture du registre depuis le 2026-10-30). Facture de séjour : la
+    # ligne ventile le séjour, aucune écriture de vente (décision 8). Facture
+    # passée au journal Ventes : la ligne s'impute sur le 400000 du tiers. Le
+    # montant est facultatif : sans lui, ce qui reste dû, dans la limite de la
+    # ligne.
     def collect_sales_invoice
-      facture = SalesInvoice.find(params[:sales_invoice_id])
-      lignes = Finance::RecordSalesInvoicePayment.new(
-        sales_invoice: facture, cash_entry: @entry, whodunnit: current_user&.email
+      facture = SalesInvoice.find_by(id: params[:sales_invoice_id])
+      if facture.nil?
+        return apres_affectation(@entry, finance_cash_entry_path(@entry), alert: "Choisis une facture de vente.")
+      end
+
+      montant = params[:amount].present? ? (params[:amount].to_s.tr(",", ".").to_f * 100).round : nil
+      Finance::RecordSalesInvoicePayment.new(
+        sales_invoice: facture, cash_entry: @entry, amount_cents: montant, whodunnit: current_user&.email
       ).run!
 
-      apres_affectation(@entry, finance_unallocated_cash_entries_path,
-                        notice: "Facture #{facture.number} encaissée — #{lignes.size} ligne(s) de recette, " \
-                                "l'IBAN est mémorisé pour ce client.")
+      suite = if facture.on_issue?
+                facture.reload.paid? ? "elle est soldée." : "il reste #{Money.new(facture.remaining_cents, 'EUR').format} à encaisser."
+              else
+                "la recette est ventilée selon le séjour, l'IBAN est mémorisé pour ce client."
+              end
+      apres_affectation(@entry, finance_unallocated_cash_entries_path, notice: "#{facture.label} rapprochée — #{suite}")
     rescue Finance::RecordSalesInvoicePayment::WrongDirection,
            Finance::RecordSalesInvoicePayment::AlreadyPaid,
            Finance::RecordSalesInvoicePayment::NoVentilableSource,
+           Finance::RecordSalesInvoicePayment::TooMuch,
+           Finance::RecordSalesInvoicePayment::MissingAccount,
            Finance::VentilateStay::EmptyQuote, Finance::VentilateStay::MissingMapping,
            Accounting::PostCashEntry::NotFullyAllocated,
            Accounting::PostDocument::MissingFiscalYear,
@@ -416,6 +429,18 @@ module Finance
     # entrante qui porte encore quelque chose : « Ventiler ce séjour » répartit
     # le montant choisi, ce qui reste par défaut (Michael, 2026-10-30 : le bar
     # peut être affecté avant ou après la nuitée).
+    # Les factures de vente qui attendent encore quelque chose, pour les
+    # rapprocher à la main depuis la fiche : une ligne entrante encaisse une
+    # facture, une ligne sortante rembourse une note de crédit.
+    def charger_factures_vente
+      return if @entry.posted? || @entry.status == "excluded" || @entry.remaining_cents.zero?
+
+      scope = SalesInvoice.issued.includes(:third_party, :customer, :legal_entity).ordered
+      scope = @entry.amount_cents.positive? ? scope.invoices : scope.credit_notes.where(credited_invoice_id: nil, posting_mode: "on_issue")
+      @sales_invoice_choices = scope.limit(300).to_a
+      @proposed_sales_invoice_id = Finance::MatchSalesInvoices.new(invoices: @sales_invoice_choices).for_entry(@entry).first&.invoice&.id
+    end
+
     def charger_sejours
       return unless @entry.incoming? && @entry.status == "pending" && @entry.remaining_cents.positive?
 

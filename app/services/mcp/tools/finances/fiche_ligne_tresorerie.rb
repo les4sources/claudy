@@ -84,6 +84,10 @@ module Mcp
 
         def pistes_entree(entry)
           pistes = []
+          ::Finance::MatchPurchaseInvoices.new.for_entry(entry).each do |m|
+            pistes << "avec: facture_achat, facture: #{m.invoice.id} — remboursement de la #{m.invoice.payable_label.downcase_first} " \
+                      "reste #{euros(m.due_cents)} (#{m.reason})"
+          end
           if (sejour = ::Finance::MatchStay.new(cash_entry: entry).run!)
             lignes = begin
               ::Finance::VentilateStay.new(stay: sejour.stay, amount_cents: entry.amount_cents).run!
@@ -104,7 +108,8 @@ module Mcp
                       "poste probable #{m.flow_label} (#{m.reason}, #{m.confidence} %)"
           end
           ::Finance::MatchSalesInvoices.new.for_entry(entry).each do |m|
-            pistes << "avec: facture_vente, facture_vente: #{m.invoice.id} — #{m.invoice.label} #{euros(m.invoice.total_cents)} (#{m.reason})"
+            pistes << "avec: facture_vente, facture_vente: #{m.invoice.id} — #{m.invoice.label} #{m.invoice.customer_name} " \
+                      "#{euros(m.invoice.total_cents)}, reste dû #{euros(m.invoice.remaining_cents)} (#{m.reason})"
           end
           ::Finance::MatchStripePayouts.new.for_entry(entry).each do |m|
             pistes << "avec: versement_stripe, versement_stripe: #{m.payout.id} — #{m.payout.account_label} #{euros(m.payout.amount_cents)} " \

@@ -31,8 +31,9 @@ module Finance
                             .sort_by { |piece| [piece.due_on || Date.new(9999, 1, 1), piece.attachment.id] }
     end
 
-    # Les factures seules : une note de crédit ne s'encode pas comme une facture
-    # d'achat, et la soustraire ferait passer 5 factures pour presque rien.
+    # Les factures seules : une note de crédit s'impute sur la facture qu'elle
+    # cite, une fois encodée ; la soustraire ici ferait passer 5 factures pour
+    # presque rien.
     def total_cents = pieces.reject(&:credit_note?).sum(&:total_cents)
 
     private

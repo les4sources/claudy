@@ -1,5 +1,5 @@
 / Grille "Espaces" JOUR par JOUR — remplace les hall slots pour le B2C.
-/ Chaque cellule cycle : — → Journée → Soirée → J+S via space_slot_controller.
+/ Chaque cellule cycle : — → Journée → ½ jour → Soirée → J+S via space_slot_controller.
 / Epic #234, Phase 1 : les colonnes sont les JOURS du séjour, du jour d'arrivée
 / au jour de DÉPART INCLUS. Une salle se loue à la journée — un groupe qui dort
 / 4 nuits du lundi au vendredi occupe la salle les 5 jours. Les grilles à la
@@ -47,9 +47,9 @@
         = funnel_icon :hall, css_class: "w-5 h-5 text-ember flex-shrink-0"
         span Salles et cuisine
       - if public_mode
-        p.funnel-hint.mt-1 Touchez une case : journée, puis soirée, puis les deux.
+        p.funnel-hint.mt-1 Touche une case : journée, demi-journée, soirée, puis journée + soirée.
       - else
-        p.text-xs.text-moss.mt-0.5 Cliquez pour réserver — journée, soirée ou les deux, pour chaque jour du séjour, du jour d'arrivée au jour de départ. Tarifs semaine (↑ week-end).
+        p.text-xs.text-moss.mt-0.5 Clique pour réserver — journée, demi-journée, soirée ou journée + soirée, pour chaque jour du séjour, du jour d'arrivée au jour de départ. Tarifs semaine (↑ week-end).
     .flex.items-center.gap-2.flex-shrink-0.ml-4.mt-0.5
       / Nouvel onglet, et ça se voit (Michael, 2026-10-03) : le client ne doit
       / pas quitter le formulaire en cours de remplissage.
@@ -160,6 +160,9 @@
       .flex.items-center.gap-1.5
         span.funnel-slot.funnel-slot--legend(data-slot="journee") Jour
         span.text-xs.text-moss Journée
+      .flex.items-center.gap-1.5
+        span.funnel-slot.funnel-slot--legend(data-slot="demi_journee") ½ jour
+        span.text-xs.text-moss Demi-journée (matin ou après-midi)
       .flex.items-center.gap-1.5
         span.funnel-slot.funnel-slot--legend(data-slot="soiree") Soir
         span.text-xs.text-moss Soirée

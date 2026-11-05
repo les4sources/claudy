@@ -38,6 +38,23 @@ RSpec.describe "Stays — section Comptabilité de la modale", type: :request do
       expect(response.body).to match(/<option selected="selected" value="none">Non requise<\/option>/)
     end
 
+    # Michael 2026-11-03 — le virement signalé par le client, partiel compris.
+    it "montre le virement signalé par le client et ce qu'il manque" do
+      stay = create_stay
+      stay.update!(total_amount_cents: 48_500, transfer_notified_at: Time.current, transfer_notified_cents: 15_000)
+
+      get stay_path(stay, modal: 1)
+
+      notice = response.body[/data-stay-transfer-notice="true".*?<\/div>/m]
+      expect(notice).to include("150,00", "partiel, il manque 335,00")
+    end
+
+    it "ne montre rien sans virement signalé" do
+      get stay_path(create_stay, modal: 1)
+
+      expect(response.body).not_to include('data-stay-transfer-notice="true"')
+    end
+
     it "passe par une liste cherchable" do
       get stay_path(create_stay, modal: 1)
 

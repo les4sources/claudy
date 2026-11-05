@@ -49,6 +49,7 @@ en:
         two_hours: "2 hours"
         evening: "evening"
         day: "day"
+        halfday: "half day"
         fullday: "day + evening"
         see_notes: "see notes"
         unspecified: "period not specified"

@@ -40,6 +40,9 @@ module MailIntake
 
     def number = text("/*/ID")
 
+    # La facture qu'une note de crédit corrige, quand le fournisseur la cite.
+    def credited_number = text("/*/BillingReference/InvoiceDocumentReference/ID")
+
     def issued_on = date(text("/*/IssueDate"))
 
     def due_on = date(text("/*/DueDate") || text("//PaymentMeans/PaymentDueDate"))

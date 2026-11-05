@@ -145,5 +145,98 @@ RSpec.describe Mcp::Server, "finances : fournisseurs et clients" do
       confirme("facture_vente", { "geste" => "retirer", "facture" => "##{facture.id}" })
       expect(SalesInvoice.count).to eq(0)
     end
+
+    # Michael, 2026-10-30 : toute facture au registre, pas seulement celles
+    # d'une réservation.
+    it "enregistre une facture sans réservation, avec son écriture, sa note de crédit et son PDF" do
+      build_general_account(code: "400000", name: "Clients", klass: 4, nature: "asset")
+      build_general_account(code: "701002", name: "Location de salles", klass: 7, nature: "revenue")
+      ThirdParty.create!(name: "Commune de Saint-Gilles", kind: "customer")
+      pdf = Base64.strict_encode64("%PDF-1.4 facture de test")
+
+      sortie = confirme("facture_vente", { "geste" => "enregistrer", "tiers" => "Saint-Gilles", "numero" => "2026-061",
+                                           "date" => "#{Date.current.year}-01-15", "piece_pdf" => pdf,
+                                           "lignes" => [{ "compte" => "701002", "libelle" => "Salle du Moulin", "montant_ht" => "450" }] })
+      facture = SalesInvoice.find_by!(number: "2026-061")
+      expect(sortie).to include("journal Ventes", "Commune de Saint-Gilles", "450,00 €")
+      expect(facture).to have_attributes(total_cents: 45_000, posting_mode: "on_issue", legal_entity: entity)
+      expect(facture.document).to be_attached
+      expect(facture.journal_entry.journal_lines.map { |l| [l.general_account.code, l.debit_cents, l.credit_cents] })
+        .to contain_exactly(["400000", 45_000, 0], ["701002", 0, 45_000])
+
+      tva = outil("facture_vente", { "geste" => "enregistrer", "tiers" => "Saint-Gilles", "numero" => "2026-099",
+                                     "lignes" => [{ "compte" => "701002", "montant_ht" => "100", "taux" => 21 }] })
+      expect(texte(tva)).to include("pas assujettie")
+
+      confirme("facture_vente", { "geste" => "enregistrer", "type" => "note_de_credit", "tiers" => "Saint-Gilles",
+                                  "numero" => "2026-062", "facture_corrigee" => "2026-061", "date" => "#{Date.current.year}-01-20",
+                                  "lignes" => [{ "compte" => "701002", "montant_ht" => "50" }] })
+      expect(texte(outil("factures_vente", { "tiers" => "Saint-Gilles", "impayees" => true })))
+        .to include("n° 2026-061", "reste dû 400,00 €")
+      expect(texte(outil("factures_vente", { "type" => "note_de_credit" }))).to include("NC n° 2026-062", "corrige 2026-061")
+
+      confirme("facture_vente", { "geste" => "corriger", "facture" => "2026-062",
+                                  "lignes" => [{ "compte" => "701002", "montant_ht" => "40" }] })
+      expect(SalesInvoice.find_by!(number: "2026-062").total_cents).to eq(4_000)
+      expect(facture.reload.remaining_cents).to eq(41_000)
+
+      expect(texte(outil("facture_vente", { "geste" => "retirer", "facture" => "2026-061" }))).to include("note de crédit")
+    end
+
+    it "encaisse une facture du registre en deux virements avec rapprocher_ligne" do
+      build_general_account(code: "400000", name: "Clients", klass: 4, nature: "asset")
+      build_general_account(code: "701002", name: "Location de salles", klass: 7, nature: "revenue")
+      banque = build_general_account(code: "550000", name: "Banque")
+      compte = build_cash_account(entity, banque)
+      fabry = ThirdParty.create!(name: "Fabry", kind: "customer")
+      facture = SalesInvoices::Record.new(attributes: {
+                                            legal_entity_id: entity.id, third_party_id: fabry.id, number: "2026-047",
+                                            issued_on: Date.new(Date.current.year, 1, 10), total_cents: 100_000,
+                                            sales_invoice_lines_attributes: [{ general_account_id: GeneralAccount.find_by(code: "701002").id,
+                                                                               net_cents: 100_000, vat_rate: 0 }]
+                                          }).run!
+      premiere = build_cash_entry(compte, amount_cents: 40_000, entry_date: Date.new(Date.current.year, 1, 20))
+      premiere.update!(communication: "2026-047")
+      expect(texte(outil("fiche_ligne_tresorerie", { "ligne" => premiere.id }))).to include("facture_vente: #{facture.id}", "reste dû 1000,00 €")
+
+      sortie = confirme("rapprocher_ligne", { "ligne" => premiere.id, "avec" => "facture_vente", "facture_vente" => "2026-047" })
+      expect(sortie).to include("Imputé sur le 400000 de Fabry", "reste dû 600,00 €")
+
+      seconde = build_cash_entry(compte, amount_cents: 60_000, entry_date: Date.new(Date.current.year, 1, 25))
+      confirme("rapprocher_ligne", { "ligne" => seconde.id, "avec" => "facture_vente", "facture_vente" => facture.id, "montant" => "600" })
+      expect(facture.reload.status).to eq("paid")
+    end
+
+    it "rattache une écriture de vente reprise et relie son encaissement, sans nouvelle écriture" do
+      clients = build_general_account(code: "400000", name: "Clients", klass: 4, nature: "asset")
+      salles = build_general_account(code: "701002", name: "Location de salles", klass: 7, nature: "revenue")
+      banque = build_general_account(code: "550000", name: "Banque")
+      compte = build_cash_account(entity, banque)
+      ciep = ThirdParty.create!(name: "CIEP Namur", kind: "customer")
+      annee = Date.current.year
+      ecriture = Accounting::PostDocument.new(
+        legal_entity: entity, journal: "sales", entry_date: Date.new(annee, 1, 28), label: "#{annee}-094 CIEP Namur - ateliers",
+        lines: [{ account: clients, debit_cents: 75_000, credit_cents: 0, third_party: ciep },
+                { account: salles, debit_cents: 0, credit_cents: 75_000 }]
+      ).run!
+      virement = build_cash_entry(compte, amount_cents: 75_000, entry_date: Date.new(annee, 1, 29))
+      virement.update!(communication: "Paiement facture #{annee}-094")
+      virement.cash_allocations.create!(general_account: clients, legal_entity: entity, third_party: ciep, amount_cents: 75_000)
+      Accounting::PostCashEntry.new(cash_entry: virement.reload).run!
+
+      apercu = texte(outil("facture_vente", { "geste" => "enregistrer", "rattacher_ecriture" => ecriture.reference }))
+      expect(apercu).to include("aucune nouvelle écriture", "n° #{annee}-094", "CIEP Namur", "Paiement relié : ligne ##{virement.id}")
+      expect(SalesInvoice.count).to eq(0)
+
+      expect { confirme("facture_vente", { "geste" => "enregistrer", "rattacher_ecriture" => "#{annee}-094" }) }
+        .not_to change(JournalEntry, :count)
+      facture = SalesInvoice.find_by!(number: "#{annee}-094")
+      expect(facture).to have_attributes(journal_entry: ecriture, status: "paid", third_party: ciep)
+
+      expect(texte(outil("facture_vente", { "geste" => "corriger", "facture" => "#{annee}-094", "montant" => "700" })))
+        .to include("écriture reprise")
+      expect(confirme("facture_vente", { "geste" => "retirer", "facture" => "#{annee}-094" })).to include("retirée")
+      expect(virement.cash_allocations.sole.reload.document).to be_nil
+    end
   end
 end

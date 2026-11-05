@@ -1,0 +1,101 @@
+/ Le formulaire d'une facture de vente sans réservation (Michael, 2026-10-30) :
+  tiers client, type (facture ou note de crédit), lignes de produit, PDF.
+  L'enregistrement passe l'écriture au journal Ventes.
+
+  Le reste à ventiler se calcule pendant qu'on tape, avec le contrôleur des
+  factures d'achat : même calcul de TVA, taux par taux.
+- default_rate = invoice.vat_subject? ? 21 : 0
+= form_with model: invoice, url: url, method: method, html: { class: "space-y-6", multipart: true },
+            data: { controller: "purchase-invoice-form" } do |f|
+  .grid.gap-4(class="lg:grid-cols-2")
+    .space-y-4.min-w-0
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-4
+        .grid.gap-3(class="sm:grid-cols-2")
+          / Facture ou note de crédit : la note de crédit passe l'écriture
+            inverse et réduit le reste dû de la facture qu'elle corrige.
+          .sm:col-span-2.flex.flex-wrap.items-center.gap-2.text-sm
+            span.text-gray-500 Type
+            .inline-flex.rounded-lg.bg-gray-100.p-1
+              - SalesInvoice::KINDS.each do |kind|
+                label.cursor-pointer
+                  = f.radio_button :kind, kind, class: "peer sr-only"
+                  span.block.rounded-md.px-3.py-1.text-gray-600(class="peer-checked:bg-white peer-checked:text-gray-900 peer-checked:shadow-sm peer-focus-visible:ring-2 peer-focus-visible:ring-4s-main")= SalesInvoice::KIND_LABELS[kind]
+          div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un tiers…" class="relative sm:col-span-2")
+            .flex.items-center.justify-between
+              label.block.text-xs.font-medium.text-gray-500(for="sales_invoice_third_party_id") Client (tiers)
+              = link_to "Nouveau tiers", new_finance_third_party_path, class: "text-xs text-blue-500 hover:underline", target: "_blank"
+            = f.collection_select :third_party_id, third_parties, :id, :name, { include_blank: "Choisir…" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+            = render "shared/searchable_select_search", label: "Chercher un tiers"
+          div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une entité…" class="relative")
+            label.block.text-xs.font-medium.text-gray-500 Entité qui facture
+            = f.collection_select :legal_entity_id, entities, :id, :name, {}, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+            = render "shared/searchable_select_search", label: "Chercher une entité"
+          div
+            label.block.text-xs.font-medium.text-gray-500 Numéro OkiOki
+            = f.text_field :number, label: false, placeholder: "2026-047", class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+          div
+            label.block.text-xs.font-medium.text-gray-500 Date d'émission
+            = f.date_field :issued_on, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+          div
+            label.block.text-xs.font-medium.text-gray-500 Montant TTC (€)
+            = text_field_tag "sales_invoice[total]", (invoice.total_cents.to_i.positive? ? format("%.2f", invoice.total_cents / 100.0) : nil),
+                             inputmode: "decimal", placeholder: "0,00",
+                             class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
+                             data: { purchase_invoice_form_target: "total", action: "input->purchase-invoice-form#refresh" }
+          div(data-controller="searchable-select" data-searchable-select-placeholder-value="Aucune" data-searchable-select-clearable-value="true" class="relative sm:col-span-2")
+            label.block.text-xs.font-medium.text-gray-500(for="sales_invoice_credited_invoice_id") Facture corrigée (note de crédit)
+            = f.collection_select :credited_invoice_id, creditable, :id, ->(i) { "#{i.number} · #{i.customer_name || '—'} · #{humanized_money_with_symbol(Money.new(i.total_cents, 'EUR'))}" }, { include_blank: "Aucune" }, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm", data: { searchable_select_target: "select" }
+            = render "shared/searchable_select_search", label: "Chercher une facture"
+            p.mt-1.text-xs.text-gray-400 Seulement pour une note de crédit : elle réduit le reste dû de cette facture.
+
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+        .flex.flex-wrap.items-center.justify-between.gap-2.mb-3
+          h3.text-xs.uppercase.tracking-wide.text-gray-400 Lignes
+          button.text-sm.text-blue-500(type="button" data-action="purchase-invoice-form#add") ➕ Ajouter une ligne
+        - unless invoice.vat_subject?
+          p.mb-3.text-xs.text-gray-500 = "#{invoice.legal_entity&.name || 'Cette entité'} n'est pas assujettie : les lignes se facturent à 0 % et tout part au produit."
+
+        #lignes.space-y-3(data-purchase-invoice-form-target="rows")
+          - invoice.sales_invoice_lines.each_with_index do |line, index|
+            = f.fields_for :sales_invoice_lines, line, child_index: index do |lf|
+              = render "finance/sales_invoices/open_line", lf: lf, revenue_accounts: revenue_accounts, teams: teams
+
+        template(data-purchase-invoice-form-target="template")
+          = f.fields_for :sales_invoice_lines, SalesInvoiceLine.new(vat_rate: default_rate), child_index: "NEW_RECORD" do |lf|
+            = render "finance/sales_invoices/open_line", lf: lf, revenue_accounts: revenue_accounts, teams: teams
+
+        .mt-4.border-t.border-gray-100.pt-3.space-y-1
+          .flex.items-center.justify-between.text-sm
+            span.text-gray-500 Total HTVA
+            span.font-medium.text-gray-900(data-purchase-invoice-form-target="allocated") —
+          .flex.items-center.justify-between.text-sm
+            span.text-gray-500 TVA
+            span.font-medium.text-gray-900(data-purchase-invoice-form-target="vat") —
+          .flex.items-center.justify-between.text-sm
+            span.text-gray-500 Écart avec le montant TTC
+            span.font-semibold.text-gray-900(data-purchase-invoice-form-target="remaining") —
+
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+        label.block.text-xs.font-medium.text-gray-500(for="sales_invoice_notes") Notes
+        = f.text_area :notes, rows: 3, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+
+      .flex.flex-wrap.items-center.gap-3
+        = f.submit submit_label, class: "inline-flex items-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90 cursor-pointer"
+        = link_to "Annuler", cancel_path, class: "text-sm text-gray-500 hover:underline"
+      p.text-xs.text-gray-400 L'enregistrement passe l'écriture au journal Ventes : débit du 400000 sur le tiers, crédit des comptes de produit, et du 451000 si l'entité est assujettie.
+
+    .min-w-0.self-start(class="lg:sticky lg:top-4")
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-3
+        h3.text-xs.uppercase.tracking-wide.text-gray-400 PDF de la facture
+        - document_blob = invoice.persisted? && invoice.document.attached? ? invoice.document.blob : nil
+        label.block.cursor-pointer.rounded-xl.border-2.border-dashed.border-gray-300.px-4.py-3.text-center(data-purchase-invoice-form-target="dropzone" data-action="dragover->purchase-invoice-form#dragover dragleave->purchase-invoice-form#dragleave drop->purchase-invoice-form#drop")
+          p.text-sm.text-gray-600= document_blob ? "Glisse un autre PDF ici pour le remplacer." : "Glisse le PDF ici, ou clique pour le choisir."
+          p.mt-1.text-xs.text-gray-400(data-purchase-invoice-form-target="filename")
+            = document_blob ? document_blob.filename.to_s : "Aucun PDF choisi"
+          = file_field_tag "sales_invoice[document]", accept: "application/pdf", class: "hidden",
+                           data: { purchase_invoice_form_target: "file", action: "change->purchase-invoice-form#showFilename" }
+        - source = document_blob ? rails_blob_path(document_blob, disposition: "inline") : nil
+        iframe.w-full.rounded-lg.ring-1.ring-gray-200(src=(source && "#{source}#navpanes=0&view=FitH") hidden=source.nil? title="Aperçu de la facture" style="height: 70vh" data-purchase-invoice-form-target="previewFrame")
+        img(hidden=true alt="" data-purchase-invoice-form-target="previewImage")
+        - if source.nil?
+          p.text-xs.text-gray-400(data-purchase-invoice-form-target="previewEmpty") Le PDF s'affichera ici, à côté des champs, pour les vérifier.

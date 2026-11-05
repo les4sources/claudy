@@ -6,6 +6,9 @@ module SalesInvoices
   # affectées avec cette facture en `document` couvrent son total. Et ça
   # fonctionne dans les deux sens — défaire l'affectation la ramène à « émise ».
   # Un état qui ne sait que monter est un état faux.
+  #
+  # Une note de crédit qui corrige une facture la règle d'autant ; liée à sa
+  # facture, elle est elle-même réglée d'office (`SalesInvoice#settled_cents`).
   class RefreshPayment < ServiceBase
     def initialize(sales_invoice:)
       @invoice = sales_invoice
@@ -19,10 +22,10 @@ module SalesInvoices
     def refresh
       return @invoice if @invoice.blank?
 
-      couvert = @invoice.cash_allocations.sum(:amount_cents).abs
+      couvert = @invoice.settled_cents
 
       if couvert >= @invoice.total_cents && @invoice.total_cents.positive?
-        @invoice.update_columns(status: "paid", paid_on: derniere_date || Date.current) unless @invoice.paid?
+        @invoice.update_columns(status: "paid", paid_on: derniere_date || @invoice.issued_on) unless @invoice.paid?
       elsif @invoice.paid?
         @invoice.update_columns(status: "issued", paid_on: nil)
       end
@@ -30,8 +33,12 @@ module SalesInvoices
       @invoice.reload
     end
 
+    # Le jour où la facture a été soldée : le dernier encaissement ou la
+    # dernière note de crédit qui la corrige.
     def derniere_date
-      @invoice.cash_allocations.includes(:cash_entry).filter_map { |a| a.cash_entry&.entry_date }.max
+      dates = @invoice.cash_allocations.includes(:cash_entry).filter_map { |a| a.cash_entry&.entry_date }
+      dates += @invoice.credit_notes.pluck(:issued_on) unless @invoice.credit_note?
+      dates.max
     end
   end
 end

@@ -277,4 +277,41 @@ RSpec.describe "Comptabilité — encaisser une facture de vente (epic #240, pha
       expect(response.body).not_to include("Encaisser cette facture")
     end
   end
+
+  # Michael, 2026-10-30 : toute facture du registre s'encaisse, en un ou
+  # plusieurs virements, et se choisit à la main depuis la fiche de la ligne.
+  describe "une facture passée au journal Ventes" do
+    let!(:clients) { build_general_account(code: "400000", name: "Clients", klass: 4, nature: "asset") }
+    let!(:salles) { build_general_account(code: "701002", name: "Location de salles", klass: 7, nature: "revenue") }
+    let!(:fabry) { ThirdParty.create!(name: "Fabry", kind: "customer") }
+    let!(:libre) do
+      SalesInvoices::Record.new(attributes: { legal_entity_id: entity.id, third_party_id: fabry.id, number: "2026-047",
+                                              issued_on: Date.new(2026, 6, 2), total_cents: 80_000,
+                                              sales_invoice_lines_attributes: [{ general_account_id: salles.id, net_cents: 80_000, vat_rate: 0 }] }).run!
+    end
+
+    it "se propose sur la fiche de la ligne et s'encaisse en partie" do
+      entry = entrante(50_000)
+      entry.update!(communication: "Facture 2026-047 acompte")
+
+      get finance_cash_entry_path(entry)
+      expect(response.body).to include("Encaisser une facture de vente", "2026-047 · Fabry")
+      expect(response.body).to include("La facture ##{libre.id} est proposée")
+
+      post collect_sales_invoice_finance_cash_entry_path(entry), params: { sales_invoice_id: libre.id, amount: "50" }
+
+      expect(response).to redirect_to(finance_unallocated_cash_entries_path)
+      expect(flash[:notice]).to include("il reste 750 €")
+      expect(entry.reload.cash_allocations.sole).to have_attributes(general_account: clients, amount_cents: 5_000)
+      expect(libre.reload.remaining_cents).to eq(75_000)
+    end
+
+    it "est proposée dans la file quand la communication cite son numéro" do
+      entrante(80_000).update!(communication: "2026-047")
+
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to include("Facture de vente 2026-047", "La communication cite la facture 2026-047")
+    end
+  end
 end

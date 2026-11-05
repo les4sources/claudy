@@ -25,6 +25,12 @@ RSpec.describe SpacesGridHelper, type: :helper do
       expect(helper.spaces_summary_line(periodes, jours)).to eq("2 journées · + 2 soirées · lun 8 → ven 12")
     end
 
+    it "compte les demi-journées à part, entre journées et soirées" do
+      periodes = ["journee", "demi_journee", "demi_journee", "", "soiree"]
+
+      expect(helper.spaces_summary_line(periodes, jours)).to eq("1 journée · 2 demi-journées · + 1 soirée · lun 8 → ven 12")
+    end
+
     it "n'affiche pas de plage pour un seul jour" do
       periodes = ["", "", "journee", "", ""]
 
@@ -40,8 +46,8 @@ RSpec.describe SpacesGridHelper, type: :helper do
 
   describe "#space_rate_hint" do
     it "dérive journée, soirée et forfait 5 jours du catalogue" do
-      expect(helper.space_rate_hint("petite_salle")).to eq("140 €/j · 90 €/soir · 525 € les 5 jours")
-      expect(helper.space_rate_hint("grande_salle")).to eq("290 €/j · 190 €/soir · 990 € les 5 jours")
+      expect(helper.space_rate_hint("petite_salle")).to eq("140 €/j · 90 €/½ j ou soir · 525 € les 5 jours")
+      expect(helper.space_rate_hint("grande_salle")).to eq("290 €/j · 190 €/½ j ou soir · 990 € les 5 jours")
     end
 
     it "suit la table `rates` avant les constantes" do

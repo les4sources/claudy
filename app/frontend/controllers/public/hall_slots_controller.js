@@ -88,6 +88,7 @@ export default class extends Controller {
       [
         ["— Période —", ""],
         ["Journée", "journee"],
+        ["Demi-journée", "demi_journee"],
         ["Soirée", "soiree"],
         ["Journée + Soirée", "journee_et_soiree"]
       ]

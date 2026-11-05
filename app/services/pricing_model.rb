@@ -324,6 +324,7 @@ class PricingModel
   # --- Salles & cuisine pro : forfait par ligne {kind, date, period} ---
   PERIOD_LABELS = {
     "journee"           => "journée",
+    "demi_journee"      => "demi-journée",
     "soiree"            => "soirée",
     "journee_et_soiree" => "journée + soirée"
   }.freeze

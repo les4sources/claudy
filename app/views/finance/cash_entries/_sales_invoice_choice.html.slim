@@ -1,0 +1,30 @@
+/ Rapprocher une facture de vente choisie à la main (Michael, 2026-10-30) :
+  toute facture du registre, avec le montant qu'on impute. Une facture payée
+  en deux virements s'encaisse deux fois ; un virement qui solde deux
+  factures se rapproche de l'une puis de l'autre.
+- montant = ->(cents) { number_with_precision(cents / 100.0, precision: 2, separator: ",") }
+- entrante = entry.amount_cents.positive?
+.mb-4.p-4.bg-white.rounded-lg.border.border-gray-100
+  h4.text-sm.font-semibold.text-gray-900= entrante ? "Encaisser une facture de vente" : "Rembourser une note de crédit"
+  p.mt-1.mb-3.text-xs.text-gray-500
+    - if entrante
+      | Une facture passée au journal Ventes s'impute sur le 400000 de son client ; celle d'un séjour ventile la recette du séjour. Sans montant, ce qui reste dû, dans la limite de la ligne.
+    - else
+      | La note de crédit s'impute sur le 400000 du client : la ligne la rembourse.
+    - if proposed_id
+      =< "La facture ##{proposed_id} est proposée d'après la communication, le montant ou l'IBAN."
+  = form_with url: collect_sales_invoice_finance_cash_entry_path(entry), method: :post, class: "flex flex-wrap items-end gap-3" do
+    div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher une facture…" class="relative w-full max-w-xl")
+      = label_tag "sales_invoice_id_#{entry.id}", "Facture", class: "block text-xs font-medium text-gray-500"
+      = select_tag :sales_invoice_id,
+                   options_for_select(choices.map { |f| ["#{f.number} · #{f.customer_name || '—'} · reste #{montant.call(f.remaining_cents)} € · #{f.legal_entity.name}", f.id] }, proposed_id),
+                   id: "sales_invoice_id_#{entry.id}",
+                   include_blank: "Choisir…",
+                   class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm",
+                   data: { searchable_select_target: "select" }
+      = render "shared/searchable_select_search", label: "Chercher une facture"
+    div
+      = label_tag "sales_invoice_amount_#{entry.id}", "Montant (€)", class: "block text-xs font-medium text-gray-500"
+      = text_field_tag :amount, nil, id: "sales_invoice_amount_#{entry.id}", inputmode: "decimal", placeholder: montant.call(entry.remaining_cents.abs),
+                       class: "mt-1 w-28 rounded-md border-gray-300 text-sm shadow-sm"
+    button.inline-flex.items-center.rounded-md.border.border-transparent.px-4.py-2.text-sm.font-medium.text-white.shadow-sm(class="bg-4s-main hover:opacity-90" type="submit")= entrante ? "Encaisser" : "Rembourser"

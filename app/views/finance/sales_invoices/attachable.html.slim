@@ -1,0 +1,62 @@
+/ Reprise (Michael, 2026-10-30) : les écritures de vente déjà au grand livre
+  qui attendent leur facture au registre. Rattacher n'écrit rien au grand
+  livre : la facture pointe l'écriture, et les encaissements déjà au 400000
+  du tiers deviennent ses paiements.
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Rattacher des écritures de vente"
+
+= render "finance/shared/entity_filter", url: attachable_finance_sales_invoices_path, all: false
+
+.mb-5.flex.flex-wrap.items-center.gap-2
+  - [@year - 1, @year, @year + 1].each do |annee|
+    = link_to annee, attachable_finance_sales_invoices_path(legal_entity_id: @entity.id, year: annee), class: "rounded-full px-3 py-1 text-sm #{annee == @year ? 'bg-gray-900 text-white' : 'bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50'}"
+  = link_to "Retour au registre", finance_sales_invoices_path(legal_entity_id: @entity.id), class: "ml-2 text-sm text-blue-500 hover:text-blue-700"
+
+- prets = @previews.count(&:ready?)
+.mb-6.rounded-xl.border.border-stone-200.bg-white.px-4.py-3.text-sm.text-stone-600
+  p
+    strong.text-stone-800 = "#{@previews.size} écriture(s) de vente #{@year} sans facture au registre chez #{@entity.name}."
+    = " #{prets} se lisent seules (numéro en tête du libellé, tiers sur le 400000)."
+  p.mt-1.text-xs.text-stone-500
+    | Rattacher ne passe aucune écriture. Les virements déjà imputés au 400000 du tiers qui citent le numéro, sinon le seul du montant exact, deviennent les paiements de la facture.
+  - if prets.positive?
+    = button_to "Rattacher les #{prets} écriture(s) lisibles", attach_all_finance_sales_invoices_path(legal_entity_id: @entity.id, year: @year),
+                class: "mt-3 inline-flex items-center rounded-lg bg-4s-main px-3 py-2 text-sm font-medium text-white hover:bg-teal-700 cursor-pointer",
+                form: { data: { turbo_confirm: "Rattacher #{prets} écriture(s) de #{@entity.name} au registre des ventes ?" } }
+
+- if @previews.empty?
+  .rounded-xl.border.border-dashed.border-stone-300.p-8.text-center
+    p.text-sm.text-stone-500 Toutes les écritures de vente de cette année ont leur facture au registre.
+- else
+  .divide-y.divide-gray-200.overflow-hidden.rounded-lg.bg-white.shadow.ring-1.ring-black.ring-opacity-5
+    .hidden.grid-cols-12.gap-3.bg-gray-50.px-3.py-2.text-xs.font-medium.uppercase.text-gray-500(class="md:grid")
+      .col-span-2 Écriture
+      .col-span-3 Libellé
+      .col-span-2.text-right Montant
+      .col-span-2 Numéro
+      .col-span-3 Client (tiers)
+    - @previews.each do |preview|
+      - entry = preview.entry
+      = form_with url: attach_finance_sales_invoices_path, method: :post, class: "grid grid-cols-1 items-center gap-3 px-3 py-2 text-sm md:grid-cols-12", data: { attach_entry: entry.id } do
+        = hidden_field_tag :journal_entry_id, entry.id
+        .md:col-span-2
+          p.font-medium.text-gray-800 = entry.reference
+          p.text-xs.text-gray-500 = l(entry.entry_date, format: :long)
+        .md:col-span-3.text-gray-700 = entry.label
+        - if preview.error
+          .md:col-span-7.text-sm.text-red-700 = preview.error
+        - else
+          .md:col-span-2.text-right.tabular-nums.text-gray-800
+            = humanized_money_with_symbol(Money.new(preview.total_cents, "EUR"))
+            - if preview.kind == "credit_note"
+              span class="ml-2 inline-flex rounded-full bg-violet-50 px-2 py-0.5 text-[0.65rem] font-medium text-violet-700" NC
+          .md:col-span-2
+            = text_field_tag :number, preview.number, placeholder: "2026-…", required: true, autocomplete: "off", spellcheck: "false", class: "w-full rounded-lg border-stone-200 text-sm", aria: { label: "Numéro de la facture" }
+          .flex.items-center.gap-2(class="md:col-span-3")
+            - if preview.third_party
+              span.flex-1.text-gray-700 = preview.third_party.name
+            - else
+              div(data-controller="searchable-select" data-searchable-select-placeholder-value="Choisis le client" class="relative flex-1")
+                = select_tag :third_party_id, options_from_collection_for_select(@third_parties, :id, :name), include_blank: "Choisis le client", required: true, class: "w-full rounded-lg border-stone-200 text-sm", data: { searchable_select_target: "select" }
+                = render "shared/searchable_select_search", label: "Chercher un tiers"
+            = submit_tag "Rattacher", class: "rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-sm text-stone-700 hover:border-stone-300 cursor-pointer"

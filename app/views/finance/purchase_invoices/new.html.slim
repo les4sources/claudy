@@ -1,5 +1,5 @@
 - content_for :page_header do
-  = render "layouts/components/page_header", title: "Nouvelle facture d'achat"
+  = render "layouts/components/page_header", title: (@invoice.credit_note? ? "Nouvelle note de crédit fournisseur" : "Nouvelle facture d'achat")
 
 - if @mail_attachment
   - courriel = @mail_attachment.mail_message
@@ -18,6 +18,6 @@
     | (#{@deadline.legal_entity.name}) : elle la soldera quand elle sera payée.
 
 = render "finance/purchase_invoices/form", invoice: @invoice, third_parties: @third_parties,
-         entities: @entities, teams: @teams, general_accounts: @general_accounts,
-         url: finance_purchase_invoices_path(compliance_deadline_id: @deadline&.id, mail_attachment_id: @mail_attachment&.id), method: :post, submit_label: "Enregistrer la facture",
+         entities: @entities, teams: @teams, general_accounts: @general_accounts, creditable_invoices: @creditable_invoices,
+         url: finance_purchase_invoices_path(compliance_deadline_id: @deadline&.id, mail_attachment_id: @mail_attachment&.id), method: :post, submit_label: "Enregistrer",
          supplier_draft: @mail_attachment&.supplier_draft

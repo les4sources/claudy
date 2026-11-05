@@ -21,9 +21,58 @@ module Finance
       @expected = queue.expected_payments
       @not_ready = not_ready_invoices
       @unencoded = Finance::UnencodedMailInvoices.new(legal_entity: @entity)
+      # Déjà payée par une sortie passée au 440000 sans elle, ou encodée deux
+      # fois (Michael, 2026-11-05, VOO) : à voir AVANT de repayer.
+      factures = @rows.grep(PurchaseInvoice)
+      @orphan_payments = Finance::OrphanSupplierPayments.new(invoices: factures).by_invoice
+      @duplicates = factures.to_h { |invoice| [invoice.id, invoice.probable_duplicates.to_a] }.select { |_, list| list.any? }
+      load_sepa
+    end
+
+    # Le fichier de virements SEPA des dettes cochées (Michael, 2026-11-05),
+    # pour l'import de la banque en ligne. Il NE PAIE RIEN : les dettes restent
+    # dans la file jusqu'à ce que le relevé ramène les virements et qu'on les
+    # rapproche — un lot peut ne jamais être autorisé dans la banque.
+    def sepa
+      load_entity_filter
+      return redirect_to(finance_payables_path, alert: "Choisis d'abord une structure : un fichier par structure.") unless @entity
+
+      file = Finance::SepaCreditTransfer.new(
+        legal_entity: @entity,
+        debtor_account: Finance::SepaCreditTransfer.debtor_accounts(@entity).find { |a| a.id == params[:cash_account_id].to_i },
+        payables: selected_payables,
+        execution_date: execution_date
+      )
+      send_data file.to_xml, filename: file.filename, type: "application/xml", disposition: "attachment"
+    rescue Finance::SepaCreditTransfer::Error => e
+      redirect_to finance_payables_path(legal_entity_id: @entity.id), alert: e.message
     end
 
     private
+
+    # Une clé par dette, « Classe:id » : la file mélange factures, notes de
+    # frais, relevés… dont les ids se recoupent.
+    helper_method def sepa_key(row) = "#{row.class.name}:#{row.id}"
+
+    def load_sepa
+      return unless @entity
+
+      @sepa_accounts = Finance::SepaCreditTransfer.debtor_accounts(@entity)
+      @sepa_problems = @rows.to_h { |row| [sepa_key(row), Finance::SepaCreditTransfer.problem_for(row)] }
+    end
+
+    # Relues dans la file de la structure, jamais d'après le formulaire : une
+    # dette soldée entre-temps, ou d'une autre structure, n'y est plus.
+    def selected_payables
+      keys = Array(params[:payables]).map(&:to_s)
+      Finance::PayableQueue.new(legal_entity: @entity).rows.select { |row| keys.include?(sepa_key(row)) }
+    end
+
+    def execution_date
+      Date.iso8601(params[:execution_date].to_s)
+    rescue Date::Error
+      Date.current
+    end
 
     # Les factures reçues qui ne sont pas encore « à payer » (à traiter, à
     # valider), Michael 2026-10-30 : hors file et hors total — sans

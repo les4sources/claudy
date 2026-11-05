@@ -27,7 +27,10 @@ table(cellpadding="6" style="border-collapse: collapse; margin: 16px 0;")
     - @entries.each do |entry|
       tr
         td= l(entry.entry_date, format: :short)
-        td= entry.label
+        td
+          = entry.label
+          - if entry.entry_date < @statement.period_month
+            = " (#{l(entry.entry_date, format: '%B %Y')} : arrivée après son décompte)"
         td
           - if entry.quantity.present?
             = "#{entry.quantity.to_s.sub('.0', '')} × #{number_to_currency(entry.unit_price_cents.to_i / 100.0)}"

@@ -53,6 +53,9 @@ module SalesInvoices
             issued_on: @issued_on,
             total_cents: @total_cents,
             status: "issued",
+            # La recette d'une réservation arrive par la ventilation du séjour
+            # à l'encaissement : pas d'écriture de vente (décision 8).
+            posting_mode: "on_payment",
             notes: @notes
           )
           @invoice.document.attach(@document) if @document.present?

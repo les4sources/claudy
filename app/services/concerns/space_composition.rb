@@ -52,13 +52,14 @@ module SpaceComposition
   }.freeze
 
   # Période de PRICING (funnel/admin : "journee"…) → durée CANONIQUE de
-  # `SpaceReservation#duration` (vocabulaire tranche 1 : "day"/"evening"/
+  # `SpaceReservation#duration` (vocabulaire tranche 1 : "day"/"halfday"/"evening"/
   # "fullday"/"2h"/"see_notes", celui que lit `SpaceBookingDecorator#duration`).
   # Sans ce mapping, la composition persistait "journee" → affiché « période
   # non précisée » partout (bug repéré le 2026-07-20). L'inverse vit dans
   # `Stays::DraftReconstructor` (édition → clés de pricing).
   DURATION_BY_PERIOD = {
     "journee"           => "day",
+    "demi_journee"      => "halfday",
     "soiree"            => "evening",
     "journee_et_soiree" => "fullday"
   }.freeze

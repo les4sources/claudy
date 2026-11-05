@@ -39,9 +39,14 @@ class AdminMailer < ApplicationMailer
   # Le client a cliqué « J'ai envoyé le virement » sur la page de son séjour
   # (Michael, 2026-10-19). Même destinataires que le paiement Stripe ; la
   # réponse va au client, pour lui écrire si le virement n'arrive pas.
-  def transfer_announced(stay)
+  # `corrected: true` : le client a corrigé le montant d'un virement déjà
+  # signalé (virement partiel, Michael 2026-11-03).
+  def transfer_announced(stay, corrected: false)
     @stay = StayDecorator.new(stay)
+    @corrected = corrected
     @amount = ActiveSupport::NumberHelper.number_to_currency(stay.transfer_notified_cents.to_i / 100.0)
+    @requested = ActiveSupport::NumberHelper.number_to_currency(@stay.transfer_amount_cents / 100.0)
+    @shortfall = @stay.transfer_shortfall_cents.positive? ? ActiveSupport::NumberHelper.number_to_currency(@stay.transfer_shortfall_cents / 100.0) : nil
     @client = ActionView::Base.full_sanitizer.sanitize(@stay.display_name.to_s).squish.presence || "Client inconnu"
     @dates = ActionView::Base.full_sanitizer.sanitize(@stay.date_range.to_s).squish.presence
     mail(
@@ -49,7 +54,7 @@ class AdminMailer < ApplicationMailer
       to: "compta@les4sources.be",
       cc: "sejours@les4sources.be",
       reply_to: stay.customer&.email.presence,
-      subject: "🏦 Virement annoncé : #{@amount} — #{[@client, @dates].compact.join(" · ")}",
+      subject: "🏦 #{transfer_subject_label} : #{@amount} — #{[@client, @dates].compact.join(" · ")}",
       tag: "admin_transfer_announced",
       bcc: nil
     )
@@ -67,6 +72,11 @@ class AdminMailer < ApplicationMailer
   end
 
   private
+
+  def transfer_subject_label
+    precisions = [("partiel" if @shortfall), ("montant corrigé" if @corrected)].compact
+    precisions.any? ? "Virement annoncé (#{precisions.join(", ")})" : "Virement annoncé"
+  end
 
   def payment_received_subject
     details = [@payment.admin_client_label, @payment.admin_dates_label].compact.join(" · ")

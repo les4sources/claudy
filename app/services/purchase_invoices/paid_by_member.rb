@@ -81,6 +81,7 @@ module PurchaseInvoices
     private
 
     def check_status!
+      raise BadStatus, "Une note de crédit ne se paie pas en magasin." if @invoice.credit_note?
       return if OPEN_STATUSES.include?(@invoice.status)
 
       if @invoice.posted?

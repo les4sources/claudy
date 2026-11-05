@@ -242,6 +242,17 @@ RSpec.describe "Comptabilité > Achats", type: :request do
 
       expect(response.body).to include("TVA manquante")
     end
+
+    it "retire l'alerte dès que le numéro de TVA du fournisseur est complété" do
+      facture = cree_facture(tiers: luminus, number: "L-1")
+      luminus.update!(vat_number: "BE0425528904")
+
+      get finance_purchase_invoices_path
+
+      expect(response.body).to include("L-1")
+      expect(response.body).not_to include("TVA manquante")
+      expect(facture.reload.quality_flags).not_to include("no_vat_number")
+    end
   end
 
   describe "POST /finance/purchases/:id/submit" do
@@ -286,6 +297,105 @@ RSpec.describe "Comptabilité > Achats", type: :request do
 
       post reopen_finance_purchase_invoice_path(facture)
       expect(facture.reload.status).to eq("to_process")
+    end
+  end
+
+  # Michael, 2026-10-31 (facture #23) : un PDF déposé pour remplacer le XML
+  # venu du mail n'arrivait jamais. La pièce passe par un `file_field_tag`,
+  # que `form_with` ne voit pas : sans `multipart`, Turbo envoie le formulaire
+  # encodé en URL et laisse tomber le fichier en silence.
+  describe "la pièce justificative" do
+    def formulaire_de_la_piece
+      Nokogiri::HTML(response.body).at_css("form:has(input[type=file][name='purchase_invoice[document]'])")
+    end
+
+    it "est envoyée en multipart, à la création comme à la modification" do
+      get new_finance_purchase_invoice_path
+      expect(formulaire_de_la_piece["enctype"]).to eq("multipart/form-data")
+
+      get edit_finance_purchase_invoice_path(cree_facture)
+      expect(formulaire_de_la_piece["enctype"]).to eq("multipart/form-data")
+    end
+
+    it "remplace le XML joint par le PDF déposé" do
+      facture = cree_facture
+      facture.document.attach(io: StringIO.new("<Invoice/>"), filename: "facture.xml", content_type: "application/xml")
+      facture.update!(pdf_sha256: Digest::SHA256.hexdigest("<Invoice/>"))
+      pdf = fixture_file_upload("ticket.pdf", "application/pdf")
+
+      patch finance_purchase_invoice_path(facture), params: { purchase_invoice: { notes: "PDF reçu", document: pdf } }
+
+      expect(response).to redirect_to(finance_purchase_invoice_path(facture))
+      facture.reload
+      expect(facture.document.filename.to_s).to eq("ticket.pdf")
+      expect(facture.document.content_type).to eq("application/pdf")
+      expect(facture.pdf_sha256).to eq(Digest::SHA256.file(file_fixture("ticket.pdf")).hexdigest)
+    end
+
+    # Sans autre changement, `attach` sauve tout de suite et vide le fichier :
+    # l'empreinte doit être prise avant.
+    it "prend l'empreinte du PDF même quand rien d'autre ne change" do
+      facture = cree_facture
+
+      patch finance_purchase_invoice_path(facture),
+            params: { purchase_invoice: { document: fixture_file_upload("ticket.pdf", "application/pdf") } }
+
+      expect(facture.reload.pdf_sha256).to eq(Digest::SHA256.file(file_fixture("ticket.pdf")).hexdigest)
+    end
+  end
+
+  # Michael, 2026-10-31 : la facture #23 était déjà « À payer », donc sans
+  # bouton « Modifier », et sa pièce restait le XML du mail.
+  describe "POST /finance/purchases/:id/replace_document" do
+    def joint_un_xml(facture)
+      facture.document.attach(io: StringIO.new("<Invoice/>"), filename: "facture.xml", content_type: "application/xml")
+      facture.update!(pdf_sha256: Digest::SHA256.hexdigest("<Invoice/>"))
+    end
+
+    it "remplace la pièce d'une facture comptabilisée sans toucher à l'écriture" do
+      facture = cree_facture
+      post submit_finance_purchase_invoice_path(facture)
+      joint_un_xml(facture.reload)
+      expect(facture.status).to eq("to_pay")
+      ecriture = JournalEntry.find_by!(source: facture, journal: "purchases")
+
+      get finance_purchase_invoice_path(facture)
+      expect(response.body).to include("Pièce au format XML")
+      formulaire = Nokogiri::HTML(response.body).at_css("form:has(input[type=file][name='purchase_invoice[document]'])")
+      expect(formulaire["action"]).to eq(replace_document_finance_purchase_invoice_path(facture))
+      expect(formulaire["enctype"]).to eq("multipart/form-data")
+
+      post replace_document_finance_purchase_invoice_path(facture),
+           params: { purchase_invoice: { document: fixture_file_upload("ticket.pdf", "application/pdf") } }
+
+      expect(response).to redirect_to(finance_purchase_invoice_path(facture))
+      expect(flash[:notice]).to eq("Pièce remplacée.")
+      facture.reload
+      expect(facture.document.filename.to_s).to eq("ticket.pdf")
+      expect(facture.status).to eq("to_pay")
+      expect(facture.pdf_sha256).to eq(Digest::SHA256.file(file_fixture("ticket.pdf")).hexdigest)
+      expect(JournalEntry.where(source: facture)).to contain_exactly(ecriture)
+    end
+
+    it "refuse une pièce déjà déposée sur une autre facture" do
+      autre = cree_facture(number: "F-AUTRE")
+      autre.update!(pdf_sha256: Digest::SHA256.file(file_fixture("ticket.pdf")).hexdigest)
+      facture = cree_facture
+      joint_un_xml(facture)
+
+      post replace_document_finance_purchase_invoice_path(facture),
+           params: { purchase_invoice: { document: fixture_file_upload("ticket.pdf", "application/pdf") } }
+
+      expect(flash[:alert]).to include("déjà été déposée")
+      expect(facture.reload.document.filename.to_s).to eq("facture.xml")
+    end
+
+    it "demande un fichier" do
+      facture = cree_facture
+
+      post replace_document_finance_purchase_invoice_path(facture), params: { purchase_invoice: { document: "" } }
+
+      expect(flash[:alert]).to eq("Choisis d'abord le fichier de la pièce.")
     end
   end
 
@@ -364,6 +474,53 @@ RSpec.describe "Comptabilité > Achats", type: :request do
 
       post reopen_finance_purchase_invoice_path(facture)
       expect(facture.reload).to be_to_process
+    end
+  end
+
+  # Les notes de crédit fournisseurs (Michael, 2026-11-01).
+  describe "une note de crédit" do
+    it "s'encode depuis le formulaire, liée à la facture qu'elle corrige" do
+      facture = cree_facture(total: 50_000)
+
+      get new_finance_purchase_invoice_path(kind: "credit_note")
+      expect(response.body).to include("Nouvelle note de crédit fournisseur", "Facture corrigée")
+
+      post finance_purchase_invoices_path,
+           params: { purchase_invoice: {
+             kind: "credit_note", credited_invoice_id: facture.id,
+             legal_entity_id: entity.id, third_party_id: antargaz.id, number: "NC-1",
+             issued_on: "2026-06-10", total_euros: "200,00",
+             purchase_invoice_lines_attributes: { "0" => { general_account_id: charges.id, amount_euros: "200,00" } }
+           } }
+
+      note = PurchaseInvoice.credit_notes.sole
+      expect(note.credited_invoice).to eq(facture)
+      expect(flash[:notice]).to eq("Note de crédit enregistrée.")
+
+      post submit_finance_purchase_invoice_path(note)
+      expect(note.reload.status_label).to eq("Imputée")
+      expect(facture.reload.remaining_cents).to eq(30_000)
+
+      get finance_purchase_invoice_path(note)
+      expect(response.body).to include("Imputé sur la facture", "-200,00")
+      get finance_purchase_invoice_path(facture)
+      expect(response.body).to include("Note de crédit NC-1")
+    end
+
+    it "se préremplit comme note de crédit depuis une pièce du mail lue comme telle" do
+      account = MailAccount.create!(address: "compta@les4sources.be", purpose: "accounting")
+      message = account.mail_messages.create!(message_id: "<nc@test>", from_address: "okioki@example.com",
+                                              subject: "Credit note", received_at: Time.current)
+      piece = message.mail_attachments.new(filename: "nc.pdf", content_type: "application/pdf", sha256: "abc",
+                                           proposal: { "kind" => { "value" => "credit_note" },
+                                                       "third_party_id" => { "value" => antargaz.id } })
+      piece.file.attach(io: StringIO.new("%PDF-1.4"), filename: "nc.pdf", content_type: "application/pdf")
+      piece.save!
+
+      get new_finance_purchase_invoice_path(mail_attachment_id: piece.id)
+
+      expect(response.body).to include("Nouvelle note de crédit fournisseur")
+      expect(response.body).to match(/value="credit_note"[^>]*checked|checked[^>]*value="credit_note"/)
     end
   end
 end

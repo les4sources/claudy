@@ -51,6 +51,7 @@ fr:
         two_hours: "2 heures"
         evening: "soirée"
         day: "journée"
+        halfday: "demi-journée"
         fullday: "journée + soirée"
         see_notes: "voir notes"
         unspecified: "période non précisée"

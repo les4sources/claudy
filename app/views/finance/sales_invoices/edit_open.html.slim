@@ -1,0 +1,14 @@
+/ Corriger une facture de vente sans réservation. Comptabilisée, elle est
+  contre-passée puis repassée si ce qui fait l'écriture change.
+- content_for :page_header do
+  = render "layouts/components/page_header", title: "Modifier : #{@invoice.label}"
+
+- if @invoice.posted?
+  .mb-4.rounded-xl.border.border-amber-200.p-4 class="bg-amber-50/60"
+    p.text-sm.text-amber-900
+      strong Cette facture est au journal Ventes.
+      = " Changer le tiers, l'entité, le numéro, la date, le montant ou les lignes contre-passe l'écriture à sa date et en passe une nouvelle. Une note ou un PDF ne touchent pas au grand livre."
+
+= render "finance/sales_invoices/open_form", invoice: @invoice, url: finance_sales_invoice_path(@invoice), method: :patch,
+         entities: @entities, third_parties: @third_parties, revenue_accounts: @revenue_accounts, teams: @teams,
+         creditable: @creditable, submit_label: "Enregistrer les modifications", cancel_path: finance_sales_invoice_path(@invoice)
