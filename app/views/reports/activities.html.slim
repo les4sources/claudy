@@ -1,0 +1,148 @@
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Reporting des activités (#{@year})",
+           links: [ \
+             @year > ENV['REPORTS_FIRST_YEAR'].to_i ? link_to(button_label_with_icon(@year - 1, "arrow_small_left"), activity_reports_path(year: @year - 1), class: "btn-page-header-with-icon") : nil,
+             link_to(button_label_with_icon(@year + 1, "arrow_small_right", right: true), activity_reports_path(year: @year + 1), class: "btn-page-header-with-icon") \
+           ]
+
+- totals = @report.totals
+- pending = @report.pending_totals
+- outcomes = @report.outcomes
+
+/ Les chiffres de l'année d'abord : ce qu'on cherche en arrivant.
+.mt-4.grid.grid-cols-2.gap-4.lg:grid-cols-5
+  .rounded-lg.bg-emerald-50.ring-1.ring-emerald-200.px-4.py-3
+    .text-xs.font-medium.text-emerald-700.uppercase.tracking-wide Réservations
+    .text-2xl.font-bold.text-emerald-900 = totals.bookings
+    .text-xs.text-emerald-700 confirmées sur l'année
+  .rounded-lg.bg-emerald-50.ring-1.ring-emerald-200.px-4.py-3
+    .text-xs.font-medium.text-emerald-700.uppercase.tracking-wide Participants
+    .text-2xl.font-bold.text-emerald-900 = totals.participants
+    .text-xs.text-emerald-700 = "#{number_with_delimiter(totals.average_participants, separator: ',')} en moyenne par réservation"
+  .rounded-lg.bg-emerald-50.ring-1.ring-emerald-200.px-4.py-3
+    .text-xs.font-medium.text-emerald-700.uppercase.tracking-wide = "Chiffre d'affaires #{@year}"
+    .text-2xl.font-bold.text-emerald-900 = number_to_currency(totals.revenue_cents / 100.0, unit: "€")
+    .text-xs.text-emerald-700 facturé sur les séjours
+  .rounded-lg.bg-emerald-50.ring-1.ring-emerald-200.px-4.py-3
+    .text-xs.font-medium.text-emerald-700.uppercase.tracking-wide Porteurs
+    .text-2xl.font-bold.text-emerald-900 = number_to_currency(totals.carrier_fee_cents / 100.0, unit: "€")
+    .text-xs.text-emerald-700
+      = "Reste #{number_to_currency(totals.margin_cents / 100.0, unit: '€')} aux 4 Sources"
+  .rounded-lg.bg-amber-50.ring-1.ring-amber-200.px-4.py-3
+    .text-xs.font-medium.text-amber-700.uppercase.tracking-wide À valider
+    .text-2xl.font-bold.text-amber-900 = pending.bookings
+    .text-xs.text-amber-700
+      - if pending.any?
+        = "#{pending.participants} pers. · #{number_to_currency(pending.revenue_cents / 100.0, unit: '€')} hors total"
+      - else
+        | rien en attente du porteur
+
+/ La tenue : une activité confirmée n'a pas toujours eu lieu. Elle reste
+  facturée tant qu'on ne l'annule pas — on le montre plutôt que de le cacher.
+- if totals.any?
+  .mt-3.flex.flex-wrap.gap-2.text-xs
+    span.inline-flex.items-center.rounded-full.bg-emerald-50.px-2.5.py-1.font-medium.text-emerald-800.ring-1.ring-inset.ring-emerald-200
+      = "#{outcomes[:held]} #{outcomes[:held] > 1 ? 'ont' : 'a'} eu lieu"
+    - if outcomes[:no_show].positive?
+      span.inline-flex.items-center.rounded-full.bg-rose-50.px-2.5.py-1.font-medium.text-rose-800.ring-1.ring-inset.ring-rose-200
+        = "#{outcomes[:no_show]} n'#{outcomes[:no_show] > 1 ? 'ont' : 'a'} pas eu lieu (toujours facturée#{outcomes[:no_show] > 1 ? 's' : ''})"
+    - if outcomes[:to_declare].positive?
+      = link_to outcomes_experience_bookings_path, class: "inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 font-medium text-amber-800 ring-1 ring-inset ring-amber-200 hover:bg-amber-100" do
+        = "#{outcomes[:to_declare]} tenue#{outcomes[:to_declare] > 1 ? 's' : ''} à déclarer"
+    - if outcomes[:upcoming].positive?
+      span.inline-flex.items-center.rounded-full.bg-gray-50.px-2.5.py-1.font-medium.text-gray-700.ring-1.ring-inset.ring-gray-200
+        = "#{outcomes[:upcoming]} à venir"
+
+h2.mt-8.text-lg.font-bold Par activité
+
+- if @report.by_experience.empty?
+  p.mt-2.text-sm.text-gray-500 = "Aucune activité confirmée en #{@year}."
+- else
+  .overflow-x-auto.shadow.ring-1.ring-black.ring-opacity-5.sm:rounded-lg.mt-4
+    table.min-w-full.divide-y.divide-gray-300
+      thead.bg-gray-50
+        tr
+          th.py-3.5.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-6[scope="col"] Activité
+          th.px-3.py-3.5.text-right.text-sm.font-semibold.text-gray-900[scope="col"] Réservations
+          th.px-3.py-3.5.text-right.text-sm.font-semibold.text-gray-900[scope="col"] Participants
+          th.px-3.py-3.5.text-right.text-sm.font-semibold.text-gray-900[scope="col"] Moy. / réservation
+          th.px-3.py-3.5.text-left.text-sm.font-semibold.text-emerald-700[scope="col"] Chiffre d'affaires
+          th.px-3.py-3.5.text-right.text-sm.font-semibold.text-gray-900[scope="col"] Porteurs
+          th.px-3.py-3.5.text-right.text-sm.font-semibold.text-gray-900[scope="col"] Reste aux 4 Sources
+      tbody.divide-y.divide-gray-200.bg-white
+        - @report.by_experience.each do |row|
+          tr
+            td.py-4.pl-4.pr-3.text-sm.sm:pl-6
+              .flex.items-center.gap-2
+                span.inline-block.h-2.5.w-2.5.shrink-0.rounded-full(style="background-color: #{row.color}")
+                - if row.deleted?
+                  span.font-medium.text-gray-500 = row.name
+                - else
+                  = link_to row.name, experience_path(row.experience), class: "font-medium text-gray-900 hover:text-4s-main"
+              - if row.experience&.human
+                .ml-5.text-xs.text-gray-500 = "Porté par #{row.experience.human.name}"
+            td.whitespace-nowrap.px-3.py-4.text-sm.text-right.text-gray-700 = row.totals.bookings
+            td.whitespace-nowrap.px-3.py-4.text-sm.text-right.text-gray-700 = row.totals.participants
+            td.whitespace-nowrap.px-3.py-4.text-sm.text-right.text-gray-500 = number_with_delimiter(row.totals.average_participants, separator: ",")
+            td.whitespace-nowrap.px-3.py-4.text-sm.text-emerald-800.bg-emerald-50
+              .font-semibold = number_to_currency(row.totals.revenue_cents / 100.0, unit: "€")
+              .mt-1.flex.items-center.gap-2
+                .h-1.5.w-24.rounded-full.bg-emerald-100
+                  .h-1.5.rounded-full(style="width: #{@report.share_of(row)}%; background-color: #{row.color}")
+                .text-xs.text-emerald-700 = "#{number_with_delimiter(@report.share_of(row), separator: ',')} %"
+            td.whitespace-nowrap.px-3.py-4.text-sm.text-right.text-gray-700
+              = number_to_currency(row.totals.carrier_fee_cents / 100.0, unit: "€")
+              - if row.totals.missing_fee.positive?
+                .text-xs.text-amber-700 = "#{row.totals.missing_fee} sans montant"
+            td.whitespace-nowrap.px-3.py-4.text-sm.text-right.font-medium.text-gray-900
+              = number_to_currency(row.totals.margin_cents / 100.0, unit: "€")
+      tfoot.bg-emerald-100
+        tr.border-t-2.border-t-gray-900
+          td.py-4.pl-4.pr-3.text-sm.font-medium.text-gray-900.sm:pl-6 Total
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-right.font-bold.text-gray-900 = totals.bookings
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-right.font-bold.text-gray-900 = totals.participants
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-right.text-gray-700 = number_with_delimiter(totals.average_participants, separator: ",")
+          td.whitespace-nowrap.px-3.py-4.text-sm.font-extrabold.text-gray-900 = number_to_currency(totals.revenue_cents / 100.0, unit: "€")
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-right.font-bold.text-gray-900 = number_to_currency(totals.carrier_fee_cents / 100.0, unit: "€")
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-right.font-extrabold.text-gray-900 = number_to_currency(totals.margin_cents / 100.0, unit: "€")
+
+h2.mt-8.text-lg.font-bold Par mois
+
+.overflow-x-auto.shadow.ring-1.ring-black.ring-opacity-5.sm:rounded-lg.mt-4
+  table.min-w-full.divide-y.divide-gray-300
+    thead.bg-gray-50
+      tr
+        th.py-3.5.pl-4.pr-3.text-left.text-sm.font-semibold.text-gray-900.sm:pl-6[scope="col"] Mois
+        th.px-3.py-3.5.text-right.text-sm.font-semibold.text-gray-900[scope="col"] Réservations
+        th.px-3.py-3.5.text-right.text-sm.font-semibold.text-gray-900[scope="col"] Participants
+        th.px-3.py-3.5.text-right.text-sm.font-semibold.text-emerald-700[scope="col"] Chiffre d'affaires
+        th.px-3.py-3.5.text-right.text-sm.font-semibold.text-gray-900[scope="col"] Porteurs
+        th.px-3.py-3.5.text-right.text-sm.font-semibold.text-gray-900[scope="col"] Reste aux 4 Sources
+    tbody.divide-y.divide-gray-200.bg-white
+      - @report.by_month.each do |month, month_totals|
+        tr(class="#{Date.new(@year, month, 1) > Date.today.end_of_month ? 'opacity-70' : nil}")
+          td.whitespace-nowrap.py-4.pl-4.pr-3.text-sm.font-medium.text-gray-900.sm:pl-6
+            = l(Date.new(@year, month, 1), format: :month_year).capitalize
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-right.text-gray-700 = month_totals.bookings
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-right.text-gray-700 = month_totals.participants
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-right.font-semibold.text-emerald-800.bg-emerald-50
+            = number_to_currency(month_totals.revenue_cents / 100.0, unit: "€")
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-right.text-gray-700
+            = number_to_currency(month_totals.carrier_fee_cents / 100.0, unit: "€")
+          td.whitespace-nowrap.px-3.py-4.text-sm.text-right.text-gray-900
+            = number_to_currency(month_totals.margin_cents / 100.0, unit: "€")
+    tfoot.bg-emerald-100
+      tr.border-t-2.border-t-gray-900
+        td.py-4.pl-4.pr-3.text-sm.font-medium.text-gray-900.sm:pl-6 Total
+        td.whitespace-nowrap.px-3.py-4.text-sm.text-right.font-bold.text-gray-900 = totals.bookings
+        td.whitespace-nowrap.px-3.py-4.text-sm.text-right.font-bold.text-gray-900 = totals.participants
+        td.whitespace-nowrap.px-3.py-4.text-sm.text-right.font-extrabold.text-gray-900 = number_to_currency(totals.revenue_cents / 100.0, unit: "€")
+        td.whitespace-nowrap.px-3.py-4.text-sm.text-right.font-bold.text-gray-900 = number_to_currency(totals.carrier_fee_cents / 100.0, unit: "€")
+        td.whitespace-nowrap.px-3.py-4.text-sm.text-right.font-extrabold.text-gray-900 = number_to_currency(totals.margin_cents / 100.0, unit: "€")
+
+p.mt-4.text-xs.text-gray-500
+  | Réservations confirmées par le porteur, à la date du créneau, hors séjours
+    annulés. Le chiffre d'affaires suit le barème de l'activité (forfait + prix
+    par personne), comme le total du séjour. « Porteurs » = la rémunération
+    figée à la confirmation de chaque réservation.
