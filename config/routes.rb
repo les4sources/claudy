@@ -232,6 +232,9 @@ Rails.application.routes.draw do
   # Statistiques du site (2026-10-03), avant `resources :reports` pour la même raison.
   post "site-stats/hits", to: "site_hits#create", as: :site_hits
   get "reports/site-web", to: "site_stats#show", as: :site_stats
+  # Reporting des activités (ânes, grimpe…), avant `resources :reports` pour la
+  # même raison.
+  get "reports/activites", to: "reports#activities", as: :activity_reports
   resources :reports
   # Paramètres › Accès : les rôles d'accès des comptes (2026-10-09).
   get "access", to: "access_roles#index", as: :access_roles

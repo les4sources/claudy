@@ -76,6 +76,10 @@
                       kitchen_reporting_path,
                       class: "px-2.5 py-1 rounded transition-colors #{controller_path == 'kitchen/reporting' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
           li
+            = link_to "Activités",
+                      activity_reports_path,
+                      class: "px-2.5 py-1 rounded transition-colors #{(controller_name == 'reports' && action_name == 'activities') ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"
+          li
             = link_to "Site web",
                       site_stats_path,
                       class: "px-2.5 py-1 rounded transition-colors #{controller_name == 'site_stats' ? 'text-4s-main bg-teal-100 font-medium' : 'text-gray-500 hover:text-4s-main hover:bg-teal-50/60'}"

@@ -27,6 +27,14 @@ class ReportsController < BaseController
     @annual_breakdown = Reports::AnnualBreakdown.new(year: @year)
   end
 
+  # Les activités (ânes, grimpe dans les arbres, ateliers…) : réservations,
+  # participants, chiffre d'affaires et rémunération des porteurs, par mois et
+  # par activité. Le calcul vit dans `Reports::ActivityReport`.
+  def activities
+    @year = params.fetch(:year, Time.now.year).to_i
+    @report = Reports::ActivityReport.new(year: @year)
+  end
+
   # Le reporting cuisine vit désormais sous Cuisine (epic #269, phase 2) :
   # `Kitchen::ReportingController`. `/reports/kitchen` y redirige.
 
