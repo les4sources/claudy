@@ -2,7 +2,7 @@ require "rails_helper"
 
 # Agenda en rubans de la nouvelle interface (redesign, Michael 2026-10-24) :
 # une bande par séjour, de l'après-midi de l'arrivée au matin du départ, le
-# jour choisi à droite, la liste des jours sur téléphone. L'ancienne interface
+# jour choisi dans un tiroir en bas, la liste des jours sur téléphone. L'ancienne interface
 # et la vue Sourciers gardent l'ancien calendrier.
 RSpec.describe "Agenda en rubans", type: :request do
   include Devise::Test::IntegrationHelpers
@@ -96,6 +96,23 @@ RSpec.describe "Agenda en rubans", type: :request do
     # Romarin est pris par les Scouts, Balsamine s'est libérée le matin.
     expect(panel.at_css(".ui-ag-free b").text.squish).to eq("Balsamine")
     expect(text).not_to include("€")
+  end
+
+  it "prend toute la largeur et range le jour choisi dans un tiroir, ouvert quand l'adresse nomme un jour" do
+    get "/", params: { date: month.iso8601 }
+
+    doc = Nokogiri::HTML(response.body)
+    drawer = doc.at_css(".ui-ag-desk aside.ui-ag-drawer[data-controller='agenda-drawer']")
+    expect(drawer).to be_present
+    expect(drawer["class"]).not_to include("is-open")
+    expect(drawer.at_css("turbo-frame#agenda_day .ui-ag-drawer-h .ui-ag-free")).to be_present
+    expect(drawer.at_css("button[aria-controls='ag-day-body']")).to be_present
+
+    get "/", params: { date: month.iso8601, jour: "2026-10-21" }
+
+    drawer = Nokogiri::HTML(response.body).at_css(".ui-ag-drawer")
+    expect(drawer["class"]).to include("is-open")
+    expect(drawer.at_css("#ag-day-title").text).to eq("Mercredi 21 octobre")
   end
 
   it "montre le veilleur du jour en avatar, les renforts empilés derrière lui" do

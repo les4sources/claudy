@@ -1,22 +1,29 @@
-/ Le jour choisi, à droite de la grille : qui arrive, qui part, les salles, la
-  cuisine, ce qui reste libre le soir. Aucun montant. Rendu dans le cadre
-  `agenda_day` : un clic sur un jour de la grille ne recharge que lui.
+/ Le jour choisi, dans le tiroir du bas de l'agenda : qui arrive, qui part, les
+  salles, la cuisine, ce qui reste libre le soir. Aucun montant. Rendu dans le
+  cadre `agenda_day` : un clic sur un jour de la grille ne recharge que lui, et
+  ouvre le tiroir (`agenda_drawer_controller.js`).
 - date = day.date
 - arrivals = day.entries.select { |entry| %i[arrival day].include?(entry.kind) }
 - activities = day.entries.select { |entry| entry.kind == :activity }
 - departures = day.entries.select { |entry| entry.kind == :departure }
 - events = day.entries.select { |entry| entry.kind == :event }
-section.ui-card.ui-ag-panel(aria-labelledby="ag-day-title")
-  .ui-card-h
+- free_tonight = day.all_rooms_free? ? "toutes les chambres" : (day.free_rooms.map(&:name).to_sentence.presence || "aucune chambre")
+section.ui-ag-panel(aria-labelledby="ag-day-title")
+  / La barre du tiroir : toujours visible. Un clic ailleurs que sur un lien
+    ouvre ou replie le tiroir.
+  .ui-ag-drawer-h(data-action="click->agenda-drawer#toggleFromBar")
     .ui-ag-panel-t
-      h2.ui-h2#ag-day-title = l(date, format: "%A %-d").capitalize
+      h2.ui-h2#ag-day-title = l(date, format: "%A %-d %B").capitalize
       - if date == Date.current
         span.ui-ag-tag Aujourd’hui
       - elsif date == Date.current + 1
         span.ui-ag-tag Demain
-    / Qui veille (Michael 2026-10-24) : son avatar en haut à droite, les
-      personnes disponibles en renfort empilées derrière lui, bordées
-      d'orange. Le tout ouvre la fiche du jour, où l'on attribue les rôles.
+    .ui-ag-free
+      span Libre ce soir
+      b = free_tonight
+    / Qui veille (Michael 2026-10-24) : son avatar, les personnes disponibles
+      en renfort empilées derrière lui, bordées d'orange. Le tout ouvre la
+      fiche du jour, où l'on attribue les rôles.
     - watchers = day.watchers
     - backups = day.backup_watchers
     - label = ["Veille : #{watchers.map(&:name).to_sentence.presence || 'personne'}", ("en renfort : #{backups.map(&:name).to_sentence}" if backups.any?)].compact.join(" · ")
@@ -32,75 +39,68 @@ section.ui-card.ui-ag-panel(aria-labelledby="ag-day-title")
           = ui_avatar(human.name, human: human)
       - else
         span.ui-av.ui-av-none(aria-hidden="true") ?
-  .ui-card-b
-    - if day.empty? && day.notes.empty?
-      p.ui-empty Rien de prévu ce jour-là.
+    button.ui-ibtn.ui-ibtn-o.ui-ag-drawer-btn(type="button" aria-controls="ag-day-body" aria-expanded="false" aria-label="Montrer le détail du jour" data-agenda-drawer-target="toggle")
+      = ui_icon(:up, size: 18)
 
-    - if arrivals.any?
-      h3.ui-over.ui-ag-sub Arrivées
-      = render "pages/v2/agenda_panel_rows", entries: arrivals, day: day
-    - if departures.any?
-      h3.ui-over.ui-ag-sub Départs
-      = render "pages/v2/agenda_panel_rows", entries: departures, day: day
-    - if activities.any?
-      h3.ui-over.ui-ag-sub Activités
-      = render "pages/v2/agenda_panel_rows", entries: activities, day: day
-    - if events.any?
-      h3.ui-over.ui-ag-sub Événements
-      = render "pages/v2/agenda_panel_rows", entries: events, day: day
+  .ui-ag-drawer-b#ag-day-body
+    .ui-ag-drawer-in
+      .ui-ag-drawer-cols
+        - if day.empty? && day.notes.empty?
+          p.ui-empty Rien de prévu ce jour-là.
 
-    - if day.spaces.any?
-      h3.ui-over.ui-ag-sub Salles
-      ul.ui-ag-kv
-        - day.spaces.each do |row|
-          li
-            span = [row.space, row.title].compact.join(" · ")
-            - if row.when
-              b = row.when
+        - [["Arrivées", arrivals], ["Départs", departures], ["Activités", activities], ["Événements", events]].each do |title, entries|
+          - next if entries.empty?
+          .ui-ag-grp
+            h3.ui-over.ui-ag-sub = title
+            = render "pages/v2/agenda_panel_rows", entries: entries, day: day
 
-    - if day.meals_today.any?
-      h3.ui-over.ui-ag-sub Cuisine
-      ul.ui-ag-kv
-        - if day.lunch_covers.positive?
-          li
-            span Midi
-            b = day.lunch_covers
-        - if day.dinner_covers.positive?
-          li
-            span = day.dinner_covers_to_validate.positive? ? "Soir · dont #{day.dinner_covers_to_validate} à valider" : "Soir"
-            b = day.dinner_covers
-        - if day.lunch_covers.zero? && day.dinner_covers.zero?
-          li
-            span = "#{day.meals_today.size} #{day.meals_today.size > 1 ? 'services' : 'service'} (goûter, buffet…)"
+        - if day.spaces.any?
+          .ui-ag-grp
+            h3.ui-over.ui-ag-sub Salles
+            ul.ui-ag-kv
+              - day.spaces.each do |row|
+                li
+                  span = [row.space, row.title].compact.join(" · ")
+                  - if row.when
+                    b = row.when
 
-    - if day.notes.any?
-      h3.ui-over.ui-ag-sub Pour l’équipe
-      / En post-its de la couleur de leur type (Michael 2026-10-24).
-      ul.ui-postits
-        - day.notes.each do |note|
-          li(class="ui-postit ui-postit-#{note.color || 'yellow'}" title=note.type_label)
-            - if section_writable?(:full)
-              = link_to edit_note_path(note), data: { turbo_frame: "modal" } do
-                = truncate(note.body.to_s.squish, length: 160)
-            - else
-              span = truncate(note.body.to_s.squish, length: 160)
+        - if day.meals_today.any?
+          .ui-ag-grp
+            h3.ui-over.ui-ag-sub Cuisine
+            ul.ui-ag-kv
+              - if day.lunch_covers.positive?
+                li
+                  span Midi
+                  b = day.lunch_covers
+              - if day.dinner_covers.positive?
+                li
+                  span = day.dinner_covers_to_validate.positive? ? "Soir · dont #{day.dinner_covers_to_validate} à valider" : "Soir"
+                  b = day.dinner_covers
+              - if day.lunch_covers.zero? && day.dinner_covers.zero?
+                li
+                  span = "#{day.meals_today.size} #{day.meals_today.size > 1 ? 'services' : 'service'} (goûter, buffet…)"
 
-    .ui-ag-free
-      span Libre ce soir
-      b
-        - if day.all_rooms_free?
-          | toutes les chambres
-        - else
-          = day.free_rooms.map(&:name).to_sentence.presence || "aucune chambre"
+        - if day.notes.any?
+          .ui-ag-grp
+            h3.ui-over.ui-ag-sub Pour l’équipe
+            / En post-its de la couleur de leur type (Michael 2026-10-24).
+            ul.ui-postits
+              - day.notes.each do |note|
+                li(class="ui-postit ui-postit-#{note.color || 'yellow'}" title=note.type_label)
+                  - if section_writable?(:full)
+                    = link_to edit_note_path(note), data: { turbo_frame: "modal" } do
+                      = truncate(note.body.to_s.squish, length: 160)
+                  - else
+                    span = truncate(note.body.to_s.squish, length: 160)
 
-    .ui-ag-panel-act
-      = link_to day_details_path(date: date.iso8601), class: "ui-btn", data: { turbo_frame: "modal" } do
-        | Ouvrir la journée
-      - if section_writable?(:full)
-        = link_to new_note_path(date: date.iso8601), class: "ui-btn ui-btn-s", data: { turbo_frame: "modal" } do
-          = ui_icon(:pencil, size: 15)
-          | Note
-        / Aussi sur un jour passé : on encode souvent un séjour après coup (Michael, 2026-11-05).
-        = link_to new_stay_path(date: date.iso8601), class: "ui-btn ui-btn-s", data: { turbo_frame: "_top" } do
-          = ui_icon(:plus, size: 15)
-          | Séjour ce jour-là
+      .ui-ag-panel-act
+        = link_to day_details_path(date: date.iso8601), class: "ui-btn", data: { turbo_frame: "modal" } do
+          | Ouvrir la journée
+        - if section_writable?(:full)
+          = link_to new_note_path(date: date.iso8601), class: "ui-btn ui-btn-s", data: { turbo_frame: "modal" } do
+            = ui_icon(:pencil, size: 15)
+            | Note
+          / Aussi sur un jour passé : on encode souvent un séjour après coup (Michael, 2026-11-05).
+          = link_to new_stay_path(date: date.iso8601), class: "ui-btn ui-btn-s", data: { turbo_frame: "_top" } do
+            = ui_icon(:plus, size: 15)
+            | Séjour ce jour-là
