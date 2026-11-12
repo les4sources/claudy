@@ -58,9 +58,12 @@ RSpec.describe ExperienceBooking, "prestation tenue par quelqu'un d'autre" do
 
   it "fige la personne et le montant une fois la prestation sur un relevé" do
     booking = tenue!(performed_by: magali)
-    CarrierStatements::Generate.new(human: magali, period_from: Date.current - 30, period_to: Date.current).run!
+    statement = CarrierStatements::Generate.new(human: magali, period_from: Date.current - 30, period_to: Date.current).run!
 
     expect(booking.reload.update(performed_by: bene)).to be(false)
-    expect(booking.reload.update(carrier_fee_cents: 1)).to be(false)
+    # En brouillon, le montant se corrige encore ; émis, il est figé.
+    expect(booking.reload.update(carrier_fee_cents: 1)).to be(true)
+    statement.update!(status: "issued")
+    expect(booking.reload.update(carrier_fee_cents: 2)).to be(false)
   end
 end

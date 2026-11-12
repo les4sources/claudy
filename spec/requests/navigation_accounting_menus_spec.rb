@@ -74,6 +74,7 @@ RSpec.describe "Menus de la sous-navigation Comptabilité", type: :request do
     # atteignable qu'en tapant son URL.
     SANS_ENTREE = %w[
       finance/allocation_suggestions
+      finance/carrier_statement_lines
       finance/cash_allocations
       finance/stripe_fee_invoices
     ].freeze

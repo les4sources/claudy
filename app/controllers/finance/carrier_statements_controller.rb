@@ -5,7 +5,7 @@ module Finance
   # ÉMETTRE en fait un document — figé, comptabilisé, envoyé. Le second est
   # irréversible, d'où le premier. Même forme que les relevés de reversement.
   class CarrierStatementsController < Finance::AccountingBaseController
-    before_action :get_statement, only: %i[show issue pay repost destroy]
+    before_action :get_statement, only: %i[show issue pay repost reopen destroy]
 
     breadcrumb "Porteurs", :finance_carrier_statements_path, match: :exact
 
@@ -26,6 +26,7 @@ module Finance
       @payments = @statement.cash_allocations.includes(:cash_entry).order(:id)
       @candidate_entries = candidate_entries if @statement.issued? && @statement.remaining_cents.positive?
       @repost = CarrierStatements::Repost.new(statement: @statement)
+      @reopen = CarrierStatements::Reopen.new(statement: @statement) if @statement.issued?
     end
 
     # Solder le relevé par une ligne bancaire sortante déjà passée (epic #244,
@@ -63,6 +64,20 @@ module Finance
     rescue CarrierStatements::Repost::Refused,
            Accounting::PostCarrierStatement::MissingAccount,
            Accounting::PostCarrierStatement::NothingToPost,
+           Accounting::PostDocument::MissingFiscalYear,
+           ActiveRecord::RecordInvalid => e
+      redirect_to finance_carrier_statement_path(@statement), alert: e.message
+    end
+
+    # Rouvrir en brouillon pour corriger (Michael, 2026-11-12) : l'écriture est
+    # contre-passée, les lignes se corrigent ou se retirent, puis on réémet.
+    def reopen
+      @statement = CarrierStatements::Reopen.new(statement: @statement, reason: params[:reason],
+                                                 whodunnit: current_user&.email).run!
+      redirect_to finance_carrier_statement_path(@statement),
+                  notice: "Relevé rouvert en brouillon : l'écriture est contre-passée. Corrige ses lignes, puis réémets-le."
+    rescue CarrierStatements::Reopen::Refused,
+           Accounting::ReverseEntry::AlreadyReversed,
            Accounting::PostDocument::MissingFiscalYear,
            ActiveRecord::RecordInvalid => e
       redirect_to finance_carrier_statement_path(@statement), alert: e.message

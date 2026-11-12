@@ -17,18 +17,49 @@
             th.py-2.px-4[scope="col"] Date
             th.py-2.px-4[scope="col"] Activité
             th.py-2.px-4.text-right[scope="col"] Rémunération
+            - if @statement.draft?
+              th.py-2.px-4[scope="col"]
+                span.sr-only Corriger
         tbody
           - @lines.each do |line|
             tr.border-b.bg-white
               td.py-2.px-4.whitespace-nowrap
                 - if line.occurred_on
                   = l(line.occurred_on, format: :short)
-              td.py-2.px-4.text-gray-900 = line.display_label
-              td.py-2.px-4.text-right = humanized_money_with_symbol(line.fee)
+              td.py-2.px-4.text-gray-900
+                = line.display_label
+                - if @statement.draft?
+                  = link_to " · réservation ##{line.experience_booking_id}", experience_booking_path(line.experience_booking_id), class: "text-xs text-gray-400 hover:text-4s-main"
+              - if @statement.draft?
+                / Brouillon : le montant se corrige ici (la réservation suit),
+                  la ligne se reporte au prochain relevé ou ne se paie pas.
+                td.py-2.px-4.text-right
+                  = form_with url: finance_carrier_statement_line_path(@statement, line), method: :patch, class: "inline-flex items-center justify-end gap-1" do
+                    = text_field_tag :fee, format("%.2f", line.fee_cents.to_i / 100.0).tr(".", ","),
+                                     inputmode: "decimal", "aria-label": "Rémunération de #{line.display_label}",
+                                     class: "w-24 rounded-md border-gray-300 py-1 text-right text-sm shadow-sm"
+                    span.text-gray-500 €
+                    = submit_tag "Corriger", class: "rounded-md bg-white px-2 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                td.py-2.px-4.whitespace-nowrap.text-right
+                  .inline-flex.items-center.gap-3
+                    = button_to "Reporter",
+                                finance_carrier_statement_line_path(@statement, line, pay: 1),
+                                method: :delete,
+                                form: { data: { turbo_confirm: "Retirer cette ligne ? La prestation reviendra au prochain relevé." } },
+                                class: "text-xs text-gray-600 hover:text-gray-900"
+                    = button_to "Ne pas payer",
+                                finance_carrier_statement_line_path(@statement, line, pay: 0),
+                                method: :delete,
+                                form: { data: { turbo_confirm: "Retirer cette ligne et ne pas la payer ? Sa rémunération passe à 0 €, elle ne reviendra sur aucun relevé." } },
+                                class: "text-xs text-red-600 hover:text-red-800"
+              - else
+                td.py-2.px-4.text-right = humanized_money_with_symbol(line.fee)
         tfoot
           tr.bg-gray-50
             td.py-2.px-4.font-semibold.text-gray-900(colspan="2") Total
             td.py-2.px-4.text-right.font-semibold.text-gray-900 = humanized_money_with_symbol(@statement.total_fee)
+            - if @statement.draft?
+              td
 
     .px-4.py-4.border-t.border-gray-200.flex.flex-wrap.items-center.gap-3
       - if @statement.draft?
@@ -71,6 +102,23 @@
                     method: :post,
                     form: { class: "mt-3", data: { turbo_confirm: "Repasser ce relevé au nom de #{@repost.target_name} ? L'écriture actuelle sera contre-passée." } },
                     class: "inline-flex items-center rounded-md bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+
+  / Un relevé émis, pas encore payé, se rouvre pour être corrigé (Michael,
+    2026-11-12) : contre-passation, brouillon, puis réémission.
+  - if @reopen && !@statement.paid?
+    .bg-white.shadow.sm:rounded-lg.px-4.py-4
+      h4.text-sm.font-medium.text-gray-900 Une erreur sur ce relevé ?
+      - if @reopen.possible?
+        p.mt-1.text-xs.text-gray-500
+          | « Rouvrir en brouillon » contre-passe l'écriture (les deux restent au grand livre) et retire la dette de « À payer ». Tu corriges alors les rémunérations ou retires des lignes, puis tu réémets : nouvelle écriture, et le relevé corrigé part à #{@statement.recipient_email || 'personne (pas d’email)'}.
+        = form_with url: reopen_finance_carrier_statement_path(@statement), method: :post, class: "mt-3 flex flex-wrap items-end gap-3",
+                    data: { turbo_confirm: "Rouvrir ce relevé en brouillon ? Son écriture sera contre-passée." } do
+          div(class="min-w-[18rem] flex-1")
+            = label_tag :reason, "Pourquoi (facultatif, inscrit dans la contre-passation)", class: "block text-xs font-medium text-gray-700"
+            = text_field_tag :reason, nil, placeholder: "ex. rémunérations fausses, lignes en double", class: "mt-1 block w-full rounded-md border-gray-300 text-sm shadow-sm"
+          = submit_tag "Rouvrir en brouillon", class: "inline-flex items-center rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+      - else
+        p.mt-1.text-xs.text-gray-500 = "Il ne se rouvre pas. #{@reopen.refusal}"
 
   - if @payments.any?
     .bg-white.shadow.sm:rounded-lg.px-4.py-4

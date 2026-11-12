@@ -67,6 +67,7 @@ RSpec.describe "Comptabilité > Guide", type: :request do
     # posé ailleurs et ne rendent pas de page.
     SANS_PAGE = %w[
       finance/allocation_suggestions
+      finance/carrier_statement_lines
       finance/cash_allocations
       finance/stripe_fee_invoices
     ].freeze

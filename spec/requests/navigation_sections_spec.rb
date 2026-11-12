@@ -74,7 +74,7 @@ RSpec.describe "Appartenance des contrôleurs Finance::", type: :model do
   # une décision : « la trésorière, pas les habitants ».
   COMPTABILITE = %w[
     accountant_exports accounting allocation_rules allocation_suggestions analytic_balance annual_accounts budgets
-    carrier_statements
+    carrier_statement_lines carrier_statements
     cash_accounts cash_allocations cash_counts cash_entries cash_motifs cash_reallocations cash_sheet coda_imports
     collection_cost compliance_deadlines compliance_obligations
     consignment_reports cross_check expense_reports fiscal_years fixed_assets guide
