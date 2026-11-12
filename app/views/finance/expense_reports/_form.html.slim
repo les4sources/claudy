@@ -41,9 +41,9 @@
         h3.text-sm.font-semibold.text-gray-900 = report.mileage? ? "Les trajets" : "Les dépenses"
         p.text-xs.text-gray-500
           - if report.mileage?
-            | Une ligne par trajet. Le montant est calculé : kilomètres × indemnité du jour de la ligne, figée à l'enregistrement.
+            | Une ligne par trajet. Le montant est calculé : kilomètres × indemnité du jour de la ligne, figée à l'enregistrement. Un trajet qui revient ? « Dupliquer » le recopie juste en dessous, il ne reste qu'à changer la date.
           - else
-            | Une ligne par ticket, avec sa photo ou la mention « fourni sur papier ». La ligne suivante hérite de la date et du pôle de la précédente. Le compte de charge, c'est la comptabilité qui l'attribue au traitement.
+            | Une ligne par ticket, avec sa photo ou la mention « fourni sur papier ». La ligne suivante hérite de la date et du pôle de la précédente ; « Dupliquer » recopie toute une ligne. Le compte de charge, c'est la comptabilité qui l'attribue au traitement.
       .text-right
         .text-xs.uppercase.tracking-wide.text-gray-400 Total de la note
         .text-2xl.font-semibold.tabular-nums.text-gray-900(data-expense-lines-target="total") 0,00 €

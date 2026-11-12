@@ -13,7 +13,10 @@ import { Controller } from '@hotwired/stimulus';
 //      précédente — sur une feuille, six dépenses tombent presque toujours dans
 //      le même pôle et le même compte ;
 //   3. le total se met à jour en direct, ce qui permet de le comparer au total
-//      écrit en bas de la feuille AVANT d'enregistrer.
+//      écrit en bas de la feuille AVANT d'enregistrer ;
+//   4. « Dupliquer » recopie TOUTE une ligne juste en dessous d'elle (Michael,
+//      2026-11-12) : le trajet de la boulangerie revient chaque semaine avec les
+//      mêmes kilomètres, le même motif et le même pôle, seule la date change.
 //
 // Retirer une ligne : une ligne jamais enregistrée disparaît du DOM ; une ligne
 // existante coche son `_destroy` caché et s'efface visuellement — Rails ne la
@@ -49,6 +52,65 @@ export default class extends Controller {
     // Le curseur atterrit sur le libellé : la date et le compte viennent
     // d'être hérités, ce qui reste à taper c'est ce que la dépense était.
     row?.querySelector('[data-expense-field="label"]')?.focus();
+  }
+
+  // Une nouvelle ligne, juste sous celle qu'on duplique, qui en reprend toutes
+  // les valeurs saisies. Ni l'`id` (ce serait la même ligne), ni le `_destroy`,
+  // ni le fichier du justificatif (un navigateur ne recopie pas un fichier, et
+  // un deuxième ticket n'est pas le même ticket). Le curseur va sur la date :
+  // c'est elle qui change d'une ligne dupliquée à l'autre.
+  duplicate(event) {
+    event.preventDefault();
+
+    const source = event.target.closest('[data-expense-lines-target="row"]');
+    if (!source) return;
+
+    const html = this.templateTarget.innerHTML.replaceAll(
+      this.placeholderValue,
+      this.nextIndex()
+    );
+    source.insertAdjacentHTML('afterend', html);
+    const row = source.nextElementSibling;
+    if (!row) return;
+
+    this.copyValues(source, row);
+    this.refresh();
+
+    const date = row.querySelector('[data-expense-field="spent_on"]');
+    date?.focus();
+  }
+
+  copyValues(source, row) {
+    const fieldsOf = (element) => {
+      const fields = new Map();
+      element.querySelectorAll('input[name], select[name], textarea[name]').forEach((field) => {
+        if (field.type === 'hidden' || field.type === 'file') return;
+        const key = this.fieldKey(field.name);
+        if (key) fields.set(key, field);
+      });
+      return fields;
+    };
+
+    const targets = fieldsOf(row);
+    fieldsOf(source).forEach((field, key) => {
+      const target = targets.get(key);
+      if (!target) return;
+
+      if (field.type === 'checkbox' || field.type === 'radio') {
+        target.checked = field.checked;
+      } else {
+        target.value = field.value;
+      }
+      // Les listes cherchables suivent leur <select> par l'événement `change`.
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }
+
+  // `expense_report[expense_lines_attributes][0][distance_in_km]` → `[distance_in_km]`.
+  fieldKey(name) {
+    const match = name.match(/\[expense_lines_attributes\]\[[^\]]+\](.+)$/);
+    if (!match || /\[(id|_destroy)\]$/.test(match[1])) return null;
+    return match[1];
   }
 
   remove(event) {
