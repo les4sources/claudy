@@ -30,7 +30,8 @@ section#comptes.space-y-4
           - count = accounts.pending_entries_count
           li
             = "#{count} #{'ligne'.pluralize(count)} de trésorerie #{count > 1 ? 'attendent' : 'attend'} encore d'être #{'affectée'.pluralize(count)} : elles ne sont dans aucun pôle."
-            =< link_to "Les affecter", finance_unallocated_cash_entries_path, class: "font-medium underline"
+            - if section_readable?(:accounting)
+              =< link_to "Les affecter", finance_unallocated_cash_entries_path, class: "font-medium underline"
         - unassigned = accounts.unassigned_totals
         - if unassigned.any?
           li = "En #{year}, #{team_euros(unassigned.expense_cents)} de charges et #{team_euros(unassigned.revenue_cents)} de produits sont au grand livre sans pôle."
@@ -142,7 +143,8 @@ section#comptes.space-y-4
                     - if invoice.validation_team_id != team.id && invoice.validation_team
                       = " · #{invoice.validation_team.name}"
                 .whitespace-nowrap.text-sm.font-semibold.text-gray-900 = team_euros(invoice.total_cents)
-        = link_to "Voir et valider les factures", finance_purchase_invoices_path(status: "to_validate", team_id: team.id), class: "mt-3 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-900 hover:bg-amber-100"
+        - if section_readable?(:accounting)
+          = link_to "Voir et valider les factures", finance_purchase_invoices_path(status: "to_validate", team_id: team.id), class: "mt-3 inline-flex items-center rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-900 hover:bg-amber-100"
       - else
         .mt-4.flex.items-center.gap-2.rounded-xl.bg-teal-50.px-4.py-3.text-sm.text-teal-800
           span(aria-hidden="true") ✓

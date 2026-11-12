@@ -8,6 +8,15 @@ class InterfacePreferencesController < BaseController
   def update
     current_user.update!(new_interface: ActiveModel::Type::Boolean.new.cast(params[:new_interface]))
     notice = current_user.new_interface? ? "Bienvenue dans la nouvelle interface." : "Tu es revenu·e à l'ancienne interface."
-    redirect_to (current_user.new_interface? && current_user.can_read?(:calendar) ? today_path : (access_home_path || root_path)), notice: notice
+    redirect_to (local_return_to || (current_user.new_interface? && current_user.can_read?(:calendar) ? today_path : (access_home_path || root_path))), notice: notice
+  end
+
+  private
+
+  # Une page qui invite à basculer (la Situation financière, 2026-11-12) y
+  # ramène : un chemin local seulement, jamais une autre origine.
+  def local_return_to
+    path = params[:return_to].to_s
+    path if path.start_with?("/") && !path.start_with?("//") && !path.include?("\\")
   end
 end

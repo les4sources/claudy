@@ -90,6 +90,11 @@ RSpec.describe "Appartenance des contrôleurs Finance::", type: :model do
   # authentifié, pas de celui de la Comptabilité.
   PARAMETRES = %w[legal_entities].freeze
 
+  # La Situation financière (Michael, 2026-11-12) : la lecture des Sourciers,
+  # sortie de la Comptabilité. Ni socle Comptabilité ni socle Finances : sa
+  # propre section, `:situation`.
+  SITUATION = %w[situation].freeze
+
   # Troisième camp, et il faut le nommer pour qu'il reste un choix : les canaux
   # à JETON. Ils ne demandent pas de connexion — c'est le lien signé de l'email
   # qui fait foi — donc ils n'héritent d'aucun des deux socles (patron :
@@ -125,9 +130,19 @@ RSpec.describe "Appartenance des contrôleurs Finance::", type: :model do
     end
   end
 
+  it "range la Situation financière à part, dans sa propre section" do
+    classes = SITUATION.map { |n| "Finance::#{n.camelize}Controller".constantize }
+
+    expect(classes).to all(be < ::BaseController)
+    classes.each do |klass|
+      expect(klass).not_to be < Finance::AccountingBaseController
+      expect(klass.access_sections["*"]).to eq(:situation)
+    end
+  end
+
   it "laisse tous les autres écrans aux sourciers" do
-    parametres = PARAMETRES.map { |n| "Finance::#{n.camelize}Controller" }
-    autres = controleurs.reject { |k| k < Finance::AccountingBaseController || parametres.include?(k.name) }
+    a_part = (PARAMETRES + SITUATION).map { |n| "Finance::#{n.camelize}Controller" }
+    autres = controleurs.reject { |k| k < Finance::AccountingBaseController || a_part.include?(k.name) }
 
     expect(autres).to all(be < Finance::BaseController)
     expect(autres.map(&:name)).to include("Finance::AccountsController",

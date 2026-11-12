@@ -3,6 +3,11 @@ module Finance
   # les deux lectures de l'autre. Un écran sans porte d'entrée n'est pas
   # vérifiable, et un référentiel qu'on ne trouve pas n'est jamais corrigé.
   class AccountingController < Finance::AccountingBaseController
+    # La Comptabilité est aux Administratifs, la Situation financière aux
+    # Sourciers (Michael, 2026-11-12). Un Sourcier qui ouvre l'ancienne porte
+    # (favori, lien d'un mail) arrive sur la page qui lui est destinée, plutôt
+    # que sur « Tu n'as pas accès ».
+    prepend_before_action :redirect_to_situation, only: :index
 
     def index
       @accounts_count = GeneralAccount.actives.count
@@ -49,16 +54,16 @@ module Finance
 
     private
 
-    # La nouvelle interface (Michael, 2026-10-30) : la page du collectif des
-    # administrateurs. Les trois structures côte à côte (`Finance::Overview`) :
-    # aujourd'hui, les trois prochains mois, plus loin, et ce qu'il faut
-    # trancher ensemble ; `?entity=` zoome sur une seule. Le travail des
-    # comptables (« À faire », la caisse, les repères) reste en bas, replié.
+    def redirect_to_situation
+      return if current_user.nil? || current_user.can_read?(:accounting) || !current_user.can_read?(:situation)
+
+      redirect_to finance_situation_path(params.permit(:entity).to_h)
+    end
+
+    # La nouvelle interface (Michael, 2026-11-12) : « À faire », la page des
+    # comptables. La situation de chaque structure vit dans la Situation
+    # financière (`Finance::SituationController`).
     def render_v2_index
-      @overview = Finance::Overview.new(loans: @loans, verdicts: @verdicts)
-      @focus = @overview.find(params[:entity]) if params[:entity].present?
-      @healths = @focus ? [@focus] : @overview.entities
-      @signals = @overview.signals(only: @focus)
       @page_guide_inline = true
       render "finance/accounting/v2/index"
     end

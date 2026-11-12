@@ -20,7 +20,7 @@
         tbody
           tr.border-t.border-gray-200.bg-gray-50
             th.py-2.px-3.text-left.font-medium.text-gray-700(scope="rowgroup" colspan="4")
-              = link_to "#{account.code} #{account.name}",
+              = situation_link_to "#{account.code} #{account.name}",
                         finance_ledger_path(general_account_id: account.id, legal_entity_id: verdict.entity.id),
                         data: { turbo_frame: "_top" }, class: "text-blue-600 hover:text-blue-800"
               - if owed.negative?

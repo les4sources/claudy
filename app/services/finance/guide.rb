@@ -159,12 +159,19 @@ module Finance
     # et il a sa place dans le guide.
     PAGES = {
       "finance/accounting" => Page.new(
+        "Le travail des comptables : les files dans l'ordre du circuit, la caisse et les repères. La situation de " \
+        "chaque structure se lit dans Situation financière.",
+        ["Commence par la première file qui n'est pas à jour : « Commencer » t'y emmène.",
+         "Une file qui attend quelqu'un d'autre est montrée sans compter : rien à faire de ton côté.",
+         "Compte la caisse du bar au moins une fois par semaine."],
+        %w[a-affecter solde-verifie echeance]
+      ),
+      "finance/situation" => Page.new(
         "La page des administrateurs : comment va chaque structure aujourd'hui, ce qui l'attend dans les trois " \
         "mois, ce qui pèse plus loin, et ce qu'il faut trancher ensemble.",
         ["Lis d'abord le feu et la phrase de chaque structure : ils disent si on peut dépenser.",
          "Termine par « Ce qu'on doit trancher ensemble » : c'est l'ordre du jour que proposent les chiffres.",
-         "Clique sur une structure (en haut à droite) pour voir le calcul, toutes les échéances et chaque prêteur.",
-         "Tu tiens les comptes ? « Le travail des comptables », en bas, garde les files dans l'ordre."],
+         "Clique sur une structure (en haut à droite) pour voir le calcul, toutes les échéances et chaque prêteur."],
         %w[a-affecter solde-verifie pret dette echeance]
       ),
       "finance/guide" => Page.new(

@@ -18,7 +18,7 @@
           - dates = rows.map(&:due_on).sort
           tr.border-t.border-gray-100(data-liability-id=liability.id)
             td.py-2.px-3.text-gray-900
-              = link_to liability.label, edit_finance_liability_path(liability),
+              = situation_link_to liability.label, edit_finance_liability_path(liability),
                         data: { turbo_frame: "_top" }, class: "text-blue-600 hover:text-blue-800"
               span.ml-2.inline-flex.rounded-full.bg-amber-100.px-2.py-0.5.text-xs.text-amber-800= liability.kind_label.downcase
             td.py-2.px-3.text-gray-500= liability.third_party&.name || "—"
@@ -33,4 +33,4 @@
           td.py-2.px-3.font-medium.text-gray-700(colspan="3") Total
           td.py-2.px-3.text-right.font-semibold.tabular-nums.text-gray-900= euros.(outflows.sum(&:amount_cents))
   p.mt-4.text-xs.text-gray-500
-    = link_to "Ouvrir les dettes et litiges", finance_liabilities_path, data: { turbo_frame: "_top" }, class: "text-blue-600 hover:text-blue-800"
+    = situation_link_to "Ouvrir les dettes et litiges", finance_liabilities_path, nav: true, data: { turbo_frame: "_top" }, class: "text-blue-600 hover:text-blue-800"

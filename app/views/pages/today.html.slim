@@ -15,7 +15,7 @@
         mark.ui-hl = highlighted
         = after
     .ui-actions
-      - if section_writable?(:accounting)
+      - if section_writable?(:accounts)
         = link_to new_finance_expense_report_path(kind: "expenses", human_id: current_user.linked_human&.id), class: "ui-btn ui-hide-m" do
           = ui_icon(:receipt, size: 16)
           | Note de frais

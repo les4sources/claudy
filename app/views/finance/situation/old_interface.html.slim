@@ -1,0 +1,10 @@
+/ La Situation financière n'existe que dans la nouvelle interface (Michael,
+  2026-11-12). Dans l'ancienne, on le dit et on propose de basculer.
+.max-w-xl.mx-auto.my-16.p-6.rounded-2xl.border.border-gray-200.bg-white.text-center
+  h1.text-2xl.font-semibold.text-gray-900 Situation financière
+  p.mt-3.text-gray-600
+    | La situation de chaque structure s’ouvre dans la nouvelle interface de Claudy.
+    | Tu peux y passer en un clic, et revenir à l’ancienne quand tu veux.
+  = button_to "Passer à la nouvelle interface", interface_preference_path(new_interface: true), method: :patch,
+              params: { return_to: finance_situation_path },
+              class: "mt-6 inline-flex items-center px-4 py-2 rounded-lg bg-4s-main text-white font-medium"

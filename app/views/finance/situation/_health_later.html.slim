@@ -12,7 +12,7 @@ article.ui-card.ui-adm-ent(data-entity-later=e.id)
       dd
         - if health.budget?
           - planned = health.budget.budget
-          = link_to overview_signed(planned.net_cents), finance_budget_path(entity_id: e.id, year: health.today.year), class: "ui-adm-amount#{' is-neg' if planned.net_cents.negative?}"
+          = situation_link_to overview_signed(planned.net_cents), finance_budget_path(entity_id: e.id, year: health.today.year), class: "ui-adm-amount#{' is-neg' if planned.net_cents.negative?}"
           small
             = "prévu : #{accounting_euros(planned.revenue_cents)} de recettes, #{accounting_euros(planned.expense_cents)} de dépenses"
             - if health.books?
@@ -26,10 +26,10 @@ article.ui-card.ui-adm-ent(data-entity-later=e.id)
       dd
         - if health.next_budget?
           - planned = health.next_budget.budget
-          = link_to overview_signed(planned.net_cents), finance_budget_path(entity_id: e.id, year: health.next_year), class: "ui-adm-amount#{' is-neg' if planned.net_cents.negative?}"
+          = situation_link_to overview_signed(planned.net_cents), finance_budget_path(entity_id: e.id, year: health.next_year), class: "ui-adm-amount#{' is-neg' if planned.net_cents.negative?}"
           small = "#{accounting_euros(planned.revenue_cents)} de recettes, #{accounting_euros(planned.expense_cents)} de dépenses prévues"
         - else
-          = link_to "À préparer", finance_budget_path(entity_id: e.id, year: health.next_year), class: "ui-adm-amount is-muted"
+          = situation_link_to "À préparer", finance_budget_path(entity_id: e.id, year: health.next_year), class: "ui-adm-amount is-muted"
           small brouillon prérempli avec les 12 derniers mois
     div(data-fig="loans")
       dt Prêts à rendre
@@ -53,20 +53,20 @@ article.ui-card.ui-adm-ent(data-entity-later=e.id)
           b.ui-adm-na —
           small pas de bilan dans Claudy
         - else
-          = link_to accounting_euros(health.equity_cents), finance_annual_accounts_path, class: "ui-adm-amount#{' is-neg' if health.equity_cents.negative?}"
+          = situation_link_to accounting_euros(health.equity_cents), finance_annual_accounts_path, class: "ui-adm-amount#{' is-neg' if health.equity_cents.negative?}"
           small = health.equity_cents.negative? ? "elle doit plus qu’elle ne possède (bilan provisoire)" : "ce qu’elle possède moins ce qu’elle doit (bilan provisoire)"
   - if full && (health.lenders.any? || health.liabilities.any?)
     ul.ui-acc-owed-l.ui-adm-owed
       - health.liabilities.each do |liability|
         li
-          = link_to finance_liabilities_path do
+          = situation_link_to finance_liabilities_path do
             span
               = liability.label
               small = ["Dette ou litige sans facture", (l(liability.expected_on, format: "%B %Y") if liability.expected_on)].compact.join(" · ")
             b = accounting_euros(liability.remaining_cents)
       - health.lenders.each do |lender|
         li
-          = link_to finance_ledger_path(general_account_id: lender.account.id, legal_entity_id: e.id) do
+          = situation_link_to finance_ledger_path(general_account_id: lender.account.id, legal_entity_id: e.id) do
             span
               = lender.named? ? "Prêt de #{lender.name}" : lender.name
               small = [lender.account.code, (lender.long_term? ? "long terme" : "court terme")].join(" · ")

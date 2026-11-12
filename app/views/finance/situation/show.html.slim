@@ -1,0 +1,98 @@
+/ SITUATION FINANCIÈRE (Michael, 2026-11-12) : la page des administrateurs,
+  sortie de la Comptabilité. Lisible par n'importe quel Sourcier, comptable ou
+  pas. Les structures côte à côte, une colonne chacune, et trois horizons :
+  aujourd'hui, les trois prochains mois, plus loin. Puis ce qu'il faut trancher
+  ensemble. `?entity=` zoome sur une seule structure et ouvre le détail.
+  Tous les chiffres viennent de `Finance::Overview`, qui lit les briques
+  existantes ; la vue n'en calcule aucun. Les liens vers la Comptabilité ne
+  s'ouvrent qu'à qui peut la lire (`situation_link_to`).
+- full = @focus.present?
+- urgent = @signals.count { |signal| signal.level == :no }
+.ui-acc.ui-adm(data-overview=(full ? "entity" : "all"))
+  header.ui-phead
+    .ui-phead-t
+      p.ui-over = [@focus&.entity&.name, l(Date.current, format: "%-d %B %Y")].compact.join(" · ")
+      h1.ui-h1 Situation financière
+      p.ui-adm-lead
+        | Comment va chaque structure, ce qui l’attend, et ce qu’il faut trancher ensemble.
+        - if @signals.any?
+          = " "
+          = link_to "#a-trancher", class: "ui-adm-lead-a", data: { turbo: false } do
+            - if urgent.positive?
+              = "#{urgent} point#{'s' if urgent > 1} à traiter"
+            - else
+              = "#{@signals.size} point#{'s' if @signals.size > 1} à connaître"
+    nav.ui-seg(aria-label="Structure")
+      = link_to "Toutes", finance_situation_path, class: "ui-seg-i", aria: { current: (full ? nil : "page") }
+      - @overview.entities.each do |health|
+        = link_to health.entity.form_label, finance_situation_path(entity: health.entity.id), class: "ui-seg-i",
+                  aria: { current: (health == @focus ? "page" : nil) }, title: health.entity.name
+
+  = render "finance/shared/page_guide"
+
+  / D'où viennent les chiffres : le dernier mois arrêté, et ce qui attend
+    encore d'être classé. Sans cela, une estimation passe pour un fait.
+  p.ui-sit-rel(data-situation-reliability=(@reliability.pending? ? "pending" : "clear"))
+    = ui_icon(:clock, size: 16)
+    span
+      - if @reliability.closed_through
+        = "Chiffres arrêtés au #{l(@reliability.closed_through, format: '%-d %B %Y')}"
+      - else
+        | Aucun mois arrêté pour l’instant
+      - if @reliability.pending?
+        = " · #{@reliability.pending_count} ligne#{'s' if @reliability.pending_count > 1} de banque ou de caisse pas encore classée#{'s' if @reliability.pending_count > 1} (#{accounting_euros(@reliability.pending_cents)}) : les chiffres du mois en cours peuvent encore bouger."
+      - else
+        | . Toutes les lignes de banque et de caisse sont classées.
+
+  - cols = { style: "--adm-cols: #{@healths.size}" }
+  section.ui-adm-sec(data-overview-section="today" aria-labelledby="adm-today")
+    .ui-adm-sec-h
+      h2.ui-h2#adm-today Aujourd’hui
+      p Comment va chaque structure ?
+    .ui-adm-cols(*cols)
+      - @healths.each do |health|
+        = render "finance/situation/health_today", health: health, full: full
+
+  section.ui-adm-sec(data-overview-section="soon" aria-labelledby="adm-soon")
+    .ui-adm-sec-h
+      h2.ui-h2#adm-soon Les trois prochains mois
+      p = "Jusqu’au #{l(Date.current + Finance::Treasury::HORIZON_DAYS, format: '%-d %B')} : ce qui va rentrer, sortir, et ce que la loi demande."
+    .ui-adm-cols(*cols)
+      - @healths.each do |health|
+        = render "finance/situation/health_soon", health: health, full: full
+
+  section.ui-adm-sec(data-overview-section="later" aria-labelledby="adm-later")
+    .ui-adm-sec-h
+      h2.ui-h2#adm-later Plus loin
+      p L’année, le budget, les prêts et ce que vaut chaque structure.
+    .ui-adm-cols(*cols)
+      - @healths.each do |health|
+        = render "finance/situation/health_later", health: health, full: full
+
+  section.ui-adm-sec#a-trancher(data-overview-section="signals" aria-labelledby="adm-signals")
+    .ui-adm-sec-h
+      h2.ui-h2#adm-signals Ce qu’on doit trancher ensemble
+      p Ce que Claudy repère dans les chiffres, le plus urgent d’abord.
+    - if @signals.any?
+      ol.ui-card.ui-adm-sig
+        - @signals.each do |signal|
+          li(data-signal-level=signal.level)
+            = overview_level(signal)
+            p
+              - unless full
+                b.ui-adm-sig-e = signal.entity.form_label
+              = signal.text
+            - if (path = situation_signal_path(signal))
+              = link_to "Voir", path, class: "ui-card-link"
+    - else
+      p.ui-card.ui-card-b.ui-adm-empty Rien de particulier : les chiffres ne signalent aucun point à trancher.
+
+  details.ui-adm-more(data-overview-glossary="")
+    summary
+      span Les mots de cette page
+      = ui_icon(:right, size: 16, css: "ui-adm-more-i")
+    dl.ui-adm-glossary
+      - AccountingOverviewHelper::OVERVIEW_GLOSSARY.each do |word, definition|
+        div
+          dt = word
+          dd = definition

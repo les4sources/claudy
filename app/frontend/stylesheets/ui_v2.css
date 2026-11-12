@@ -1228,6 +1228,10 @@ a.ui-kt-who:hover { text-decoration: underline; text-decoration-color: var(--ui-
 .ui-adm-lead { font-size: 15px; color: var(--ui-ink2); max-width: 62ch; }
 .ui-adm-lead-a { font-weight: 700; color: var(--ui-red-ink); text-decoration: underline; text-decoration-color: currentColor; text-underline-offset: 3px; white-space: nowrap; }
 .ui-adm-sec { margin-top: 30px; }
+/* Situation financière (2026-11-12) : d'où viennent les chiffres. */
+.ui-sit-rel { display: flex; align-items: flex-start; gap: 8px; margin-top: 18px; padding: 10px 14px; border-radius: 12px; border: 1.5px solid var(--ui-line); background: #fff; font-size: 13.5px; color: var(--ui-ink2); max-width: 90ch; }
+.ui-sit-rel .ui-ico { flex: none; margin-top: 2px; color: var(--ui-ink3); }
+.ui-sit-rel[data-situation-reliability="pending"] { background: var(--ui-yellow-tint); border-color: #e2cf7a; }
 .ui-adm-sec-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 14px; }
 .ui-adm-sec-h p { font-size: 14.5px; color: var(--ui-ink3); }
 .ui-adm-cols { display: grid; grid-template-columns: repeat(var(--adm-cols, 3), minmax(0, 1fr)); gap: 18px; align-items: stretch; }
@@ -1291,6 +1295,9 @@ a.ui-kt-who:hover { text-decoration: underline; text-decoration-color: var(--ui-
 .ui-adm-glossary dd { margin-top: 3px; font-size: 13.5px; line-height: 1.5; color: var(--ui-ink2); }
 .ui-adm-work { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; padding: 0 20px 20px; }
 .ui-adm-work .ui-acc-refs { margin-top: 0; padding-top: 0; border-top: 0; }
+.ui-acc-work { padding: 0; margin-top: 8px; }
+.ui-acc-work .ui-card.is-warn { border-color: #e2cf7a; }
+.ui-acc-late { color: var(--ui-red-ink); }
 
 @media (max-width: 1100px) {
   .ui-adm-cols { grid-template-columns: minmax(0, 1fr); }

@@ -36,5 +36,8 @@
                 div
                   dt.font-medium.text-gray-900= term.word
                   dd.text-gray-600= term.definition
-      .px-4.pb-3.text-xs
-        = link_to "Ouvrir le guide complet : ta routine et tout le lexique", finance_guide_path, class: "text-teal-700 underline hover:no-underline"
+      / Le guide de la compta est un écran de la Comptabilité : la Situation
+        financière ne le propose qu'à qui peut l'ouvrir.
+      - if section_readable?(:accounting)
+        .px-4.pb-3.text-xs
+          = link_to "Ouvrir le guide complet : ta routine et tout le lexique", finance_guide_path, class: "text-teal-700 underline hover:no-underline"
