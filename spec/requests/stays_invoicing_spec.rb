@@ -208,7 +208,7 @@ RSpec.describe "Séjours — demande de facture", type: :request do
     it "affiche le badge de facture quand une facture est attendue" do
       get stay_path(stay(invoice_status: "requested"))
 
-      expect(response.body).to include("À fournir")
+      expect(response.body).to include(">Facture à fournir</span>")
     end
 
     it "n'affiche aucun badge sur un séjour sans facture" do

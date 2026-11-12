@@ -632,15 +632,23 @@ class StayDecorator < ApplicationDecorator
     "sent"      => "bg-green-100 text-green-800"
   }.freeze
 
+  # Texte du badge : seul sous le nom du séjour, « À fournir » ne disait pas
+  # QUOI fournir (Michael 2026-11-12). La liste de choix garde « À fournir »
+  # (`Stay::INVOICE_STATUSES`), sous son libellé « Statut de facturation ».
+  INVOICE_BADGE_LABELS = {
+    "requested" => "Facture à fournir",
+    "sent"      => "Facturée"
+  }.freeze
+
   # Badge de FACTURE (Michael 2026-09-02). Rien à afficher sur l'immense
   # majorité des séjours, qui ne demandent aucune facture — le badge n'apparaît
   # donc que quand une facture est attendue ou déjà partie.
   def invoice_badge
     return unless object.invoice_expected?
 
-    h.content_tag(:span, object.invoice_status_label,
-                  class: "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium #{INVOICE_BADGE_STYLES[object.invoice_status]}",
-                  title: "Facture #{object.invoice_status_label.downcase}")
+    label = INVOICE_BADGE_LABELS.fetch(object.invoice_status, object.invoice_status_label)
+    h.content_tag(:span, label,
+                  class: "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium #{INVOICE_BADGE_STYLES[object.invoice_status]}")
   end
 
   # Apporteur du séjour (Michael, 2026-10-18) : « Via Semisto » dans l'en-tête
