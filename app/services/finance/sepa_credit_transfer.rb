@@ -52,6 +52,11 @@ module Finance
     def self.problem_for(payable)
       return "Note de crédit : c'est le fournisseur qui te rembourse." if payable.try(:credit_note?)
       return "Rien à virer : déjà couvert par les rapprochements." unless payable.remaining_cents.positive?
+      # Domiciliée (2026-11-12) : la banque la prélève, la virer la paierait deux fois.
+      return "Réglée par compensation : rien à virer." if payable.try(:settled_by_offset?)
+      if payable.try(:direct_debit?)
+        return "Domiciliation : la banque la prélève#{" le #{I18n.l(payable.settled_on, format: :short)}" if payable.settled_on}, pas de virement."
+      end
       return "Bénéficiaire sans nom." if payable.payable_beneficiary.blank?
 
       iban = normalize_iban(payable.payable_iban)

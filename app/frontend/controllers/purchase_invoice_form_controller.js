@@ -31,7 +31,7 @@ export default class extends Controller {
   // membre pour « Payée par un membre ».
   toggleSettlement() {
     const choice = this.settlementTargets.find((input) => input.checked)?.value ?? ""
-    this.settledOnTargets.forEach((element) => { element.hidden = !["bank", "cash"].includes(choice) })
+    this.settledOnTargets.forEach((element) => { element.hidden = !["bank", "cash", "direct_debit", "offset"].includes(choice) })
     this.settledByMemberTargets.forEach((element) => { element.hidden = choice !== "member" })
   }
 

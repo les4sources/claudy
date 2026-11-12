@@ -80,6 +80,66 @@ RSpec.describe "Facture d'achat déjà réglée à l'encodage" do
     end
   end
 
+  # Domiciliation (Michael, 2026-11-12, la SWDE) : la banque prélèvera. Elle
+  # reste due (« À payer », trésorerie), mais ne se vire pas.
+  describe "par domiciliation" do
+    it "prend l'échéance comme date de prélèvement, à défaut la date de la pièce" do
+      expect(facture(settled_via: "direct_debit").settled_on).to eq(Date.new(2026, 10, 15))
+      expect(facture(settled_via: "direct_debit", settled_on: Date.new(2026, 10, 20)).payable_due_on).to eq(Date.new(2026, 10, 20))
+    end
+
+    it "reste dans « À payer », jamais en retard, mais hors fichier de virements" do
+      f = PurchaseInvoices::Advance.new(purchase_invoice: facture(settled_via: "direct_debit")).submit!
+
+      expect(f).to be_to_pay
+      expect(f).to be_posted
+      expect(f.status_label).to eq("Domiciliée")
+      expect(f).to be_awaiting_direct_debit
+      expect(f).not_to be_awaiting_bank_line
+      expect(PurchaseInvoice.payable).to include(f)
+      expect(Finance::PayableQueue.new.rows).to include(f)
+      expect(f.payable_overdue?(Date.new(2026, 11, 12))).to be(false)
+      expect(Finance::SepaCreditTransfer.problem_for(f)).to include("Domiciliation", "pas de virement")
+    end
+
+    it "propose la ligne du prélèvement et passe « Payée » au rapprochement" do
+      f = PurchaseInvoices::Advance.new(purchase_invoice: facture(settled_via: "direct_debit")).submit!
+      ligne = build_cash_entry(banque, amount_cents: -5_999, entry_date: Date.new(2026, 10, 16), label: "Domiciliation SWDE")
+
+      expect(PurchaseInvoices::BankLineCandidates.new(f).entries).to eq([ligne])
+      match = Finance::MatchPurchaseInvoices.new.for_entry(ligne).first
+      expect(match.invoice).to eq(f)
+      expect(match.reason).to include("domiciliée")
+
+      Finance::RecordInvoicePayment.new(purchase_invoice: f, cash_entry: ligne).run!
+
+      expect(f.reload).to be_paid
+      expect(f.status_label).to eq("Payée")
+    end
+  end
+
+  # Compensation (Michael, 2026-11-12, loyer SSI #19) : éteinte avec d'autres
+  # dettes, sans argent. Hors file et trésorerie, la dette reste au 440000.
+  describe "par compensation" do
+    it "sort de « À payer », du fichier SEPA et des suggestions de rapprochement" do
+      f = PurchaseInvoices::Advance.new(purchase_invoice: facture(settled_via: "offset", settled_on: Date.new(2026, 10, 20))).submit!
+
+      expect(f).to be_to_pay
+      expect(f).to be_posted
+      expect(f.status_label).to eq("Compensée, à justifier")
+      expect(f).to be_awaiting_offset_entry
+      expect(f).not_to be_expects_bank_line
+      expect(PurchaseInvoice.payable).not_to include(f)
+      expect(Finance::PayableQueue.new.rows).not_to include(f)
+      expect(f.overdue?(Date.new(2026, 11, 12))).to be(false)
+      expect(Finance::SepaCreditTransfer.problem_for(f)).to include("compensation")
+
+      ligne = build_cash_entry(banque, amount_cents: -5_999, entry_date: Date.new(2026, 10, 21))
+      expect(Finance::MatchPurchaseInvoices.new.for_entry(ligne).map(&:invoice)).not_to include(f)
+      expect(PurchaseInvoices::BankLineCandidates.new(f).entries).to be_empty
+    end
+  end
+
   describe "en espèces" do
     let!(:caisse) { build_cash_account(entity, compte_caisse, name: "Caisse", kind: "cash") }
 

@@ -7,7 +7,7 @@ module Finance
   # personne n'avait dit oui.
   class PurchaseInvoicesController < Finance::AccountingBaseController
     before_action :get_invoice, only: %i[show edit update submit dispute reopen validate_by_team pay_in_cash paid_by_member
-                                              replace_document unpost link_payment record_bank_payment unsettle]
+                                              replace_document unpost link_payment record_bank_payment unsettle declare_settlement]
     before_action :get_form_collections, only: %i[new create edit update]
 
     breadcrumb "Achats", :finance_purchase_invoices_path, match: :exact
@@ -57,7 +57,7 @@ module Finance
       return unless @invoice.to_pay?
 
       # Déjà réglée par la banque : la ligne du relevé est peut-être déjà là.
-      @bank_line_candidates = PurchaseInvoices::BankLineCandidates.new(@invoice).entries.to_a if @invoice.awaiting_bank_line?
+      @bank_line_candidates = PurchaseInvoices::BankLineCandidates.new(@invoice).entries.to_a if @invoice.expects_bank_line?
       @orphan_payments = Finance::OrphanSupplierPayments.new(invoices: [@invoice]).for(@invoice)
       @unpost_refusal = PurchaseInvoices::Unpost.refusal_for(@invoice)
     end
@@ -278,6 +278,35 @@ module Finance
       redirect_to finance_purchase_invoice_path(@invoice), alert: e.message
     end
 
+    # Sur une facture déjà comptabilisée (la SWDE #33) : la banque la prélèvera,
+    # ou l'a déjà débitée. Seules ces deux-là : les espèces passent par
+    # « Payée en caisse », un membre par « Payée par un membre ».
+    def declare_settlement
+      via = params[:settled_via].to_s
+      unless %w[direct_debit bank offset].include?(via) && !@invoice.credit_note? && !@invoice.paid? && !@invoice.member_paid?
+        return redirect_to finance_purchase_invoice_path(@invoice), alert: "Ce règlement ne s'applique pas à cette facture."
+      end
+
+      attributes = { settled_via: via, settled_on: params[:settled_on].presence }
+      # La compensation garde son pourquoi dans les notes, pour la comptable.
+      if via == "offset" && params[:reason].present?
+        attributes[:notes] = [@invoice.notes.presence, "Réglée par compensation : #{params[:reason].strip}"].compact.join("\n")
+      end
+      @invoice.update!(attributes)
+      notice = if @invoice.direct_debit?
+                 "Facture domiciliée : plus de virement à faire, elle reste attendue en trésorerie au " \
+                   "#{l(@invoice.settled_on, format: :short)}."
+               elsif @invoice.settled_by_offset?
+                 "Facture réglée par compensation : elle sort de « À payer » et de la trésorerie. " \
+                   "La dette reste au 440000 jusqu'à l'écriture de compensation."
+               else
+                 "Facture déclarée réglée par la banque : elle sort de « À payer »."
+               end
+      redirect_to finance_purchase_invoice_path(@invoice), notice: notice
+    rescue ActiveRecord::RecordInvalid, Date::Error => e
+      redirect_to finance_purchase_invoice_path(@invoice), alert: e.message
+    end
+
     # Ce n'était pas réglé, finalement : la facture retourne dans « À payer ».
     def unsettle
       unless @invoice.settled_beforehand? && !@invoice.paid?
@@ -285,7 +314,7 @@ module Finance
       end
 
       @invoice.update!(settled_via: nil)
-      notice = @invoice.to_pay? ? "Facture remise dans « À payer »." : "Facture plus déclarée réglée."
+      notice = @invoice.to_pay? ? "Facture remise dans « À payer », à virer." : "Facture plus déclarée réglée."
       redirect_to finance_purchase_invoice_path(@invoice), notice: notice
     end
 
@@ -322,6 +351,8 @@ module Finance
       end
       return "#{base} Déjà réglée #{invoice.settlement_label} : comptabilise-la, elle n'ira pas dans « À payer »." if invoice.settled_by_bank? && !invoice.posted?
       return "#{base} Payée en espèces : la sortie de caisse se créera quand tu la comptabiliseras." if invoice.settled_in_cash? && !invoice.posted?
+      return "#{base} Domiciliée : elle n'ira pas dans le fichier de virements." if invoice.direct_debit? && !invoice.posted?
+      return "#{base} Réglée par compensation : comptabilise-la, elle n'ira pas dans « À payer »." if invoice.settled_by_offset? && !invoice.posted?
 
       base
     end
@@ -341,6 +372,14 @@ module Finance
                  "« Payée » quand la ligne du relevé y sera rapprochée."
         end
         return "Facture comptabilisée et payée en espèces : la sortie de caisse est enregistrée." if invoice.settled_in_cash? && invoice.paid?
+        if invoice.awaiting_offset_entry?
+          return "Facture comptabilisée et réglée par compensation : hors « À payer », la dette reste au 440000 " \
+                 "jusqu'à l'écriture de compensation."
+        end
+        if invoice.awaiting_direct_debit?
+          return "Facture comptabilisée et domiciliée : pas de virement à faire, elle passera « Payée » quand " \
+                 "le prélèvement du relevé y sera rapproché."
+        end
         return "Facture prête à payer, écriture générée au journal des achats." unless invoice.credit_note?
 
         "Note de crédit #{invoice.status_label.downcase}, écriture générée au journal des achats."

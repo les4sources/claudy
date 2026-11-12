@@ -1,6 +1,6 @@
 module PurchaseInvoices
   # Les lignes du relevé qui peuvent être le paiement d'une facture déclarée
-  # « déjà réglée par la banque » (Michael, 2026-11-12) : sorties bancaires de
+  # « déjà réglée par la banque » ou « domiciliée » (Michael, 2026-11-12) : sorties bancaires de
   # la même structure, encore à affecter, du montant qui reste dû, autour de la
   # date du règlement. La fiche les propose ; un humain clique (invariant B4 :
   # rien ne s'affecte tout seul).
@@ -18,7 +18,7 @@ module PurchaseInvoices
     end
 
     def entries
-      return CashEntry.none unless @invoice.awaiting_bank_line?
+      return CashEntry.none unless @invoice.expects_bank_line?
 
       du = @invoice.remaining_cents
       return CashEntry.none unless du.positive?

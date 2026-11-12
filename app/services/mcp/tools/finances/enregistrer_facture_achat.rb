@@ -16,7 +16,7 @@ module Mcp
         TYPES = { "facture" => "invoice", "note_de_credit" => "credit_note" }.freeze
         # Déjà réglée à l'encodage (2026-11-12), comme le bloc « Règlement » du
         # formulaire. Payée par un membre : geste_facture_achat payee_par_membre.
-        REGLEMENTS = { "non" => nil, "banque" => "bank", "especes" => "cash" }.freeze
+        REGLEMENTS = { "non" => nil, "domiciliation" => "direct_debit", "banque" => "bank", "especes" => "cash", "compensation" => "offset" }.freeze
 
         LIGNE_FACTURE = {
           type: "object",
@@ -43,10 +43,14 @@ module Mcp
                           "Une NOTE DE CRÉDIT fournisseur : `type` note_de_credit (repris d'office d'une pièce lue " \
                           "comme telle), montants positifs, `facture_corrigee` facultative ; une fois soumise, elle " \
                           "s'impute sur ce qui reste à payer de cette facture, le reste est « à rembourser » par le fournisseur. " \
-                          "DÉJÀ RÉGLÉE avant d'arriver en compta : `deja_reglee` banque (domiciliation, carte, virement " \
+                          "PRÉLEVÉE par la banque : `deja_reglee` domiciliation (hors fichier SEPA, reste attendue en " \
+                          "trésorerie à `reglee_le`, défaut l'échéance). " \
+                          "DÉJÀ RÉGLÉE avant d'arriver en compta : `deja_reglee` banque (carte, virement " \
                           "déjà fait : une fois soumise, elle ne va pas dans « à payer » et attend sa ligne du relevé) ou " \
                           "especes (la sortie de caisse se crée à la soumission), `reglee_le` = date du règlement (défaut : " \
-                          "date de la pièce). Payée par un membre : geste_facture_achat payee_par_membre.",
+                          "date de la pièce). RÉGLÉE PAR COMPENSATION avec d'autres dettes (sans argent) : `deja_reglee` compensation " \
+                          "(hors « à payer » et trésorerie, la dette reste au 440000 jusqu'à l'écriture de compensation). " \
+                          "Payée par un membre : geste_facture_achat payee_par_membre.",
              schema: {
                properties: {
                  facture: FACTURE.merge(description: "Pour corriger : la facture (#88). Absente : nouvelle facture."),
@@ -62,7 +66,7 @@ module Mcp
                  communication: { type: "string", description: "Communication de paiement (structurée +++…+++ ou libre)." },
                  validation: { type: "string", description: "Pôle qui valide avant paiement, ou « aucune »." },
                  notes: { type: "string" },
-                 deja_reglee: { type: "string", enum: REGLEMENTS.keys, description: "Déjà réglée : banque, especes, ou non (défaut)." },
+                 deja_reglee: { type: "string", enum: REGLEMENTS.keys, description: "domiciliation (la banque la prélèvera), banque (déjà débitée), especes, compensation (éteinte avec d'autres dettes), ou non (défaut)." },
                  reglee_le: DATE.merge(description: "Date du règlement déclaré. Défaut : date de la pièce."),
                  lignes: { type: "array", items: LIGNE_FACTURE }
                }
@@ -97,8 +101,16 @@ module Mcp
           end
           resume << "Validation par le pôle #{brouillon.validation_team&.name}" if brouillon.requires_validation?
           if brouillon.settled_via.present? && !brouillon.credit_note?
-            suite = brouillon.settled_by_bank? ? "elle n'ira pas dans « à payer », elle attendra sa ligne du relevé." : "la sortie de caisse se créera à la soumission."
-            resume << "Déjà réglée #{brouillon.settlement_label} le #{brouillon.settled_on || brouillon.issued_on} : #{suite}"
+            if brouillon.direct_debit?
+              resume << "Domiciliée, prélèvement prévu le #{brouillon.settled_on || brouillon.due_on || brouillon.issued_on} : " \
+                        "hors fichier SEPA, elle reste attendue en trésorerie."
+            elsif brouillon.settled_by_offset?
+              resume << "Réglée par compensation le #{brouillon.settled_on || brouillon.issued_on} : hors « à payer » et trésorerie, " \
+                        "la dette reste au 440000 jusqu'à l'écriture de compensation."
+            else
+              suite = brouillon.settled_by_bank? ? "elle n'ira pas dans « à payer », elle attendra sa ligne du relevé." : "la sortie de caisse se créera à la soumission."
+              resume << "Déjà réglée #{brouillon.settlement_label} le #{brouillon.settled_on || brouillon.issued_on} : #{suite}"
+            end
           end
           if attributs[:lignes]
             resume << "Lignes#{' (remplacent les actuelles)' if facture} :"
@@ -165,7 +177,7 @@ module Mcp
           end
           a[:lignes] = lignes!(arguments["lignes"]) if arguments.key?("lignes")
           if arguments["deja_reglee"].present?
-            a[:settled_via] = REGLEMENTS.fetch(arguments["deja_reglee"]) { raise Error, "deja_reglee : banque, especes ou non." }
+            a[:settled_via] = REGLEMENTS.fetch(arguments["deja_reglee"]) { raise Error, "deja_reglee : domiciliation, banque, especes, compensation ou non." }
           end
           a[:settled_on] = date!(arguments["reglee_le"], "reglee_le") if arguments["reglee_le"].present?
           note_de_credit!(a, arguments, facture)

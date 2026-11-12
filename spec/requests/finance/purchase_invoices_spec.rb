@@ -585,6 +585,62 @@ RSpec.describe "Comptabilité > Achats", type: :request do
       expect(PurchaseInvoice.payable).to include(facture)
     end
 
+    it "propose la domiciliation à l'encodage et la sort du fichier de virements" do
+      get new_finance_purchase_invoice_path
+      expect(response.body).to include("Domiciliation", "Réglée par compensation")
+
+      post finance_purchase_invoices_path, params: params_facture(settled_via: "direct_debit", due_on: "2026-06-20")
+      facture = PurchaseInvoice.last
+      expect(facture).to have_attributes(settled_via: "direct_debit", settled_on: Date.new(2026, 6, 20))
+
+      post submit_finance_purchase_invoice_path(facture)
+      follow_redirect!
+      expect(response.body).to include("Domiciliée", "Pas domiciliée ?")
+      expect(PurchaseInvoice.payable).to include(facture)
+    end
+
+    it "domicilie depuis la fiche une facture déjà « À payer », puis la remet à virer" do
+      post finance_purchase_invoices_path, params: params_facture(due_on: "2026-06-20")
+      facture = PurchaseInvoice.last
+      post submit_finance_purchase_invoice_path(facture)
+      get finance_purchase_invoice_path(facture)
+      expect(response.body).to include("Pas de virement à faire ?")
+
+      post declare_settlement_finance_purchase_invoice_path(facture), params: { settled_via: "direct_debit", settled_on: "2026-06-25" }
+
+      expect(facture.reload).to have_attributes(settled_via: "direct_debit", settled_on: Date.new(2026, 6, 25), status: "to_pay")
+      follow_redirect!
+      expect(response.body).to include("Facture domiciliée")
+
+      post unsettle_finance_purchase_invoice_path(facture)
+      expect(facture.reload.settled_via).to be_nil
+    end
+
+    it "sort de « À payer » une facture réglée par compensation, avec sa précision dans les notes" do
+      post finance_purchase_invoices_path, params: params_facture
+      facture = PurchaseInvoice.last
+      post submit_finance_purchase_invoice_path(facture)
+
+      post declare_settlement_finance_purchase_invoice_path(facture),
+           params: { settled_via: "offset", settled_on: "2026-10-30", reason: "dettes de la SRL envers la SSI" }
+
+      expect(facture.reload).to have_attributes(settled_via: "offset", settled_on: Date.new(2026, 10, 30), status: "to_pay")
+      expect(facture.notes).to include("Réglée par compensation : dettes de la SRL envers la SSI")
+      expect(PurchaseInvoice.payable).not_to include(facture)
+      follow_redirect!
+      expect(response.body).to include("Compensée, à justifier", "Pas compensée ?")
+      expect(response.body).not_to include("Copier l&#39;IBAN")
+    end
+
+    it "refuse de domicilier une note de crédit" do
+      note = PurchaseInvoice.create!(legal_entity: entity, third_party: antargaz, kind: "credit_note",
+                                     issued_on: Date.new(2026, 6, 1), total_cents: 1_000)
+
+      post declare_settlement_finance_purchase_invoice_path(note), params: { settled_via: "direct_debit" }
+
+      expect(note.reload.settled_via).to be_nil
+    end
+
     it "met une facture payée par un membre sur sa note de frais dès l'enregistrement" do
       post finance_purchase_invoices_path, params: params_facture(settled_via: "member", settled_by_human_id: marie.id)
 

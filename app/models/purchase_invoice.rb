@@ -37,6 +37,16 @@
 # y est rapprochée. `cash` : la sortie de caisse se crée quand elle est
 # comptabilisée (`Advance#submit!`). Payée par un membre, c'est le statut
 # `member_paid`, pas cette colonne.
+#
+# `direct_debit` (Michael, 2026-11-12, SWDE) : la banque la PRÉLÈVERA. Rien à
+# virer, donc hors du fichier SEPA ; mais l'argent n'est pas encore parti :
+# elle reste dans « À payer » et dans la trésorerie à sa date de prélèvement
+# (`settled_on`), et passe « Payée » quand la ligne du relevé est rapprochée.
+#
+# `offset` (Michael, 2026-11-12, loyer SSI #19) : réglée PAR COMPENSATION avec
+# d'autres dettes, sans mouvement d'argent. Hors « À payer », du fichier SEPA
+# et de la trésorerie ; la dette reste au 440000 (« Compensée, à justifier »)
+# jusqu'à l'écriture de compensation que passe la comptable.
 # == Schema Information
 #
 # Table name: purchase_invoices
@@ -115,11 +125,15 @@ class PurchaseInvoice < ApplicationRecord
 
   # Par où l'argent est déjà sorti quand la facture est déclarée réglée à
   # l'encodage (2026-11-12).
-  SETTLEMENT_METHODS = %w[bank cash].freeze
+  SETTLEMENT_METHODS = %w[bank cash direct_debit offset].freeze
   SETTLEMENT_LABELS = {
-    "bank" => "par la banque",
-    "cash" => "en espèces"
+    "bank"         => "par la banque",
+    "cash"         => "en espèces",
+    "direct_debit" => "par domiciliation",
+    "offset"       => "par compensation"
   }.freeze
+  # Rien à virer ni à attendre en trésorerie : hors de la file « À payer ».
+  OUT_OF_QUEUE_SETTLEMENTS = %w[bank offset].freeze
 
   KINDS = %w[invoice credit_note].freeze
   KIND_LABELS = {
@@ -205,7 +219,8 @@ class PurchaseInvoice < ApplicationRecord
   # attend de l'argent qui rentre (`awaiting_refund`). Une facture déjà réglée
   # par la banque n'a plus rien à virer : elle attend sa ligne du relevé
   # (`awaiting_bank_line`), et la remettre dans la file la ferait payer deux fois.
-  scope :payable, -> { invoices.where(status: "to_pay").where("purchase_invoices.settled_via IS DISTINCT FROM 'bank'") }
+  # Compensée (`offset`) : aucun argent ne bouge, la comptable solde le 440000.
+  scope :payable, -> { invoices.where(status: "to_pay").where("COALESCE(purchase_invoices.settled_via, '') NOT IN (?)", OUT_OF_QUEUE_SETTLEMENTS) }
   scope :awaiting_bank_line, -> { invoices.where(status: "to_pay", settled_via: "bank") }
   scope :awaiting_refund, -> { credit_notes.where(status: "to_pay") }
   # Ce que le pôle doit trancher (phase 3) : le callout de sa page s'en sert.
@@ -222,6 +237,8 @@ class PurchaseInvoice < ApplicationRecord
   # attend un remboursement, ou elle est imputée sur sa facture / remboursée.
   def status_label
     return "Réglée, à rapprocher" if awaiting_bank_line?
+    return "Domiciliée" if awaiting_direct_debit?
+    return "Compensée, à justifier" if awaiting_offset_entry?
     return STATUS_LABELS.fetch(status, status) unless credit_note?
     return "À rembourser" if to_pay?
     return(allocated_cents.positive? ? "Remboursée" : "Imputée") if paid?
@@ -233,12 +250,28 @@ class PurchaseInvoice < ApplicationRecord
   def settled_beforehand? = settled_via.present?
   def settled_by_bank? = settled_via == "bank"
   def settled_in_cash? = settled_via == "cash"
+  def direct_debit? = settled_via == "direct_debit"
+  def settled_by_offset? = settled_via == "offset"
   def settlement_label = SETTLEMENT_LABELS[settled_via]
 
   # Comptabilisée, réglée par la banque, et sa ligne du relevé n'est pas
   # encore rapprochée : rien à virer, une ligne à attendre.
   def awaiting_bank_line? = to_pay? && settled_by_bank? && !credit_note?
 
+  # Comptabilisée, la banque la prélèvera (ou l'a fait) : rien à virer, mais
+  # elle reste une sortie attendue jusqu'au rapprochement de sa ligne.
+  def awaiting_direct_debit? = to_pay? && direct_debit? && !credit_note?
+
+  # Comptabilisée et réglée par compensation : la dette reste au 440000 tant
+  # que l'écriture de compensation n'est pas passée.
+  def awaiting_offset_entry? = to_pay? && settled_by_offset? && !credit_note?
+
+  # Une ligne du relevé est attendue, qu'elle soit déjà partie ou prélevée.
+  def expects_bank_line? = awaiting_bank_line? || awaiting_direct_debit?
+
+  # Payable : une domiciliation n'est jamais « en retard » dans la file, c'est
+  # la banque qui choisit le jour.
+  def payable_overdue?(on = Date.current) = !direct_debit? && super
   def lines_total_cents = purchase_invoice_lines.sum(&:amount_cents)
   def lines_vat_cents = purchase_invoice_lines.sum(&:vat_cents)
   def balanced? = lines_total_cents == total_cents
@@ -331,7 +364,8 @@ class PurchaseInvoice < ApplicationRecord
   def payable_beneficiary = third_party&.name
   def payable_third_party = third_party
   def payable_communication = payment_reference.presence || number.presence || "Facture ##{id}"
-  def payable_due_on = due_on
+  # Domiciliée : le jour du prélèvement, c'est là que la trésorerie l'attend.
+  def payable_due_on = (direct_debit? && settled_on) || due_on
   def payable_reference = reference.presence || "##{id}"
   def payable_label = "#{kind_label} #{payable_reference}"
 
@@ -489,7 +523,8 @@ class PurchaseInvoice < ApplicationRecord
     if settled_via.nil?
       self.settled_on = nil
     else
-      self.settled_on ||= issued_on
+      # Une domiciliation se prélève à l'échéance ; le reste, le jour de la pièce.
+      self.settled_on ||= (direct_debit? ? due_on : nil) || issued_on
     end
   end
 
