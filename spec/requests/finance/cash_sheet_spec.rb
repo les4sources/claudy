@@ -96,6 +96,21 @@ RSpec.describe "Comptabilité > Caisse — la feuille du mois", type: :request d
       expect(response.body).to include("Mois arrêté")
       expect(response.body).not_to include("cash_line[cash_motif_id]")
     end
+
+    # Michael, 2026-11-12 : le formulaire verdit pour une entrée, rougit pour
+    # une sortie. Le sens voyage sur chaque option, le contrôleur le lit.
+    it "porte le sens de chaque motif pour colorer le formulaire" do
+      get finance_cash_sheet_path(month: "2026-06")
+
+      page = Nokogiri::HTML(response.body)
+      wrapper = page.at_css('[data-controller="cash-direction"]')
+      expect(wrapper).to be_present
+      expect(wrapper["data-cash-direction-in-class"]).to include("bg-emerald-50")
+      expect(wrapper["data-cash-direction-out-class"]).to include("bg-red-50")
+      expect(wrapper.at_css('select[data-cash-direction-target="select"]')).to be_present
+      expect(page.at_css("option[value='#{motif_bar.id}']")["data-direction"]).to eq("in")
+      expect(page.at_css("option[value='#{motif_menage.id}']")["data-direction"]).to eq("out")
+    end
   end
 
   describe "POST /finance/cash/lines" do

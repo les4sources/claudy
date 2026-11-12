@@ -14,7 +14,7 @@
       = number_field_tag "cash_line[amount]", nil, step: 0.01, min: 0, required: true, inputmode: "decimal", placeholder: "0,00", class: "mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm"
     .col-span-2(class="relative sm:col-span-2" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un motif…")
       = label_tag "cash_line[cash_motif_id]", "Motif", class: "block text-xs font-medium text-gray-600"
-      = select_tag "cash_line[cash_motif_id]", options_from_collection_for_select(motifs, :id, ->(m) { "#{m.label} · #{m.direction_label}" }), include_blank: "— Choisir —", required: true, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm", data: { searchable_select_target: "select" }
+      = select_tag "cash_line[cash_motif_id]", options_for_select(motifs.map { |m| ["#{m.label} · #{m.direction_label}", m.id, { data: { direction: m.direction } }] }), include_blank: "— Choisir —", required: true, class: "mt-1 w-full rounded-md border-gray-300 shadow-sm text-sm", data: { searchable_select_target: "select", cash_direction_target: "select" }
       = render "shared/searchable_select_search", label: "Chercher un motif"
     .col-span-2(class="sm:col-span-2")
       = label_tag "cash_line[label]", "Libellé", class: "block text-xs font-medium text-gray-600"
@@ -27,4 +27,4 @@
         | Ajouter
 
   p.text-xs.text-gray-400
-    | Le sens vient du motif : « Bar » fait entrer, « Volontariat » fait sortir. Pas de signe à taper.
+    | Le sens vient du motif : « Bar » fait entrer (fond vert), « Volontariat » fait sortir (fond rouge). Pas de signe à taper.
