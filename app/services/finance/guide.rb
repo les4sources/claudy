@@ -373,7 +373,8 @@ module Finance
       "finance/carrier_statements" => Page.new(
         "Les relevés de rémunération des porteurs d'activité.",
         ["Génère le relevé en brouillon et relis-le.",
-         "Émets-le : il est alors figé, comptabilisé et envoyé au porteur, et rejoint la file À payer."],
+         "Émets-le : il est alors figé, comptabilisé et envoyé au porteur, et rejoint la file À payer.",
+         "Une erreur sur un relevé émis, pas encore payé ? Rouvre-le en brouillon : l'écriture est contre-passée, corrige ou retire ses lignes, puis réémets-le."],
         %w[releve]
       ),
       "finance/consignment_reports" => Page.new(

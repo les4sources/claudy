@@ -119,6 +119,7 @@ class ExperienceBooking < ApplicationRecord
   validate :payout_frozen_once_reported
 
   before_save :freeze_carrier_fee
+  after_update :sync_draft_statement_line
 
   validates :participants, numericality: { greater_than: 0 }
   validate :duration_readable
@@ -460,15 +461,35 @@ class ExperienceBooking < ApplicationRecord
   end
 
   # Même règle pour qui est payé et combien : une fois sur un relevé, on ne
-  # réécrit ni la personne ni le montant.
+  # réécrit ni la personne ni le montant. Sauf tant que ce relevé est un
+  # BROUILLON (jamais émis, ou rouvert pour correction, Michael 2026-11-12) :
+  # le montant et la durée se corrigent alors, et la ligne suit
+  # (`sync_draft_statement_line`). Qui est payé reste figé : une prestation
+  # d'un autre porteur se retire du relevé.
   def payout_frozen_once_reported
     return unless persisted? && carrier_statement_line.present?
-    return unless will_save_change_to_performed_by_id? || will_save_change_to_carrier_fee_cents? ||
-                  will_save_change_to_duration_minutes?
+
+    fee_changed = will_save_change_to_carrier_fee_cents? || will_save_change_to_duration_minutes?
+    return unless will_save_change_to_performed_by_id? || (fee_changed && !reported_on_draft?)
 
     errors.add(:base,
-               "cette prestation figure sur un relevé de rémunération : qui la reçoit, sa durée et combien sont figés. " \
-               "Passez par une contre-passation du relevé.")
+               "cette prestation figure sur un relevé de rémunération émis : qui la reçoit, sa durée et combien sont figés. " \
+               "Rouvre le relevé en brouillon (contre-passation) pour la corriger.")
+  end
+
+  def reported_on_draft? = carrier_statement_line&.carrier_statement&.draft? || false
+
+  # La rémunération d'une prestation relevée en brouillon vient d'être corrigée
+  # (fiche de la réservation ou page du relevé) : la ligne et le total suivent,
+  # pour que le brouillon dise ce qui sera émis.
+  def sync_draft_statement_line
+    return unless (saved_change_to_carrier_fee_cents? || saved_change_to_duration_minutes?) && reported_on_draft?
+
+    line = carrier_statement_line
+    line.update!(fee_cents: carrier_fee_cents.to_i, label: CarrierStatements::Generate.label_for(self))
+    statement = line.carrier_statement
+    statement.recompute_total
+    statement.save!
   end
 
   def outcome_frozen_once_reported
@@ -477,6 +498,6 @@ class ExperienceBooking < ApplicationRecord
 
     errors.add(:outcome,
                "cette prestation figure sur un relevé de rémunération : son verdict est figé. " \
-               "Passez par une contre-passation du relevé.")
+               "Retire-la du relevé en brouillon, ou rouvre-le d'abord (contre-passation).")
   end
 end

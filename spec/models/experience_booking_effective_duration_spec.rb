@@ -88,13 +88,22 @@ RSpec.describe ExperienceBooking, "durée effective" do
     expect(described_class.format_duration(45)).to eq("45 min")
   end
 
-  it "le dit sur le relevé, puis fige la durée" do
+  # Brouillon : la durée se corrige et la ligne suit (Michael, 2026-11-12).
+  # Émis : la durée est figée.
+  it "le dit sur le relevé, suit la correction en brouillon, puis fige la durée" do
     booking = tenue!(effective_duration: "1h30")
     statement = CarrierStatements::Generate.new(human: bene, period_from: Date.current - 30, period_to: Date.current).run!
 
     line = statement.carrier_statement_lines.first
     expect(line.label).to eq("Bain d'ânes (1h30, durée standard 2h)")
     expect(line.fee_cents).to eq(4_500)
+
+    expect(booking.reload.update(effective_duration: "1h")).to be(true)
+    expect(line.reload.label).to eq("Bain d'ânes (1h, durée standard 2h)")
+    expect(line.fee_cents).to eq(3_000)
+    expect(statement.reload.total_fee_cents).to eq(3_000)
+
+    statement.update!(status: "issued")
     expect(booking.reload.update(effective_duration: "2h")).to be(false)
   end
 end

@@ -442,6 +442,124 @@ RSpec.describe "Porteurs — relevé de rémunération (epic #244, phase 3)", ty
     end
   end
 
+  # Michael, 2026-11-12 : relevé #8 d'Olivier émis avec des rémunérations
+  # fausses et des lignes en trop, et aucun écran pour le corriger.
+  describe "rouvrir un relevé émis pour le corriger" do
+    let!(:premiere) { held_booking(on: Date.current - 30) }
+    let!(:seconde) { held_booking(on: Date.current - 20) }
+    let!(:statement) do
+      s = CarrierStatements::Generate.new(human: carrier, period_from: Date.current - 60, period_to: Date.current).run!
+      CarrierStatements::Issue.new(statement: s).run!
+      s.reload
+    end
+
+    it "contre-passe l'écriture et remet le relevé en brouillon, sans email" do
+      old_entry = JournalEntry.find_by(source: statement, journal: "purchases")
+      ActionMailer::Base.deliveries.clear
+
+      rouvert = CarrierStatements::Reopen.new(statement: statement, reason: "lignes en double").run!
+
+      expect(rouvert).to be_draft
+      expect(rouvert.issued_at).to be_nil
+      expect(rouvert.posted_at).to be_nil
+      expect(rouvert.sent_at).to be_nil
+      mirror = JournalEntry.find_by(reversal_of_id: old_entry.id)
+      expect(mirror.label).to include("rouvert pour correction : lignes en double")
+      dette = mirror.journal_lines.find { |l| l.general_account == supplier_account }
+      expect(dette.debit_cents).to eq(statement.total_fee_cents)
+      expect(old_entry.reload.source).to be_nil
+      expect(ActionMailer::Base.deliveries).to be_empty
+      expect(CarrierStatement.awaiting_payment).not_to include(rouvert)
+    end
+
+    it "laisse corriger et retirer des lignes, puis réémettre avec une nouvelle écriture" do
+      old_entry = JournalEntry.find_by(source: statement, journal: "purchases")
+      CarrierStatements::Reopen.new(statement: statement).run!
+
+      premiere.reload.update!(carrier_fee: "40")
+      ligne = statement.carrier_statement_lines.find_by(experience_booking: premiere)
+      expect(ligne.reload.fee_cents).to eq(4_000)
+      expect(statement.reload.total_fee_cents).to eq(4_000 + seconde.carrier_fee_cents)
+
+      CarrierStatements::RemoveLine.new(line: statement.carrier_statement_lines.find_by(experience_booking: seconde), pay: false).run!
+      expect(statement.reload.total_fee_cents).to eq(4_000)
+      expect(seconde.reload.carrier_fee_cents).to eq(0)
+
+      ActionMailer::Base.deliveries.clear
+      CarrierStatements::Issue.new(statement: statement.reload).run!
+
+      entry = JournalEntry.find_by(source: statement, journal: "purchases")
+      expect(entry).not_to eq(old_entry)
+      expect(entry.journal_lines.find { |l| l.general_account == supplier_account }.credit_cents).to eq(4_000)
+      expect(statement.reload).to be_issued
+      expect(ActionMailer::Base.deliveries.last.to).to eq([carrier.email])
+    end
+
+    it "« Reporter » renvoie la prestation au prochain relevé, « Ne pas payer » l'en écarte" do
+      CarrierStatements::Reopen.new(statement: statement).run!
+
+      CarrierStatements::RemoveLine.new(line: statement.carrier_statement_lines.find_by(experience_booking: premiere)).run!
+      CarrierStatements::RemoveLine.new(line: statement.carrier_statement_lines.find_by(experience_booking: seconde), pay: false).run!
+
+      expect(CarrierStatements::Selection.new(human: carrier).bookings).to eq([premiere])
+    end
+
+    it "garde la rémunération figée tant que le relevé est émis" do
+      premiere.reload.carrier_fee = "10"
+      expect(premiere).not_to be_valid
+      expect(premiere.errors[:base].join).to include("Rouvre le relevé")
+
+      expect {
+        CarrierStatements::RemoveLine.new(line: statement.carrier_statement_lines.first).run!
+      }.to raise_error(CarrierStatements::RemoveLine::Refused, /rouvre-le/)
+    end
+
+    it "refuse quand un virement est déjà rapproché" do
+      ligne = build_cash_entry(cash_account, amount_cents: -1_000, label: "Acompte", entry_date: Date.current)
+      Finance::RecordCarrierStatementPayment.new(carrier_statement: statement, cash_entry: ligne, amount_cents: 1_000).run!
+
+      service = CarrierStatements::Reopen.new(statement: statement.reload)
+      expect(service).not_to be_possible
+      expect { service.run! }.to raise_error(CarrierStatements::Reopen::Refused, /virement/)
+    end
+
+    it "refuse quand le porteur a déjà un autre brouillon" do
+      held_booking(on: Date.current - 5)
+      CarrierStatements::Generate.new(human: carrier, period_from: Date.current - 10, period_to: Date.current).run!
+
+      expect {
+        CarrierStatements::Reopen.new(statement: statement).run!
+      }.to raise_error(CarrierStatements::Reopen::Refused, /déjà un relevé en brouillon/)
+    end
+
+    it "se fait depuis la page du relevé : rouvrir, corriger, retirer" do
+      get finance_carrier_statement_path(statement)
+      expect(response.body).to include("Rouvrir en brouillon")
+
+      post reopen_finance_carrier_statement_path(statement), params: { reason: "rémunérations fausses" }
+      expect(response).to redirect_to(finance_carrier_statement_path(statement))
+      expect(statement.reload).to be_draft
+
+      get finance_carrier_statement_path(statement)
+      expect(response.body).to include("Ne pas payer")
+      expect(response.body).to include("Reporter")
+
+      ligne = statement.carrier_statement_lines.find_by(experience_booking: premiere)
+      patch finance_carrier_statement_line_path(statement, ligne), params: { fee: "55,50" }
+      expect(ligne.reload.fee_cents).to eq(5_550)
+      expect(premiere.reload.carrier_fee_cents).to eq(5_550)
+
+      patch finance_carrier_statement_line_path(statement, ligne), params: { fee: "beaucoup" }
+      follow_redirect!
+      expect(CGI.unescapeHTML(response.body)).to include("Montant illisible")
+
+      autre = statement.carrier_statement_lines.find_by(experience_booking: seconde)
+      delete finance_carrier_statement_line_path(statement, autre, pay: 0)
+      expect(statement.reload.carrier_statement_lines.count).to eq(1)
+      expect(statement.total_fee_cents).to eq(5_550)
+    end
+  end
+
   describe "les écrans" do
     it "liste les porteurs et ce qu'on leur doit" do
       held_booking

@@ -123,6 +123,35 @@ RSpec.describe Mcp::Server, "finances : reversements" do
       expect(ActionMailer::Base.deliveries).to be_empty
     end
 
+    # Olivier (novembre 2026) : relevé émis avec des rémunérations fausses et
+    # des lignes en double. Rouvrir, corriger, retirer, réémettre.
+    it "rouvre un relevé émis, corrige et retire des lignes" do
+      premiere = held_booking(on: Date.current - 30)
+      seconde = held_booking(on: Date.current - 20)
+      releve = CarrierStatements::Generate.new(human: carrier, period_from: Date.current - 60, period_to: Date.current).run!
+      CarrierStatements::Issue.new(statement: releve).run!
+      ActionMailer::Base.deliveries.clear
+
+      corriger = { "geste" => "corriger_ligne", "releve" => releve.reference, "reservation" => premiere.id, "montant" => "40" }
+      expect(texte(outil("releve_porteur", corriger))).to include("rouvre-le d'abord")
+
+      rouvrir = { "geste" => "rouvrir", "releve" => releve.reference, "motif" => "lignes en double" }
+      expect(texte(outil("releve_porteur", rouvrir))).to include("contre-passée", "Aucun email ne part")
+      expect(confirme("releve_porteur", rouvrir)).to include("Relevé rouvert")
+      expect(releve.reload).to be_draft
+
+      expect(texte(outil("releve_porteur", corriger))).to include("→ 40,00 €")
+      confirme("releve_porteur", corriger)
+      expect(premiere.reload.carrier_fee_cents).to eq(4_000)
+
+      retirer = { "geste" => "retirer_ligne", "releve" => releve.id, "reservation" => "##{seconde.id}", "payer" => false }
+      expect(texte(outil("releve_porteur", retirer))).to include("jamais payée")
+      confirme("releve_porteur", retirer)
+      expect(releve.reload.total_fee_cents).to eq(4_000)
+      expect(seconde.reload.carrier_fee_cents).to eq(0)
+      expect(ActionMailer::Base.deliveries).to be_empty
+    end
+
     it "supprime un brouillon et libère ses prestations" do
       held_booking(on: Date.current - 30)
       releve = CarrierStatements::Generate.new(human: carrier, period_from: Date.current - 60, period_to: Date.current).run!

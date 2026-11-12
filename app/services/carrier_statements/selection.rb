@@ -14,11 +14,14 @@ module CarrierStatements
       @period_to = period_to
     end
 
+    # Une prestation à 0 € n'est rien à payer : retirée d'un relevé avec « Ne
+    # pas payer » (`RemoveLine`), elle ne revient pas au suivant.
     def bookings
       @bookings ||= begin
         scope = ExperienceBooking.held
                                  .for_carrier(human)
                                  .where.not(id: already_reported_ids)
+                                 .where("experience_bookings.carrier_fee_cents IS NULL OR experience_bookings.carrier_fee_cents <> 0")
                                  .includes(:experience_availability, experience_availability: :experience)
         scope = scope.where(experience_availabilities: { available_on: period_from.. }) if period_from
         scope = scope.where(experience_availabilities: { available_on: ..period_to }) if period_to

@@ -392,7 +392,7 @@ Rails.application.routes.draw do
     end
     # Relevés de rémunération des porteurs d'activité (epic #244, phase 3) :
     # générer un brouillon, l'émettre, le voir. Pas d'update — un relevé émis
-    # est figé, une erreur se corrige par contre-passation.
+    # est figé, une erreur se corrige en le rouvrant (contre-passation).
     resources :carrier_statements, only: %i[index show create destroy] do
       member do
         post :issue
@@ -401,7 +401,11 @@ Rails.application.routes.draw do
         post :pay
         # Le repasser au nom de qui paie le porteur aujourd'hui.
         post :repost
+        # Le rouvrir en brouillon pour le corriger (contre-passation).
+        post :reopen
       end
+      # Dans un brouillon : corriger le montant d'une ligne, ou la retirer.
+      resources :lines, controller: "carrier_statement_lines", only: %i[update destroy]
     end
     get "collection_cost", to: "collection_cost#index"
     # Justificatif mensuel des frais Stripe (epic #240, phase 5) : un PDF par
