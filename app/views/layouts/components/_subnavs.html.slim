@@ -241,7 +241,9 @@
   AU-DESSUS du contenu de page (l'en-tête collant des tableaux est à `z-10`).
   Sans plan de superposition sur la barre, à z-index égal c'est le dernier
   élément du DOM qui gagne — le panneau passerait dessous.
-- if !@accounting_view.nil?
+- if !@accounting_view.nil? && new_interface?
+  = render "layouts/components/subnav_accounting_v2"
+- elsif !@accounting_view.nil?
   nav.border-b#subnav-accounting.lg:px-6.relative.z-30(class="bg-teal-50/70 border-teal-100")
     .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
       .flex.items-center

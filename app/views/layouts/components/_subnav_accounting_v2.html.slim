@@ -1,0 +1,70 @@
+/ La barre de la Comptabilité, nouvelle interface (Michael, 2026-11-12) : les
+  files en entrées directes avec ce qui y attend, les menus pour ce qu'on ouvre
+  une fois par mois, les réglages derrière l'engrenage. Même structure de DOM
+  que l'ancienne barre (`ul > li > a.bg-teal-100`, groupes `li > button + ul`)
+  pour que `ui_subnav_controller.js` range ce qui ne tient pas dans « Plus ».
+- current = accounting_nav_v2_current_label
+- active = "text-4s-main bg-teal-100 font-medium"
+- idle = "text-gray-500 hover:text-4s-main hover:bg-teal-50/60"
+nav.border-b#subnav-accounting.lg:px-6.relative.z-30(class="bg-teal-50/70 border-teal-100" data-accounting-nav="v2")
+  .max-w-screen-xl.px-4.mx-auto(class="py-2.5")
+    .flex.items-center
+      ul.flex.flex-1.flex-row.flex-wrap.items-center.font-medium.mt-0.gap-1.text-sm
+        - accounting_nav_v2_direct.each do |libelle, chemin, _|
+          - count = accounting_nav_v2_count(libelle)
+          li
+            = link_to chemin, title: accounting_nav_hint(libelle), data: { nav_entry: libelle },
+                      class: "flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors #{libelle == current ? active : idle}",
+                      aria: { current: (libelle == current ? "page" : nil) } do
+              = libelle
+              - if count
+                span.ui-subnav-n(aria-label="#{count} en attente") = count
+
+        - accounting_nav_v2_groups.each do |titre, identifiant, entrees|
+          - menu_id = "subnav-accounting-#{identifiant}"
+          - groupe_actif = entrees.any? { |(libelle, _, _)| libelle == current }
+          - group_count = accounting_nav_v2_group_count(entrees)
+          - reglages = identifiant == "v2-reglages"
+          / Le guide juste avant l'engrenage, au bout de la barre.
+          - if reglages
+            - g_libelle, g_chemin, _ = accounting_nav_guide
+            li.ui-subnav-gear
+              = link_to g_chemin, title: "Guide de la compta · #{accounting_nav_hint(g_libelle)}", data: { nav_entry: g_libelle },
+                        aria: { current: (g_libelle == current ? "page" : nil) },
+                        class: "flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors #{g_libelle == current ? active : idle}" do
+                = ui_icon(:guide, size: 18)
+                span.ui-sr Guide de la compta
+          li.relative
+            button(
+              type="button"
+              id="#{menu_id}-button"
+              data-controller="dropdown"
+              data-action="click->dropdown#toggle click@window->dropdown#hideOnClickOutside keydown.esc@window->dropdown#hide dropdown:open@window->dropdown#hideOnOtherOpen"
+              data-dropdown-toggle-value=menu_id
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-label=(reglages ? "Réglages de la comptabilité" : nil)
+              title=(reglages ? "Réglages" : nil)
+              class="flex items-center gap-1 px-3 py-1.5 rounded-md transition-colors #{groupe_actif ? active : idle}")
+              - if reglages
+                = ui_icon(:settings, size: 18)
+                span.ui-sr Réglages
+              - else
+                = titre
+                - if group_count
+                  span.ui-subnav-n = group_count
+              svg.w-3.h-3[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"]
+                polyline[points="6 9 12 15 18 9"]
+            ul(id=menu_id class="hidden absolute #{reglages ? 'right-0' : 'left-0'} mt-2 min-w-[18rem] bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden py-1")
+              - entrees.each do |libelle, chemin, _|
+                - count = accounting_nav_v2_count(libelle)
+                li
+                  = link_to chemin, data: { nav_entry: libelle },
+                            class: "block px-4 py-2 text-sm transition-colors #{libelle == current ? active : 'text-gray-600 hover:text-4s-main hover:bg-teal-50/60'}" do
+                    span.flex.items-center.gap-1.5
+                      = libelle
+                      - if count
+                        span.ui-subnav-n = count
+                    - if (hint = accounting_nav_hint(libelle))
+                      span.block.text-xs.font-normal.text-gray-400= hint
+

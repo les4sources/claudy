@@ -12,7 +12,8 @@ module CommandPaletteHelper
     screens = interface_nav_groups.flat_map(&:last).map { |e| { label: e[:label], hint: nil, icon: e[:icon], path: e[:path] } }
     screens += interface_nav_footer.map { |e| { label: e[:label], hint: nil, icon: e[:icon], path: e[:path] } }
     if section_readable?(:accounting)
-      accounting = accounting_nav_direct + accounting_nav_groups.flat_map(&:last) + [accounting_nav_guide]
+      # La palette n'existe que dans la nouvelle interface : sa barre par files.
+      accounting = accounting_nav_v2_direct + accounting_nav_v2_groups.flat_map(&:last) + [accounting_nav_guide]
       screens += accounting.map do |label, path, _|
         { label: label == "Guide" ? "Guide de la comptabilité" : label, hint: accounting_nav_hint(label), icon: :book, path: path }
       end
