@@ -16,7 +16,7 @@ class ExperienceBookingsController < BaseController
 
   def index
     @experience_bookings = ExperienceBooking.for_user(current_user)
-                                            .includes(experience_availability: :experience, stay: :customer)
+                                            .includes(:performed_by, experience_availability: { experience: :human }, stay: :customer)
                                             .order(created_at: :desc)
                                             .limit(100)
     @awaiting_outcome_count = awaiting_outcome_scope.count

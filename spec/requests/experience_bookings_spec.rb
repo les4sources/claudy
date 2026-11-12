@@ -39,6 +39,20 @@ RSpec.describe "ExperienceBookings — canal admin", type: :request, queue_adapt
       expect(response.body).to include("Balade ânes")
       expect(response.body).to include("Poterie")
     end
+
+    # Michael 2026-11-12 : l'avatar de qui a tenu l'activité, la personne nommée
+    # sur la réservation sinon le porteur.
+    it "montre l'avatar de qui tient l'activité" do
+      remplacante = Human.create!(name: "Magali Remplaçante", email: "m@example.com")
+      booking_a
+      booking_b.update!(performed_by: remplacante)
+      admin = User.create!(email: "staff@les4sources.be", password: "password123")
+      sign_in admin
+      get experience_bookings_path
+      expect(response.body).to include("Tenue par Porteuse A")
+      expect(response.body).to include("Tenue par Magali Remplaçante")
+      expect(response.body).not_to include("Tenue par Porteur B")
+    end
   end
 
   describe "PATCH /experience_bookings/:id/confirm" do
