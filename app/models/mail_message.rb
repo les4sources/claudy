@@ -81,6 +81,13 @@ class MailMessage < ApplicationRecord
 
   # Classé dès que chaque pièce qui ressemble à une facture a la sienne : les
   # conditions générales jointes ne doivent pas garder un mail dans la file.
+  # L'onglet et la recherche de la file à garder d'un écran à l'autre (mail
+  # ouvert, facture créée depuis lui), sans les valeurs par défaut.
+  def self.inbox_filters(status:, q:)
+    status = status.to_s
+    { status: (status if STATUSES.include?(status) && status != "pending"), q: q.to_s.strip.presence }.compact
+  end
+
   def settle_if_complete!(user)
     invoices = mail_attachments.select(&:invoice_like?)
     return if invoices.empty? || invoices.any? { |a| a.purchase_invoice_id.nil? }
