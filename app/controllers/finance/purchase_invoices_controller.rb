@@ -7,7 +7,7 @@ module Finance
   # personne n'avait dit oui.
   class PurchaseInvoicesController < Finance::AccountingBaseController
     before_action :get_invoice, only: %i[show edit update submit dispute reopen validate_by_team pay_in_cash paid_by_member
-                                              replace_document unpost link_payment]
+                                              replace_document unpost link_payment record_bank_payment unsettle]
     before_action :get_form_collections, only: %i[new create edit update]
 
     breadcrumb "Achats", :finance_purchase_invoices_path, match: :exact
@@ -56,6 +56,8 @@ module Finance
       @duplicates = @invoice.probable_duplicates.includes(:third_party).to_a
       return unless @invoice.to_pay?
 
+      # Déjà réglée par la banque : la ligne du relevé est peut-être déjà là.
+      @bank_line_candidates = PurchaseInvoices::BankLineCandidates.new(@invoice).entries.to_a if @invoice.awaiting_bank_line?
       @orphan_payments = Finance::OrphanSupplierPayments.new(invoices: [@invoice]).for(@invoice)
       @unpost_refusal = PurchaseInvoices::Unpost.refusal_for(@invoice)
     end
@@ -81,6 +83,7 @@ module Finance
 
     def create
       @invoice = PurchaseInvoice.new(invoice_params)
+      payer = settling_member
       attach_document(@invoice)
       @mail_attachment = linked_mail_attachment
       attach_mail_document(@invoice, @mail_attachment)
@@ -89,7 +92,8 @@ module Finance
       if @invoice.save
         @deadline&.update(purchase_invoice: @invoice)
         settle_mail_attachment(@mail_attachment, @invoice)
-        redirect_to finance_purchase_invoice_path(@invoice), notice: "#{@invoice.kind_label} enregistrée."
+        settle_by_member(@invoice, payer)
+        redirect_to finance_purchase_invoice_path(@invoice), notice: saved_notice(@invoice, "#{@invoice.kind_label} enregistrée.")
       else
         @invoice.purchase_invoice_lines.build if @invoice.purchase_invoice_lines.empty?
         flash.now[:alert] = doublon_message(@invoice) || @invoice.errors.full_messages.to_sentence
@@ -101,10 +105,12 @@ module Finance
       return redirect_to finance_purchase_invoice_path(@invoice), alert: gel_message if @invoice.locked_for_edit?
 
       @invoice.assign_attributes(invoice_params)
+      payer = settling_member
       attach_document(@invoice)
 
       if @invoice.save
-        redirect_to finance_purchase_invoice_path(@invoice), notice: "Facture mise à jour."
+        settle_by_member(@invoice, payer)
+        redirect_to finance_purchase_invoice_path(@invoice), notice: saved_notice(@invoice, "Facture mise à jour.")
       else
         flash.now[:alert] = doublon_message(@invoice) || @invoice.errors.full_messages.to_sentence
         render :edit, status: :unprocessable_entity
@@ -192,7 +198,14 @@ module Finance
     end
 
     def submit
-      invoice = PurchaseInvoices::Advance.new(purchase_invoice: @invoice, whodunnit: current_user&.email).submit!
+      service = PurchaseInvoices::Advance.new(purchase_invoice: @invoice, whodunnit: current_user&.email)
+      invoice = service.submit!
+      if service.settlement_error
+        return redirect_to finance_purchase_invoice_path(invoice),
+                           alert: "Facture comptabilisée, mais la sortie de caisse n'a pas pu se créer : " \
+                                  "#{service.settlement_error}"
+      end
+
       redirect_to finance_purchase_invoice_path(invoice), notice: notice_for(invoice)
     rescue PurchaseInvoices::Advance::NotBalanced, PurchaseInvoices::Advance::AlreadyPayable,
            Accounting::PostPurchaseInvoice::NotBalanced,
@@ -247,7 +260,71 @@ module Finance
       redirect_to finance_purchase_invoice_path(@invoice), alert: e.message
     end
 
+    # Déjà réglée par la banque : la ligne du relevé est arrivée, on la relie.
+    # Le même geste que depuis « À affecter » (`RecordInvoicePayment`).
+    def record_bank_payment
+      entry = PurchaseInvoices::BankLineCandidates.new(@invoice).entries.find_by(id: params[:cash_entry_id])
+      unless entry
+        return redirect_to finance_purchase_invoice_path(@invoice),
+                           alert: "Cette ligne ne peut plus payer la facture (déjà affectée, ou montant différent)."
+      end
+
+      Finance::RecordInvoicePayment.new(purchase_invoice: @invoice, cash_entry: entry, whodunnit: current_user&.email).run!
+      redirect_to finance_purchase_invoice_path(@invoice),
+                  notice: "Ligne du #{l(entry.entry_date, format: :short)} rapprochée : facture #{@invoice.reload.status_label.downcase}."
+    rescue Finance::RecordInvoicePayment::NotPayable, Finance::RecordInvoicePayment::WrongDirection,
+           Finance::RecordInvoicePayment::TooMuch, Finance::RecordInvoicePayment::MissingAccount,
+           ActiveRecord::RecordInvalid => e
+      redirect_to finance_purchase_invoice_path(@invoice), alert: e.message
+    end
+
+    # Ce n'était pas réglé, finalement : la facture retourne dans « À payer ».
+    def unsettle
+      unless @invoice.settled_beforehand? && !@invoice.paid?
+        return redirect_to finance_purchase_invoice_path(@invoice), alert: "Cette facture n'est pas déclarée réglée."
+      end
+
+      @invoice.update!(settled_via: nil)
+      notice = @invoice.to_pay? ? "Facture remise dans « À payer »." : "Facture plus déclarée réglée."
+      redirect_to finance_purchase_invoice_path(@invoice), notice: notice
+    end
+
     private
+
+    # « Payée par un membre » choisi dans le formulaire : le geste de la fiche
+    # (`PaidByMember`), joué juste après l'enregistrement. Le membre est lu
+    # avant, `invoice_params` retire ce choix qui n'est pas une colonne.
+    def settling_member
+      return nil unless params.dig(:purchase_invoice, :settled_via) == "member"
+
+      Human.find_by(id: params.dig(:purchase_invoice, :settled_by_human_id).presence) || :missing
+    end
+
+    def settle_by_member(invoice, payer)
+      return if payer.nil?
+
+      if payer == :missing
+        @settlement_alert = "Choisis le membre qui a payé : la facture est enregistrée, mais pas encore sur sa note de frais."
+        return
+      end
+
+      @member_report = PurchaseInvoices::PaidByMember.new(purchase_invoice: invoice, user: current_user, human: payer).run!
+    rescue PurchaseInvoices::PaidByMember::BadStatus, PurchaseInvoices::PaidByMember::MissingMember,
+           ActiveRecord::RecordInvalid => e
+      @settlement_alert = "La facture est enregistrée, mais pas sur la note de frais : #{e.message}"
+    end
+
+    def saved_notice(invoice, base)
+      flash[:alert] = @settlement_alert if @settlement_alert
+      if @member_report
+        return "#{base} Payée par #{@member_report.human.name} : elle est sur " \
+               "#{@member_report.label.sub(/ — .*/, '')}, qui la remboursera et portera sa charge."
+      end
+      return "#{base} Déjà réglée #{invoice.settlement_label} : comptabilise-la, elle n'ira pas dans « À payer »." if invoice.settled_by_bank? && !invoice.posted?
+      return "#{base} Payée en espèces : la sortie de caisse se créera quand tu la comptabiliseras." if invoice.settled_in_cash? && !invoice.posted?
+
+      base
+    end
 
     def notice_for(invoice)
       if invoice.to_validate?
@@ -259,6 +336,11 @@ module Finance
         "Facture envoyée en validation — #{recipients.size} membre(s) du pôle la retrouveront " \
           "dans le récapitulatif de lundi matin."
       else
+        if invoice.awaiting_bank_line?
+          return "Facture comptabilisée. Déjà réglée par la banque : elle n'est pas dans « À payer » et passera " \
+                 "« Payée » quand la ligne du relevé y sera rapprochée."
+        end
+        return "Facture comptabilisée et payée en espèces : la sortie de caisse est enregistrée." if invoice.settled_in_cash? && invoice.paid?
         return "Facture prête à payer, écriture générée au journal des achats." unless invoice.credit_note?
 
         "Note de crédit #{invoice.status_label.downcase}, écriture générée au journal des achats."
@@ -344,6 +426,8 @@ module Finance
       @entities = LegalEntity.actives.ordered
       @teams = Team.ordered
       @general_accounts = GeneralAccount.actives.ordered
+      # « Payée par un membre » se choisit aussi dans le formulaire.
+      @humans = Human.ordered_all
       # Les factures qu'une note de crédit peut corriger. Le fournisseur se tape
       # dans la recherche ; le modèle refuse un autre fournisseur.
       @creditable_invoices = PurchaseInvoice.invoices.includes(:third_party).ordered.limit(500)
@@ -386,10 +470,13 @@ module Finance
       params.require(:purchase_invoice).permit(
         :kind, :credited_invoice_id,
         :legal_entity_id, :third_party_id, :number, :issued_on, :due_on, :total_euros, :payment_reference,
-        :requires_validation, :validation_team_id, :notes, :amounts_include_vat,
+        :requires_validation, :validation_team_id, :notes, :amounts_include_vat, :settled_via, :settled_on,
         purchase_invoice_lines_attributes: %i[id general_account_id team_id analytic_account_id
                                               amount_euros net_euros entered_euros vat_rate label position _destroy]
       ).tap do |permitted|
+        # « Payée par un membre » n'est pas une colonne : c'est le statut
+        # `member_paid`, posé par `settle_by_member` après l'enregistrement.
+        permitted[:settled_via] = nil if permitted[:settled_via] == "member"
         euros = permitted.delete(:total_euros)
         permitted[:total_cents] = to_cents(euros) if euros.present?
 

@@ -84,8 +84,10 @@ module Mcp
           metier! do
             case d[:geste]
             when "soumettre"
-              facture = ::PurchaseInvoices::Advance.new(purchase_invoice: facture, whodunnit: whodunnit).submit!
-              "#{ligne_facture(facture)}#{"\nLe pôle la retrouvera dans le récapitulatif de lundi matin." if facture.to_validate?}"
+              service = ::PurchaseInvoices::Advance.new(purchase_invoice: facture, whodunnit: whodunnit)
+              facture = service.submit!
+              "#{ligne_facture(facture)}#{"\nLe pôle la retrouvera dans le récapitulatif de lundi matin." if facture.to_validate?}" \
+                "#{"\n⚠ Sortie de caisse pas créée : #{service.settlement_error}" if service.settlement_error}"
             when "valider"
               Validation.new(signature: whodunnit, purchase_invoice: facture, user: user).approve!
               "Facture validée : #{ligne_facture(facture.reload)}"
@@ -138,6 +140,11 @@ module Mcp
             ["→ Note de crédit comptabilisée (440000 au débit, charges au crédit)" +
              (facture.credited_invoice ? ", imputée sur ce qui reste à payer de la facture ##{facture.credited_invoice_id}" : "") +
              " ; le reste éventuel attend le remboursement du fournisseur.", {}]
+          elsif facture.settled_by_bank?
+            ["→ Écriture d'achat passée. Déjà réglée par la banque le #{facture.settled_on} : elle ne va pas dans « à payer », " \
+             "elle passera payée quand la ligne du relevé y sera rapprochée (rapprocher_ligne).", {}]
+          elsif facture.settled_in_cash?
+            ["→ Écriture d'achat passée, puis sortie de caisse du #{facture.settled_on} (payée en espèces).", {}]
           else
             ["→ À PAYER : l'écriture d'achat est passée au journal.", {}]
           end

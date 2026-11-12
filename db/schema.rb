@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_02_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_12_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -2126,6 +2126,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_02_170000) do
     t.datetime "posted_at"
     t.jsonb "quality_flags", default: [], null: false
     t.boolean "requires_validation", default: false, null: false
+    t.date "settled_on"
+    t.string "settled_via"
     t.string "status", default: "to_process", null: false
     t.bigint "third_party_id", null: false
     t.integer "total_cents", default: 0, null: false

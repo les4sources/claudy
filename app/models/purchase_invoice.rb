@@ -28,6 +28,15 @@
 # déjà payée, ou pas de facture liée) attend un remboursement du fournisseur,
 # rapproché d'une ligne bancaire ENTRANTE. Même parcours de statuts : « À
 # payer » se lit alors « À rembourser ».
+#
+# **Déjà réglée à l'encodage** (Michael, 2026-11-12) : `settled_via` dit que
+# l'argent est déjà sorti avant que la facture n'arrive en comptabilité, et par
+# où. `bank` (domiciliation, carte, virement déjà fait) : la facture se
+# comptabilise comme les autres mais ne rejoint ni « À payer » ni le fichier
+# SEPA — « Réglée, à rapprocher » —, et passe « Payée » quand la ligne du relevé
+# y est rapprochée. `cash` : la sortie de caisse se crée quand elle est
+# comptabilisée (`Advance#submit!`). Payée par un membre, c'est le statut
+# `member_paid`, pas cette colonne.
 # == Schema Information
 #
 # Table name: purchase_invoices
@@ -46,6 +55,8 @@
 #  posted_at           :datetime
 #  quality_flags       :jsonb            not null
 #  requires_validation :boolean          default(FALSE), not null
+#  settled_on          :date
+#  settled_via         :string
 #  status              :string           default("to_process"), not null
 #  total_cents         :integer          default(0), not null
 #  validated_at        :datetime
@@ -102,6 +113,14 @@ class PurchaseInvoice < ApplicationRecord
   # Les statuts d'une facture réglée : elle n'est plus jamais échue.
   SETTLED_STATUSES = %w[paid member_paid].freeze
 
+  # Par où l'argent est déjà sorti quand la facture est déclarée réglée à
+  # l'encodage (2026-11-12).
+  SETTLEMENT_METHODS = %w[bank cash].freeze
+  SETTLEMENT_LABELS = {
+    "bank" => "par la banque",
+    "cash" => "en espèces"
+  }.freeze
+
   KINDS = %w[invoice credit_note].freeze
   KIND_LABELS = {
     "invoice"     => "Facture",
@@ -157,6 +176,7 @@ class PurchaseInvoice < ApplicationRecord
   before_validation :flag_quality
   before_validation :compute_vat
   before_validation :normalize_payment_reference
+  before_validation :normalize_settlement
   validate :structured_payment_reference_is_valid
   validate :lines_cover_total_when_leaving_to_process
   validate :frozen_once_payable, on: :update
@@ -165,6 +185,7 @@ class PurchaseInvoice < ApplicationRecord
   validates :issued_on, presence: true
   validates :status, inclusion: { in: STATUSES }
   validates :kind, inclusion: { in: KINDS }
+  validates :settled_via, inclusion: { in: SETTLEMENT_METHODS }, allow_nil: true
   validates :total_cents, numericality: { only_integer: true, greater_than: 0 }
   validates :number, uniqueness: { scope: %i[third_party_id kind], allow_nil: true,
                                    message: "existe déjà pour ce tiers" }
@@ -181,8 +202,11 @@ class PurchaseInvoice < ApplicationRecord
   scope :invoices, -> { where(kind: "invoice") }
   scope :credit_notes, -> { where(kind: "credit_note") }
   # Ce qu'on doit virer : des FACTURES. Une note de crédit « À rembourser »
-  # attend de l'argent qui rentre (`awaiting_refund`).
-  scope :payable, -> { invoices.where(status: "to_pay") }
+  # attend de l'argent qui rentre (`awaiting_refund`). Une facture déjà réglée
+  # par la banque n'a plus rien à virer : elle attend sa ligne du relevé
+  # (`awaiting_bank_line`), et la remettre dans la file la ferait payer deux fois.
+  scope :payable, -> { invoices.where(status: "to_pay").where("purchase_invoices.settled_via IS DISTINCT FROM 'bank'") }
+  scope :awaiting_bank_line, -> { invoices.where(status: "to_pay", settled_via: "bank") }
   scope :awaiting_refund, -> { credit_notes.where(status: "to_pay") }
   # Ce que le pôle doit trancher (phase 3) : le callout de sa page s'en sert.
   scope :awaiting_validation_by, ->(team) { where(status: "to_validate", validation_team_id: team) }
@@ -197,12 +221,24 @@ class PurchaseInvoice < ApplicationRecord
   # Pour une note de crédit, « À payer » et « Payée » ne disent rien : elle
   # attend un remboursement, ou elle est imputée sur sa facture / remboursée.
   def status_label
+    return "Réglée, à rapprocher" if awaiting_bank_line?
     return STATUS_LABELS.fetch(status, status) unless credit_note?
     return "À rembourser" if to_pay?
     return(allocated_cents.positive? ? "Remboursée" : "Imputée") if paid?
 
     STATUS_LABELS.fetch(status, status)
   end
+  # --- Déjà réglée à l'encodage ---------------------------------------------
+
+  def settled_beforehand? = settled_via.present?
+  def settled_by_bank? = settled_via == "bank"
+  def settled_in_cash? = settled_via == "cash"
+  def settlement_label = SETTLEMENT_LABELS[settled_via]
+
+  # Comptabilisée, réglée par la banque, et sa ligne du relevé n'est pas
+  # encore rapprochée : rien à virer, une ligne à attendre.
+  def awaiting_bank_line? = to_pay? && settled_by_bank? && !credit_note?
+
   def lines_total_cents = purchase_invoice_lines.sum(&:amount_cents)
   def lines_vat_cents = purchase_invoice_lines.sum(&:vat_cents)
   def balanced? = lines_total_cents == total_cents
@@ -240,7 +276,11 @@ class PurchaseInvoice < ApplicationRecord
   # Échue = l'échéance est passée et la facture n'est pas réglée. Lu sur le
   # statut, pas sur les affectations (`payable_overdue?`) : la liste en affiche
   # des dizaines, une requête par ligne pour la même réponse serait du gâchis.
-  def overdue?(on = Date.current) = !credit_note? && due_on.present? && due_on < on && !SETTLED_STATUSES.include?(status)
+  # Une facture déjà réglée à l'encodage n'est jamais en retard : l'argent est
+  # parti, seul le rapprochement manque.
+  def overdue?(on = Date.current)
+    !credit_note? && !settled_beforehand? && due_on.present? && due_on < on && !SETTLED_STATUSES.include?(status)
+  end
   def days_overdue(on = Date.current) = overdue?(on) ? (on - due_on).to_i : 0
 
   # Les doublons probables (Michael, 2026-11-05, VOO #26 = #11) : la même pièce
@@ -438,6 +478,19 @@ class PurchaseInvoice < ApplicationRecord
     self.payment_reference = payment_reference.to_s.strip.presence
     canonique = payment_reference && MailIntake::StructuredCommunication.normalize(payment_reference)
     self.payment_reference = canonique if canonique
+  end
+
+  # Le règlement déclaré ne vaut que pour une facture (une note de crédit ne
+  # se paie pas, elle se rembourse) ; sans date, c'est celle de la pièce — un
+  # paiement par carte se fait le jour de l'achat.
+  def normalize_settlement
+    self.settled_via = settled_via.presence
+    self.settled_via = nil if credit_note?
+    if settled_via.nil?
+      self.settled_on = nil
+    else
+      self.settled_on ||= issued_on
+    end
   end
 
   # Douze chiffres dont la clé modulo 97 est fausse : c'est une faute de frappe,

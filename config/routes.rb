@@ -449,6 +449,10 @@ Rails.application.routes.draw do
         # relier un paiement passé au 440000 sans elle (Michael, 2026-11-05).
         post :unpost
         post :link_payment
+        # Déjà réglée par la banque à l'encodage (Michael, 2026-11-12) : relier
+        # la ligne du relevé arrivée depuis, ou retirer la déclaration.
+        post :record_bank_payment
+        post :unsettle
         # La pièce se remplace quel que soit le statut : ce n'est pas une
         # donnée comptable, et une facture comptabilisée ne se modifie plus.
         post :replace_document
