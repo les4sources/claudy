@@ -93,7 +93,7 @@ module Finance
         @deadline&.update(purchase_invoice: @invoice)
         settle_mail_attachment(@mail_attachment, @invoice)
         settle_by_member(@invoice, payer)
-        redirect_to finance_purchase_invoice_path(@invoice), notice: saved_notice(@invoice, "#{@invoice.kind_label} enregistrée.")
+        redirect_after_create
       else
         @invoice.purchase_invoice_lines.build if @invoice.purchase_invoice_lines.empty?
         flash.now[:alert] = doublon_message(@invoice) || @invoice.errors.full_messages.to_sentence
@@ -382,6 +382,38 @@ module Finance
 
       ComplianceDeadline.payments.find_by(id: params[:compliance_deadline_id], purchase_invoice_id: nil)
     end
+
+    # Créée depuis un mail ouvert dans la boîte de réception (Michael,
+    # 2026-11-12), la facture renvoie à la file, à l'onglet et à la recherche
+    # qu'on avait : on y était pour la vider. Si le mail garde une pièce à
+    # encoder, on revient au mail. Sinon (« À payer », échéancier, saisie
+    # libre), comme avant, la fiche de la facture.
+    def redirect_after_create
+      unless @mail_attachment && from_inbox?
+        return redirect_to(finance_purchase_invoice_path(@invoice), notice: saved_notice(@invoice, "#{@invoice.kind_label} enregistrée."))
+      end
+
+      notice = saved_notice(@invoice, "#{@invoice.kind_label} ##{@invoice.id} enregistrée.")
+
+      courriel = @mail_attachment.mail_message.reload
+      reste = courriel.mail_attachments.reload.any? { |piece| piece.invoice_like? && piece.purchase_invoice_id.nil? }
+      if courriel.pending? && reste
+        redirect_to finance_mail_message_path(courriel, inbox_filters),
+                    notice: "#{notice} Il reste une pièce à encoder dans ce mail."
+      else
+        redirect_to finance_mail_messages_path(inbox_filters),
+                    notice: courriel.pending? ? notice : "#{notice} Le mail est classé."
+      end
+    end
+
+    def from_inbox? = params[:from_inbox].present?
+    helper_method :from_inbox?
+
+    # L'onglet et la recherche de la boîte de réception d'où l'on vient.
+    def inbox_filters
+      MailMessage.inbox_filters(status: params[:inbox_status], q: params[:inbox_q])
+    end
+    helper_method :inbox_filters
 
     # Depuis « Boite de réception » (messagerie, phase 1) : une pièce pas encore
     # encodée. Une pièce déjà liée ne se relie pas, sinon un lien rejoué

@@ -1,9 +1,9 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
            title: (@message.subject.presence || "(sans sujet)"),
-           links: [(button_to("Ignorer", ignore_finance_mail_message_path(@message), method: :post, form_class: "inline", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") if @message.pending?),
-                   (button_to("Remettre dans la file", restore_finance_mail_message_path(@message), method: :post, form_class: "inline", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") unless @message.pending?),
-                   link_to("Toute la file", finance_mail_messages_path, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")].compact
+           links: [(button_to("Ignorer", ignore_finance_mail_message_path(@message), params: inbox_filters, method: :post, form_class: "inline", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") if @message.pending?),
+                   (button_to("Remettre dans la file", restore_finance_mail_message_path(@message), params: inbox_filters, method: :post, form_class: "inline", class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50") unless @message.pending?),
+                   link_to("Toute la file", finance_mail_messages_path(inbox_filters), class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")].compact
 
 - unless @message.pending?
   .mb-4.rounded-lg.border.border-gray-200.bg-gray-50.px-4.py-3.text-sm.text-gray-700

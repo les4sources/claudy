@@ -62,7 +62,7 @@
               - if message.from_name.present?
                 .text-xs.text-gray-400= message.from_address
             td.py-3.px-4.align-top
-              = link_to (message.subject.presence || "(sans sujet)"), finance_mail_message_path(message), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
+              = link_to (message.subject.presence || "(sans sujet)"), finance_mail_message_path(message, MailMessage.inbox_filters(status: @status, q: @query)), class: "text-blue-500 border-b-2 border-blue-200 hover:text-blue-700"
               - if (nature = mail_nature_label(message))
                 span.ml-2.inline-flex.rounded-full.bg-gray-100.px-2.text-xs.text-gray-600= nature
             td.py-3.px-4.align-top

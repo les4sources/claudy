@@ -32,12 +32,12 @@ module Finance
 
     def ignore
       @message.ignore!(current_user)
-      redirect_to finance_mail_messages_path, notice: "Mail sorti de la file. Il reste consultable dans « Ignorés »."
+      redirect_to finance_mail_messages_path(inbox_filters), notice: "Mail sorti de la file. Il reste consultable dans « Ignorés »."
     end
 
     def restore
       @message.restore!
-      redirect_to finance_mail_message_path(@message), notice: "Mail remis dans la file."
+      redirect_to finance_mail_message_path(@message, inbox_filters), notice: "Mail remis dans la file."
     end
 
     def sync
@@ -46,6 +46,13 @@ module Finance
     end
 
     private
+
+    # L'onglet et la recherche de la file, portés par le mail ouvert puis par la
+    # facture créée depuis lui : on revient à la file là où on l'a laissée.
+    def inbox_filters
+      MailMessage.inbox_filters(status: params[:status], q: params[:q])
+    end
+    helper_method :inbox_filters
 
     def get_message
       @message = MailMessage.find(params[:id])
