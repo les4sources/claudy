@@ -1,6 +1,6 @@
 / AGENDA EN RUBANS, nouvelle interface (Michael 2026-10-24, maquette validée) :
   le mois en semaines, chaque séjour en une bande qui court de l'après-midi de
-  son arrivée au matin de son départ ; à droite, le jour choisi. Sur téléphone,
+  son arrivée au matin de son départ ; en bas, dans un tiroir, le jour choisi. Sur téléphone,
   la semaine en pastilles puis la liste des sept jours qui viennent. Données :
   `Agenda::Month` (bandes) et `Agenda::Day` (une journée). La vue Sourciers et
   l'ancienne interface gardent `pages/calendar`.
@@ -59,20 +59,23 @@ div(data-controller="stay-details stay-merge agenda-filter" data-stay-merge-setu
           i.ui-rib-swatch.ui-rib-wait(aria-hidden="true")
           | En attente
 
-    .ui-ag-layout
-      .ui-ag-main
-        .ui-ag-grid(data-agenda-filter-target="grid" data-agenda-filter="all")
-          - agenda.weeks.each do |week|
-            = render "pages/v2/agenda_week", week: week, month: month, agenda: agenda
-        p.ui-ag-note
-          | Une bande commence l’après-midi de l’arrivée et finit le matin du départ : deux séjours qui se suivent partagent la même journée.
-        - if section_writable?(:full)
-          .ui-ag-merge
-            = render "pages/calendar/merge_toolbar"
+    .ui-ag-grid(data-agenda-filter-target="grid" data-agenda-filter="all")
+      - agenda.weeks.each do |week|
+        = render "pages/v2/agenda_week", week: week, month: month, agenda: agenda
+    p.ui-ag-note
+      | Une bande commence l’après-midi de l’arrivée et finit le matin du départ : deux séjours qui se suivent partagent la même journée.
+    - if section_writable?(:full)
+      .ui-ag-merge
+        = render "pages/calendar/merge_toolbar"
 
-      aside.ui-ag-side(aria-label="Le jour choisi")
-        = turbo_frame_tag "agenda_day" do
-          = render "pages/v2/agenda_day", day: @agenda_day
+    /  Le jour choisi dans un tiroir collé au bas de l'écran (Michael
+       2026-11-12) : le calendrier prend toute la largeur. Replié, le tiroir
+       ne montre que la date, qui veille et les chambres libres ce soir ; il
+       s'ouvre d'un clic sur sa barre ou sur un jour de la grille, se ferme
+       par Échap. Ouvert d'office quand l'adresse nomme un jour (`jour`).
+    aside.ui-ag-drawer(class=("is-open" if params[:jour].present?) aria-label="Le jour choisi" data-controller="agenda-drawer" data-action="turbo:frame-load->agenda-drawer#open keydown.esc@window->agenda-drawer#close")
+      = turbo_frame_tag "agenda_day" do
+        = render "pages/v2/agenda_day", day: @agenda_day
 
   / ---- Téléphone ---------------------------------------------------------------
   .ui-ag-mob

@@ -609,7 +609,6 @@ a.ui-row:hover .ui-row-t, a.ui-row-t:hover { text-decoration: underline; text-de
 .ui-ag-legend li { display: flex; align-items: center; gap: 7px; }
 .ui-rib-swatch { display: inline-block; width: 26px; height: 12px; border-radius: 4px; border: 1.5px solid transparent; }
 
-.ui-ag-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
 .ui-ag-grid { display: flex; flex-direction: column; gap: 14px; }
 .ui-ag-week { position: relative; background: #fff; border: 1.5px solid var(--ui-line); border-radius: 16px; overflow: hidden; }
 .ui-ag-cols { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); pointer-events: none; }
@@ -703,8 +702,45 @@ a.ui-rib-ok:is(.ui-rib-k-activity, .ui-rib-k-meal):hover { color: var(--ui-ink);
 .ui-ag-note { margin-top: 12px; max-width: 72ch; font-size: 13px; color: var(--ui-ink3); }
 .ui-ag-merge { margin-top: 4px; }
 
-.ui-ag-side { position: sticky; top: 20px; }
-.ui-ag-panel .ui-card-h { padding-top: 18px; }
+/* Le jour choisi dans un tiroir collé au bas de l'écran (Michael 2026-11-12) :
+   la grille prend toute la largeur. `position: sticky` le garde à la largeur
+   du contenu, sans calcul de la barre latérale. Replié, seule la barre se voit ;
+   le corps s'ouvre vers le haut (0fr → 1fr) et défile s'il est long. */
+.ui-ag-drawer {
+  position: sticky; bottom: 0; z-index: 20; margin-top: 18px;
+  background: #fff; border: 1.5px solid var(--ui-line); border-bottom: 0; border-radius: 18px 18px 0 0;
+  box-shadow: 0 -10px 28px -14px rgba(24, 47, 50, .35);
+}
+.ui-ag-drawer-h {
+  display: flex; align-items: center; gap: 12px 24px; padding: 12px 16px 12px 24px; cursor: pointer;
+}
+.ui-ag-drawer-h::before {
+  content: ""; position: absolute; top: 6px; left: 50%; width: 44px; height: 4px; margin-left: -22px;
+  border-radius: 999px; background: var(--ui-line);
+}
+.ui-ag-drawer-h .ui-ag-panel-t { flex: 1 1 auto; }
+.ui-ag-drawer-h .ui-h2 { font-size: 22px; }
+.ui-ag-drawer-h .ui-ag-free { margin: 0; padding: 0; border: 0; justify-content: flex-start; }
+.ui-ag-drawer-btn { flex: none; }
+.ui-ag-drawer-btn .ui-ico { transition: transform .25s; }
+.ui-ag-drawer.is-open .ui-ag-drawer-btn .ui-ico { transform: rotate(180deg); }
+.ui-ag-drawer-b { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s ease; }
+.ui-ag-drawer.is-open .ui-ag-drawer-b { grid-template-rows: 1fr; }
+.ui-ag-drawer-b > .ui-ag-drawer-in {
+  min-height: 0; overflow: hidden; visibility: hidden; transition: visibility 0s linear .25s;
+}
+.ui-ag-drawer.is-open .ui-ag-drawer-in {
+  max-height: min(58vh, 560px); overflow-y: auto; visibility: visible; transition-delay: 0s;
+  padding: 4px 24px 20px; border-top: 1.5px solid var(--ui-line-soft);
+}
+.ui-ag-drawer-cols { columns: 260px 4; column-gap: 36px; }
+.ui-ag-grp { break-inside: avoid; padding-top: 4px; }
+.ui-ag-drawer-cols > .ui-empty { margin-top: 14px; }
+.ui-ag-drawer .ui-ag-panel-act { justify-content: flex-end; border-top: 1.5px solid var(--ui-line-soft); padding-top: 14px; }
+.ui-ag-drawer .ui-ag-panel-act > .ui-btn:first-child { flex-basis: auto; }
+@media (prefers-reduced-motion: reduce) {
+  .ui-ag-drawer-b, .ui-ag-drawer-btn .ui-ico { transition: none; }
+}
 .ui-ag-tag { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: var(--ui-surface); color: var(--ui-ink2); font-size: 12.5px; font-weight: 700; }
 .ui-ag-panel-t { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
 /* Le veilleur devant, les renforts derrière (à gauche), bordés d'orange. */
@@ -751,8 +787,7 @@ a.ui-rib-ok:is(.ui-rib-k-activity, .ui-rib-k-meal):hover { color: var(--ui-ink);
 .ui-ag-star { color: var(--ui-yellow); }
 
 @media (max-width: 1100px) {
-  .ui-ag-layout { grid-template-columns: minmax(0, 1fr); }
-  .ui-ag-side { position: static; }
+  .ui-ag-drawer-h { flex-wrap: wrap; padding-left: 18px; }
   .ui-ag-day { padding: 9px 7px 7px; gap: 4px; }
   .ui-ag-day span { font-size: 11.5px; }
 }
