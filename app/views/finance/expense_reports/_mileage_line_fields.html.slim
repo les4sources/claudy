@@ -22,7 +22,9 @@
                        inputmode: "decimal", placeholder: "84", required: true,
                        class: "block w-full rounded-md border-gray-300 shadow-sm text-right tabular-nums",
                        data: { expense_lines_target: "distance", action: "input->expense-lines#refresh" }
-    .md:col-span-1.flex.items-end.justify-end.pb-1
+    .md:col-span-1.flex.flex-col.items-end.justify-end.gap-1.pb-1
+      button.text-xs.font-medium.text-4s-main(type="button" class="hover:underline" data-action="expense-lines#duplicate" aria-label="Dupliquer cette ligne" title="Ajoute juste en dessous une copie de cette ligne ; il ne reste qu'à changer la date.")
+        | Dupliquer
       button.text-xs.font-medium.text-red-600(type="button" class="hover:underline" data-action="expense-lines#remove" aria-label="Retirer cette ligne")
         | Retirer
 

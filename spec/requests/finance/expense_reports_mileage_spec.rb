@@ -107,6 +107,26 @@ RSpec.describe "Comptabilité > Notes de mission", type: :request do
       expect(hidden).to include('type="hidden"', 'value="mileage"')
       expect(response.body).not_to match(/<select[^>]*name="expense_report\[kind\]"/)
     end
+
+    # Michael, 2026-11-12 : le trajet de la boulangerie revient chaque semaine,
+    # seule la date change. Un vrai bouton (pas un lien « # », que Turbo
+    # prendrait pour une visite) sur chaque ligne, gabarit compris.
+    it "offre « Dupliquer » sur chaque ligne, trajets comme dépenses, en création et en modification" do
+      duplicate_buttons = lambda do
+        Nokogiri::HTML(response.body).css('[data-expense-lines-target="row"]').map do |row|
+          row.at_css('button[type="button"][data-action="expense-lines#duplicate"]')&.text&.strip
+        end
+      end
+
+      # La ligne enregistrée et le gabarit des lignes ajoutées.
+      get edit_finance_expense_report_path(mission)
+      expect(duplicate_buttons.call.size).to be >= 2
+      expect(duplicate_buttons.call).to all(eq("Dupliquer"))
+
+      get new_finance_expense_report_path(kind: "expenses")
+      expect(duplicate_buttons.call).not_to be_empty
+      expect(duplicate_buttons.call).to all(eq("Dupliquer"))
+    end
   end
 
   describe "la liste" do
