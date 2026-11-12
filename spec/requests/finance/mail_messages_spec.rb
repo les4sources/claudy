@@ -136,17 +136,72 @@ it "retrouve par la TVA de la pièce un fournisseur créé après la lecture du 
 end
 
   it "à l'enregistrement, relie la pièce à sa facture, reprend le PDF et classe le mail" do
-    post finance_purchase_invoices_path(mail_attachment_id: attachment.id), params: {
+    post finance_purchase_invoices_path(mail_attachment_id: attachment.id, from_inbox: 1), params: {
       purchase_invoice: { legal_entity_id: entity.id, third_party_id: proximus.id, number: "2026-77812",
                           issued_on: "2026-09-12", total_euros: "84,12" }
     }
 
     invoice = PurchaseInvoice.last
-    expect(response).to redirect_to(finance_purchase_invoice_path(invoice))
+    expect(response).to redirect_to(finance_mail_messages_path)
+    expect(flash[:notice]).to eq("Facture ##{invoice.id} enregistrée. Le mail est classé.")
     expect(invoice.document).to be_attached
     expect(invoice.pdf_sha256).to eq(attachment.sha256)
     expect(attachment.reload.purchase_invoice).to eq(invoice)
     expect(message.reload).to have_attributes(status: "filed", handled_by: user)
+  end
+
+  it "après la facture, ramène à la file avec l'onglet et la recherche d'où l'on venait" do
+    attachment
+
+    get finance_mail_messages_path(q: "proximus")
+    expect(response.body).to include(finance_mail_message_path(message, q: "proximus"))
+
+    get finance_mail_message_path(message, q: "proximus")
+    expect(response.body).to include(%(href="#{finance_mail_messages_path(q: 'proximus')}"))
+    nouvelle = new_finance_purchase_invoice_path(mail_attachment_id: attachment.id, from_inbox: 1, inbox_q: "proximus")
+    expect(response.body).to include(%(href="#{CGI.escapeHTML(nouvelle)}"))
+
+    get nouvelle
+    expect(response.body).to include(CGI.escapeHTML(finance_purchase_invoices_path(mail_attachment_id: attachment.id,
+                                                                                  from_inbox: 1, inbox_q: "proximus")))
+
+    post finance_purchase_invoices_path(mail_attachment_id: attachment.id, from_inbox: 1, inbox_q: "proximus"), params: {
+      purchase_invoice: { legal_entity_id: entity.id, third_party_id: proximus.id, number: "2026-77812",
+                          issued_on: "2026-09-12", total_euros: "84,12" }
+    }
+
+    expect(response).to redirect_to(finance_mail_messages_path(q: "proximus"))
+  end
+
+  it "revient au mail tant qu'il garde une pièce à encoder" do
+    attachment
+    message.mail_attachments.create!(filename: "facture-2.pdf", content_type: "application/pdf",
+                                     sha256: "autre-piece", file: { io: StringIO.new(pdf), filename: "facture-2.pdf" })
+
+    post finance_purchase_invoices_path(mail_attachment_id: attachment.id, from_inbox: 1, inbox_status: "pending",
+                                        inbox_q: "proximus"), params: {
+      purchase_invoice: { legal_entity_id: entity.id, third_party_id: proximus.id, number: "2026-77812",
+                          issued_on: "2026-09-12", total_euros: "84,12" }
+    }
+
+    expect(response).to redirect_to(finance_mail_message_path(message, q: "proximus"))
+    expect(flash[:notice]).to end_with("Il reste une pièce à encoder dans ce mail.")
+    expect(message.reload).to be_pending
+  end
+
+  it "créée hors de la boîte (« À payer »), la facture mène toujours à sa fiche" do
+    post finance_purchase_invoices_path(mail_attachment_id: attachment.id), params: {
+      purchase_invoice: { legal_entity_id: entity.id, third_party_id: proximus.id, number: "2026-77812",
+                          issued_on: "2026-09-12", total_euros: "84,12" }
+    }
+
+    expect(response).to redirect_to(finance_purchase_invoice_path(PurchaseInvoice.last))
+  end
+
+  it "« Ignorer » ramène à la file filtrée d'où l'on venait" do
+    post ignore_finance_mail_message_path(message), params: { q: "proximus" }
+
+    expect(response).to redirect_to(finance_mail_messages_path(q: "proximus"))
   end
 
   it "signale une pièce déjà encodée au lieu de proposer une seconde facture" do

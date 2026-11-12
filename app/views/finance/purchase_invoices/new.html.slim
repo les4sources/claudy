@@ -8,8 +8,8 @@
     strong= " #{courriel.sender_label} "
     | (#{l(courriel.received_at, format: :short)}), pièce
     strong= " #{@mail_attachment.filename}"
-    | . Relisez chaque champ : c'est une proposition, pas une vérification.
-    = link_to " Revoir le mail", finance_mail_message_path(courriel), class: "underline"
+    | . Relis chaque champ : c'est une proposition, pas une vérification.
+    = link_to " Revoir le mail", finance_mail_message_path(courriel, inbox_filters), class: "underline"
 
 - if @deadline
   .mb-4.rounded-lg.border.border-blue-200.bg-blue-50.px-4.py-3.text-sm.text-blue-900
@@ -19,5 +19,6 @@
 
 = render "finance/purchase_invoices/form", invoice: @invoice, third_parties: @third_parties,
          entities: @entities, teams: @teams, general_accounts: @general_accounts, creditable_invoices: @creditable_invoices,
-         url: finance_purchase_invoices_path(compliance_deadline_id: @deadline&.id, mail_attachment_id: @mail_attachment&.id), method: :post, submit_label: "Enregistrer",
+         url: finance_purchase_invoices_path(compliance_deadline_id: @deadline&.id, mail_attachment_id: @mail_attachment&.id,
+                                           from_inbox: (1 if from_inbox?), inbox_status: inbox_filters[:status], inbox_q: inbox_filters[:q]), method: :post, submit_label: "Enregistrer",
          supplier_draft: @mail_attachment&.supplier_draft
