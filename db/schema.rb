@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_12_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_12_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -586,6 +586,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_12_160000) do
     t.index ["legal_entity_id"], name: "index_cash_motifs_on_legal_entity_id"
     t.index ["position", "id"], name: "index_cash_motifs_on_position_and_id"
     t.index ["team_id"], name: "index_cash_motifs_on_team_id"
+  end
+
+  create_table "cash_sheet_photos", force: :cascade do |t|
+    t.bigint "cash_account_id", null: false
+    t.date "month", null: false
+    t.bigint "uploaded_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["cash_account_id", "month"], name: "index_cash_sheet_photos_on_cash_account_id_and_month", unique: true
+    t.index ["cash_account_id"], name: "index_cash_sheet_photos_on_cash_account_id"
+    t.index ["uploaded_by_id"], name: "index_cash_sheet_photos_on_uploaded_by_id"
   end
 
   create_table "catalog_items", force: :cascade do |t|
@@ -2982,6 +2993,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_12_160000) do
   add_foreign_key "cash_motifs", "general_accounts"
   add_foreign_key "cash_motifs", "legal_entities"
   add_foreign_key "cash_motifs", "teams"
+  add_foreign_key "cash_sheet_photos", "cash_accounts"
+  add_foreign_key "cash_sheet_photos", "users", column: "uploaded_by_id"
   add_foreign_key "catalog_items", "consignors"
   add_foreign_key "catalog_prices", "catalog_items"
   add_foreign_key "catalog_prices", "third_parties"

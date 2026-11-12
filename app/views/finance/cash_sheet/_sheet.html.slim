@@ -40,6 +40,8 @@
       p.text-xs.uppercase.tracking-wide.text-gray-400 Solde de clôture
       p.mt-1.text-lg.font-semibold.text-gray-900= number_to_currency(sheet.closing_cents / 100.0)
 
+  = render "finance/cash_sheet/photo", sheet: sheet
+
   - if sheet.closed?
     .mb-4.rounded-lg.border.border-amber-200.bg-amber-50.px-4.py-3.text-sm.text-amber-900
       strong Mois arrêté.

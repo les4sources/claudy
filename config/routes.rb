@@ -424,6 +424,9 @@ Rails.application.routes.draw do
     get "cash/lines/:id/edit", to: "cash_sheet#edit", as: :edit_cash_sheet_line
     patch "cash/lines/:id", to: "cash_sheet#update", as: :cash_sheet_line
     post "cash/lines/:id/exclude", to: "cash_sheet#exclude", as: :exclude_cash_sheet_line
+    # La photo de la feuille papier du mois (Michael, 2026-11-12) : une par mois.
+    post "cash/photo", to: "cash_sheet#attach_photo", as: :cash_sheet_photo
+    delete "cash/photo", to: "cash_sheet#remove_photo"
     # Comptages de caisse (epic #243, phase 3). Pas de `show` : un comptage se
     # lit dans la liste, il n'a pas assez à dire pour mériter sa page. Pas de
     # `destroy` non plus — un comptage est un fait daté.

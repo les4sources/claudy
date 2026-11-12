@@ -282,7 +282,8 @@ module Finance
       "finance/cash_sheet" => Page.new(
         "La feuille de caisse du mois : chaque entrée ou sortie d'espèces, avec un motif.",
         ["Note chaque mouvement d'espèces avec son motif : le motif suffit à l'affecter.",
-         "Compte la caisse chaque semaine pour repérer un écart pendant qu'on s'en souvient."],
+         "Compte la caisse chaque semaine pour repérer un écart pendant qu'on s'en souvient.",
+         "Joins la photo de la feuille papier du mois : elle reste sous la main pour compléter les lignes."],
         %w[tresorerie affecter]
       ),
       "finance/cash_motifs" => Page.new(

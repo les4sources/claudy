@@ -27,6 +27,13 @@ module Finance
 
     def closed? = MonthClosing.closed?(@month)
 
+    # La photo de la feuille papier du mois (Michael, 2026-11-12), ou nil.
+    def photo
+      return @photo if defined?(@photo)
+
+      @photo = CashSheetPhoto.includes(:uploaded_by, file_attachment: :blob).for(@account, @month)
+    end
+
     def entries
       @entries ||= CashEntry.where(cash_account_id: @account.id, entry_date: from..to)
                             .where.not(status: "excluded")
