@@ -45,7 +45,8 @@
       strong Mois arrêté.
       |  Les lignes de #{l(sheet.month, format: '%B %Y')} sont en lecture seule. Une correction s'y fait par écriture, pas en réécrivant la feuille.
   - else
-    .mb-5.rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4
+    / Le fond suit le sens du motif choisi : vert une entrée, rouge une sortie.
+    .mb-5.rounded-2xl.ring-1.px-4.py-4.transition-colors(class="bg-white ring-gray-200" data-controller="cash-direction" data-action="change->cash-direction#refresh" data-cash-direction-in-class="bg-emerald-50 ring-emerald-200" data-cash-direction-out-class="bg-red-50 ring-red-200" data-cash-direction-neutral-class="bg-white ring-gray-200")
       = render "finance/cash_sheet/form", sheet: sheet, motifs: motifs, default_date: default_date
 
   - if sheet.rows.empty?
