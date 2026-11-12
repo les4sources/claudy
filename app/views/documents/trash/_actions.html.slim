@@ -1,0 +1,7 @@
+- if writer
+  .ui-row-act
+    = button_to documents_restore_path, method: :patch, params: { param => [item.id] }, class: "ui-btn ui-btn-s" do
+      = ui_icon(:undo, size: 16)
+      | Restaurer
+    = button_to documents_purge_path, method: :delete, params: { param => [item.id] }, class: "ui-btn ui-btn-s ui-docs-danger", form: { data: { turbo_confirm: "Supprimer « #{item.name} » définitivement ? Ce geste est sans retour." } } do
+      | Supprimer définitivement

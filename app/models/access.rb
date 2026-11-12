@@ -14,7 +14,7 @@ module Access
     "sourcier" => { label: "Sourcier", description: "Accès complet" },
     "communication" => { label: "Communication", description: "Événements et activités, calendrier en lecture" },
     "kid" => { label: "Kid", description: "Calendrier et carte, en lecture seule" },
-    "administratif" => { label: "Administratif", description: "Comptes et comptabilité, calendrier en lecture" },
+    "administratif" => { label: "Administratif", description: "Comptes, comptabilité et documents, calendrier en lecture" },
     # Michael, 2026-10-13 : n'ouvrait rien ; le Guide (2026-10-19) est sa
     # première section, en attendant la sienne.
     "anier" => { label: "Ânier·ère", description: "Le Guide, en lecture (section à venir)" },
@@ -37,7 +37,10 @@ module Access
     map: "Carte du domaine",
     # Le Guide des 4 Sources (Michael, 2026-10-19) : lu par TOUS les rôles,
     # écrit par les Sourciers. Donner `:write` à un rôle lui ouvre l'admin.
-    guide: "Le Guide des 4 Sources"
+    guide: "Le Guide des 4 Sources",
+    # Les documents du collectif (Michael, 2026-11-12) : PDF, contrats,
+    # statuts… Ouverts aux Sourciers et à l'Administratif, en écriture.
+    documents: "Documents"
   }.freeze
 
   # Ce que chaque rôle ouvre : `:write` (consulter et modifier) ou `:read`
@@ -45,7 +48,7 @@ module Access
   GRANTS = {
     "communication" => { calendar: :read, events: :write, guide: :read },
     "kid" => { calendar: :read, map: :read, guide: :read },
-    "administratif" => { calendar: :read, accounts: :write, accounting: :write, guide: :read },
+    "administratif" => { calendar: :read, accounts: :write, accounting: :write, documents: :write, guide: :read },
     "anier" => { guide: :read },
     "porteur" => { guide: :read }
   }.freeze

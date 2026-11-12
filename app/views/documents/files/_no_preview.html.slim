@@ -1,0 +1,7 @@
+.ui-docs-nopv
+  = document_icon(file, size: :l)
+  p.ui-docs-empty-t Pas d’aperçu pour ce type de fichier
+  p.ui-muted = "#{file.kind_label} · #{document_size(file.byte_size)}"
+  = link_to download_documents_file_path(file), class: "ui-btn ui-btn-p", data: { turbo: false } do
+    = ui_icon(:download, size: 18)
+    | Télécharger

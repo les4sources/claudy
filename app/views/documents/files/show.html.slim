@@ -1,0 +1,91 @@
+/ L'aperçu d'un fichier : le PDF dans la visionneuse du navigateur, la photo,
+  la vidéo, le son ou le texte dans la page ; tout autre type se télécharge.
+  À droite : ses détails et ses gestes. ← → passent au fichier voisin du
+  même dossier.
+- writer = documents_writer?
+- file = @file
+- tree = documents_tree
+.ui-docs.ui-docs-show(data-controller="documents" data-documents-writer-value=writer.to_s data-documents-folder-id-value=(file.document_folder_id || "root") data-documents-move-url-value=documents_move_path data-documents-trash-url-value=documents_throw_path data-action="keydown@window->documents#arrowKeys" data-documents-previous-url-value=(@previous_id ? documents_file_path(@previous_id) : "") data-documents-next-url-value=(@next_id ? documents_file_path(@next_id) : ""))
+  header.ui-phead.ui-docs-head
+    .ui-phead-t
+      = render "documents/shared/crumbs", ancestors: @ancestors, current: file, writer: false
+      .ui-title-row
+        = document_icon(file, size: :s)
+        h1.ui-h1.ui-docs-title.ui-docs-ftitle = file.name
+      p.ui-muted.ui-docs-sum = document_meta(file)
+    .ui-actions
+      = link_to download_documents_file_path(file), class: "ui-btn ui-btn-p", data: { turbo: false } do
+        = ui_icon(:download, size: 18)
+        | Télécharger
+      - if file.inline? || file.kind.in?(%i[video audio])
+        = link_to raw_documents_file_path(file, filename: file.name), class: "ui-btn", target: "_blank", rel: "noopener", data: { turbo: false } do
+          = ui_icon(:external, size: 16)
+          | Ouvrir à part
+      .ui-docs-nav
+        = link_to (@previous_id ? documents_file_path(@previous_id) : "#"), class: "ui-ibtn ui-ibtn-o", title: "Fichier précédent (←)", "aria-label": "Fichier précédent", "aria-disabled": (@previous_id ? nil : "true"), tabindex: (@previous_id ? nil : "-1") do
+          = ui_icon(:left, size: 18)
+        = link_to (@next_id ? documents_file_path(@next_id) : "#"), class: "ui-ibtn ui-ibtn-o", title: "Fichier suivant (→)", "aria-label": "Fichier suivant", "aria-disabled": (@next_id ? nil : "true"), tabindex: (@next_id ? nil : "-1") do
+          = ui_icon(:right, size: 18)
+
+  .ui-docs-viewer
+    .ui-docs-stage(class="ui-docs-stage-#{file.kind}")
+      - case file.kind
+      - when :pdf
+        iframe.ui-docs-pdf(src="#{raw_documents_file_path(file, filename: file.name)}#view=FitH&navpanes=0" title="Aperçu de #{file.name}")
+      - when :image
+        - if file.inline?
+          img.ui-docs-img(src=raw_documents_file_path(file, filename: file.name) alt=file.name)
+        - else
+          = render "documents/files/no_preview", file: file
+      - when :video
+        video.ui-docs-video(src=raw_documents_file_path(file, filename: file.name) controls preload="metadata")
+      - when :audio
+        .ui-docs-audio
+          = document_icon(file, size: :l)
+          audio(src=raw_documents_file_path(file, filename: file.name) controls preload="metadata")
+      - when :text
+        - if @text_preview
+          pre.ui-docs-text = @text_preview
+        - else
+          = render "documents/files/no_preview", file: file
+      - else
+        = render "documents/files/no_preview", file: file
+
+    aside.ui-card.ui-docs-info(aria-label="Détails")
+      .ui-card-h
+        h2.ui-h3 Détails
+      .ui-card-b
+        dl.ui-docs-dl
+          dt Type
+          dd = [file.kind_label, file.extension&.upcase].compact.uniq.join(" · ")
+          dt Taille
+          dd = document_size(file.byte_size)
+          dt Dossier
+          dd
+            - if file.folder
+              = link_to tree.path(file.document_folder_id).presence || file.folder.name, documents_folder_path(file.folder)
+            - else
+              = link_to "Documents (racine)", documents_path
+          dt Ajouté
+          dd
+            = file.uploaded_by&.linked_human&.name.presence || file.uploaded_by&.email || "—"
+            br
+            span.ui-muted = l(file.created_at, format: "%-d %B %Y à %H:%M")
+          - if file.file.filename.to_s != file.name
+            dt Nom d’origine
+            dd.ui-docs-break = file.file.filename.to_s
+        - if writer
+          .ui-docs-info-a
+            button.ui-btn.ui-btn-s(type="button" data-action="documents#rename" data-documents-url-param=documents_file_path(file) data-documents-name-param=file.name data-documents-kind-param="file")
+              = ui_icon(:pencil, size: 16)
+              | Renommer
+            button.ui-btn.ui-btn-s(type="button" data-action="documents#moveOne" data-documents-id-param=file.id data-documents-kind-param="file" data-documents-name-param=file.name)
+              = ui_icon(:folder_move, size: 16)
+              | Déplacer
+            button.ui-btn.ui-btn-s.ui-docs-danger(type="button" data-action="documents#trashOne" data-documents-id-param=file.id data-documents-kind-param="file" data-documents-name-param=file.name)
+              = ui_icon(:trash, size: 16)
+              | Corbeille
+
+  - if writer
+    = render "documents/shared/dialogs", tree: tree, parent: file.folder
+    = render "documents/shared/upload_panel", here: (file.folder ? "« #{file.folder.name} »" : "Documents")

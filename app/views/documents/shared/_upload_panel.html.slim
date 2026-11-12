@@ -1,0 +1,15 @@
+/ Pendant un envoi : la barre de progression, en bas à droite. Et pendant
+  qu'on glisse des fichiers du bureau au-dessus de la page : le voile qui dit
+  où ils vont arriver.
+.ui-docs-up(hidden data-documents-target="uploadPanel" role="status" aria-live="polite")
+  .ui-docs-up-h
+    = ui_icon(:upload, size: 18)
+    span(data-documents-target="uploadTitle") Envoi en cours…
+  .ui-bar.ui-bar-l
+    span.ui-docs-up-fill(data-documents-target="uploadBar")
+  p.ui-muted.ui-small(data-documents-target="uploadDetail")
+.ui-docs-veil(hidden data-documents-target="veil" aria-hidden="true")
+  .ui-docs-veil-b
+    = ui_icon(:upload, size: 34)
+    p.ui-docs-veil-t(data-documents-target="veilText") = "Dépose pour envoyer dans #{here}"
+.ui-docs-toast(hidden data-documents-target="toast" role="alert")

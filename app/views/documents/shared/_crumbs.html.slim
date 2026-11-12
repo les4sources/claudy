@@ -1,0 +1,15 @@
+/ Le fil d'Ariane : chaque étape est aussi un endroit où déposer ce qu'on
+  glisse (remonter un fichier d'un niveau, ou à la racine).
+- drop = writer ? { documents_target: "drop", action: "dragover->documents#dropOver dragleave->documents#dropLeave drop->documents#dropOn" } : {}
+nav.ui-docs-crumbs(aria-label="Chemin")
+  - if current || ancestors.any?
+    = link_to documents_path, class: "ui-docs-crumb", data: drop.merge(folder_id: "root") do
+      = ui_icon(:files, size: 15)
+      | Documents
+    - ancestors.each do |ancestor|
+      span.ui-docs-crumb-sep(aria-hidden="true") ›
+      = link_to ancestor.name, documents_folder_path(ancestor), class: "ui-docs-crumb", data: drop.merge(folder_id: ancestor.id)
+    - if current.is_a?(DocumentFolder)
+      span.ui-docs-crumb-sep(aria-hidden="true") ›
+  - else
+    p.ui-over Le collectif

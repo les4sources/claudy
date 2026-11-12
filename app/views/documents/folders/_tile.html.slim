@@ -1,0 +1,17 @@
+/ Une tuile de dossier : on l'ouvre d'un clic, on y dépose ce qu'on glisse, et
+  elle se glisse elle-même dans un autre dossier.
+- data = { "documents-target" => "item", "kind" => "folder", "id" => folder.id, "name" => folder.name }
+- if writer
+  - data = data.merge("documents-target" => "item drop", "folder-id" => folder.id, "action" => "dragstart->documents#dragStart dragend->documents#dragEnd dragover->documents#dropOver dragleave->documents#dropLeave drop->documents#dropOn")
+.ui-docs-folder(draggable=(writer ? "true" : nil) data=data)
+  - if writer
+    label.ui-check.ui-docs-check
+      input.ui-check-i(type="checkbox" data-action="documents#toggle" aria-label="Choisir le dossier #{folder.name}")
+      span.ui-check-b(aria-hidden="true") = ui_icon(:check, size: 14)
+  = link_to documents_folder_path(folder), class: "ui-docs-folder-a", draggable: "false" do
+    = document_folder_icon(size: 30)
+    span.ui-docs-folder-m
+      span.ui-docs-folder-t = searching ? document_highlight(folder.name, @query) : folder.name
+      span.ui-docs-folder-s = searching && folder.parent_id ? tree.path(folder.parent_id) : listing.contents(tree, folder.id)
+  - if writer
+    = render "documents/shared/menu", kind: "folder", item: folder, url: documents_folder_path(folder)

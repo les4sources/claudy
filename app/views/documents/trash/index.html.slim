@@ -1,0 +1,51 @@
+/ La corbeille des Documents : ce qu'on a jeté (un dossier y entre avec tout ce
+  qu'il contient). Restaurer le remet à sa place ; « Supprimer définitivement »
+  est le seul geste sans retour, et il le dit.
+- writer = documents_writer?
+- tree = documents_tree
+- empty = @folders.empty? && @files.empty?
+.ui-docs
+  header.ui-phead.ui-docs-head
+    .ui-phead-t
+      nav.ui-docs-crumbs(aria-label="Chemin")
+        = link_to documents_path, class: "ui-docs-crumb" do
+          = ui_icon(:files, size: 15)
+          | Documents
+        span.ui-docs-crumb-sep(aria-hidden="true") ›
+      h1.ui-h1.ui-docs-title Corbeille
+      p.ui-muted.ui-docs-sum
+        = empty ? "La corbeille est vide." : "#{document_count(@folders.size + @files.size, 'élément')}. Rien n’est effacé tant que tu ne le supprimes pas définitivement."
+    - if writer && !empty
+      .ui-actions
+        = button_to documents_purge_path(all: 1), method: :delete, class: "ui-btn ui-docs-danger", form: { data: { turbo_confirm: "Vider la corbeille ? Les #{@folders.size + @files.size} éléments et tout ce qu’ils contiennent seront effacés pour de bon." } } do
+          = ui_icon(:trash, size: 18)
+          | Vider la corbeille
+
+  .ui-docs-layout
+    aside.ui-docs-side(aria-label="Dossiers")
+      = render "documents/shared/tree", tree: tree, current_id: nil, writer: false
+
+    section.ui-docs-main
+      - if empty
+        .ui-docs-empty
+          = ui_icon(:trash, size: 30)
+          p.ui-docs-empty-t Rien à la corbeille
+          p.ui-muted Ce que tu mets à la corbeille attend ici : tu peux le restaurer tant que tu ne l’as pas supprimé définitivement.
+      - else
+        .ui-docs-files(role="list")
+          - @folders.each do |folder|
+            .ui-docs-row(role="listitem")
+              span.ui-docs-row-a
+                = document_folder_icon(size: 30)
+                span.ui-row-m
+                  span.ui-docs-row-t = folder.name
+                  span.ui-row-s = ["Dossier", ("venait de « #{folder.parent.name} »" if folder.parent), "jeté #{document_when(folder.deleted_at)}"].compact.join(" · ")
+              = render "documents/trash/actions", writer: writer, param: :folder_ids, item: folder
+          - @files.each do |file|
+            .ui-docs-row(role="listitem")
+              span.ui-docs-row-a
+                = document_icon(file)
+                span.ui-row-m
+                  span.ui-docs-row-t = file.name
+                  span.ui-row-s = [file.kind_label, document_size(file.byte_size), ("venait de « #{file.folder.name} »" if file.folder), "jeté #{document_when(file.deleted_at)}"].compact.join(" · ")
+              = render "documents/trash/actions", writer: writer, param: :file_ids, item: file

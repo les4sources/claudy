@@ -1,0 +1,20 @@
+/ L'arbre des dossiers : ouvert jusqu'au dossier courant, chaque dossier est
+  un endroit où déposer. `Documents::Tree` le charge en une requête.
+- open = current_id ? tree.open_ids(current_id) : Set.new
+- drop = writer ? { documents_target: "drop", action: "dragover->documents#dropOver dragleave->documents#dropLeave drop->documents#dropOn" } : {}
+nav.ui-docs-tree
+  = link_to documents_path, class: "ui-docs-node ui-docs-node-root", aria: { current: (current_id.nil? && controller_name == "folders" ? "page" : nil) }, data: drop.merge(folder_id: "root") do
+    = ui_icon(:files, size: 18)
+    span.ui-docs-node-t Tous les documents
+    - if tree.root_files_count.positive?
+      span.ui-docs-node-n = tree.root_files_count
+  - if tree.empty?
+    p.ui-docs-tree-empty Aucun dossier pour l’instant.
+  - else
+    = render "documents/shared/tree_level", tree: tree, parent_id: nil, current_id: current_id, open: open, drop: drop, depth: 0
+  .ui-docs-tree-foot
+    = link_to documents_trash_path, class: "ui-docs-node", aria: { current: (controller_name == "trash" ? "page" : nil) } do
+      = ui_icon(:trash, size: 18)
+      span.ui-docs-node-t Corbeille
+      - if @trash_count.to_i.positive?
+        span.ui-docs-node-n = @trash_count
