@@ -1,0 +1,107 @@
+/ DOCUMENTS (Michael, 2026-11-12) : la racine ou un dossier. À gauche l'arbre
+  des dossiers, à droite ce que contient celui qu'on regarde : ses dossiers en
+  tuiles, puis ses fichiers en lignes. Tout se range à la souris : glisser une
+  ligne sur un dossier (tuile, arbre ou fil d'Ariane) la déplace, déposer des
+  fichiers du bureau n'importe où les envoie ici. Les mêmes gestes existent
+  sans glisser (menu ⋯, cases à cocher), pour le clavier et le téléphone.
+  Le contrôleur Stimulus : `documents_controller.js`.
+- writer = documents_writer?
+- tree = documents_tree
+- listing = @listing
+- folder = @folder
+- here = folder ? "« #{folder.name} »" : "Documents"
+- highlight = params[:nouveaux].to_s.split(",").map(&:to_i)
+.ui-docs(data-controller="documents" data-documents-writer-value=writer.to_s data-documents-folder-id-value=(folder&.id || "root") data-documents-folder-name-value=here data-documents-upload-url-value=documents_files_path data-documents-move-url-value=documents_move_path data-documents-trash-url-value=documents_throw_path data-documents-max-size-value=DocumentFile::MAX_SIZE data-action="dragenter->documents#osDragEnter dragover->documents#osDragOver dragleave->documents#osDragLeave drop->documents#osDrop keydown.esc@window->documents#clearSelection")
+  header.ui-phead.ui-docs-head
+    .ui-phead-t
+      = render "documents/shared/crumbs", ancestors: @ancestors, current: folder, writer: writer
+      .ui-title-row
+        h1.ui-h1.ui-docs-title = folder ? folder.name : "Documents"
+        - if writer && folder
+          button.ui-ibtn.ui-docs-tbtn(type="button" title="Renommer ce dossier" aria-label="Renommer ce dossier" data-action="documents#rename" data-documents-url-param=documents_folder_path(folder) data-documents-name-param=folder.name data-documents-kind-param="folder")
+            = ui_icon(:pencil, size: 17)
+        = render "guide/screen_links/header", title: "Documents"
+      p.ui-muted.ui-docs-sum
+        - if listing.searching?
+          = "#{document_count(listing.folders.size + listing.files.size, 'résultat')} pour « #{@query} », dans tous les dossiers"
+        - elsif listing.empty?
+          = folder ? "Ce dossier est vide." : "Range ici les documents du collectif : PDF, tableurs, photos, tout type de fichier."
+        - else
+          = [(listing.folders.any? ? document_count(listing.folders.size, "dossier") : nil), (listing.files.any? ? "#{document_count(listing.files.size, 'fichier')} (#{document_size(listing.total_bytes)})" : nil)].compact.join(" · ")
+    - if writer
+      .ui-actions
+        button.ui-btn(type="button" data-action="documents#newFolder")
+          = ui_icon(:folder_plus, size: 18)
+          | Nouveau dossier
+        = form_with url: documents_files_path, method: :post, multipart: true, class: "ui-docs-upform", data: { documents_target: "uploadForm", turbo: false } do
+          = hidden_field_tag :folder_id, folder&.id, id: nil
+          label.ui-btn.ui-btn-p.ui-docs-upbtn
+            = ui_icon(:upload, size: 18)
+            | Envoyer des fichiers
+            = file_field_tag "files[]", multiple: true, id: "documents-upload-input", class: "ui-docs-file", data: { documents_target: "fileInput", action: "change->documents#pick" }
+          noscript
+            button.ui-btn(type="submit") Envoyer
+
+  .ui-docs-layout
+    aside.ui-docs-side(aria-label="Dossiers")
+      = render "documents/shared/tree", tree: tree, current_id: folder&.id, writer: writer
+
+    section.ui-docs-main(aria-label=(folder ? "Contenu de #{folder.name}" : "Documents"))
+      .ui-docs-bar
+        = form_with url: (folder ? documents_folder_path(folder) : documents_path), method: :get, class: "ui-docs-search", role: "search", data: { turbo_action: "replace" } do
+          = ui_icon(:search, size: 18)
+          = search_field_tag :q, @query, placeholder: "Chercher un document par son nom…", "aria-label": "Chercher un document", autocomplete: "off", class: "ui-docs-q"
+          - if @sort != "name"
+            = hidden_field_tag :tri, @sort, id: nil
+          - if listing.searching?
+            = link_to "Effacer", (folder ? documents_folder_path(folder, tri: (@sort if @sort != "name")) : documents_path(tri: (@sort if @sort != "name"))), class: "ui-docs-clear"
+        nav.ui-seg(aria-label="Trier")
+          - [["name", "Nom"], ["recent", "Récents"], ["size", "Taille"]].each do |key, label|
+            - url = folder ? documents_folder_path(folder, tri: (key if key != "name"), q: @query.presence) : documents_path(tri: (key if key != "name"), q: @query.presence)
+            = link_to label, url, class: "ui-seg-i", aria: { current: (@sort == key ? "page" : nil) }
+
+      - if writer
+        .ui-docs-sel(hidden data-documents-target="selectionBar" role="region" aria-label="Sélection")
+          span.ui-docs-sel-n(data-documents-target="selectionCount" aria-live="polite")
+          button.ui-btn.ui-btn-s(type="button" data-action="documents#moveSelection")
+            = ui_icon(:folder_move, size: 16)
+            | Déplacer
+          button.ui-btn.ui-btn-s.ui-docs-danger(type="button" data-action="documents#trashSelection")
+            = ui_icon(:trash, size: 16)
+            | Mettre à la corbeille
+          button.ui-docs-link(type="button" data-action="documents#clearSelection") Tout désélectionner
+
+      - if listing.empty?
+        .ui-docs-empty(data-documents-target="emptyZone")
+          - if listing.searching?
+            = ui_icon(:search, size: 30)
+            p.ui-docs-empty-t = "Aucun document ne s’appelle « #{@query} »."
+            p.ui-muted La recherche porte sur les noms des dossiers et des fichiers, sans casse ni accents.
+          - else
+            = ui_icon(:upload, size: 30)
+            p.ui-docs-empty-t = writer ? "Glisse des fichiers ici" : "Rien ici pour l’instant"
+            - if writer
+              p.ui-muted
+                | ou
+                label.ui-docs-link(for="documents-upload-input") choisis-les sur ton ordinateur
+                | . PDF, photos, tableurs : tout passe, jusqu’à #{DocumentFile::MAX_SIZE / 1.megabyte} Mo par fichier.
+      - else
+        - if listing.folders.any?
+          h2.ui-docs-h Dossiers
+          .ui-docs-folders
+            - listing.folders.each do |child|
+              = render "documents/folders/tile", folder: child, listing: listing, tree: tree, writer: writer, searching: listing.searching?
+        - if listing.files.any?
+          .ui-docs-files-h
+            h2.ui-docs-h Fichiers
+            - if writer
+              label.ui-docs-all
+                input(type="checkbox" data-documents-target="selectAll" data-action="documents#toggleAll")
+                | Tout choisir
+          .ui-docs-files(role="list")
+            - listing.files.each do |file|
+              = render "documents/files/row", file: file, writer: writer, tree: tree, query: (@query if listing.searching?), fresh: highlight.include?(file.id)
+
+  - if writer
+    = render "documents/shared/dialogs", tree: tree, parent: folder
+    = render "documents/shared/upload_panel", here: here

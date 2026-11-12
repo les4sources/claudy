@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_12_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_12_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -930,6 +930,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_12_100000) do
     t.index ["gathering_id"], name: "index_decisions_on_gathering_id"
     t.index ["recorded_by_id"], name: "index_decisions_on_recorded_by_id"
     t.index ["taken_at"], name: "index_decisions_on_taken_at", order: :desc
+  end
+
+  create_table "document_files", force: :cascade do |t|
+    t.string "name", null: false
+    t.bigint "document_folder_id"
+    t.bigint "uploaded_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["deleted_at"], name: "index_document_files_on_deleted_at"
+    t.index ["document_folder_id"], name: "index_document_files_on_document_folder_id"
+    t.index ["uploaded_by_id"], name: "index_document_files_on_uploaded_by_id"
+  end
+
+  create_table "document_folders", force: :cascade do |t|
+    t.string "name", null: false
+    t.bigint "parent_id"
+    t.bigint "created_by_id"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_document_folders_on_created_by_id"
+    t.index ["deleted_at"], name: "index_document_folders_on_deleted_at"
+    t.index ["parent_id"], name: "index_document_folders_on_parent_id"
   end
 
   create_table "event_categories", force: :cascade do |t|
@@ -2993,6 +3017,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_12_100000) do
   add_foreign_key "decisions", "agenda_items", on_delete: :nullify
   add_foreign_key "decisions", "gatherings", on_delete: :nullify
   add_foreign_key "decisions", "humans", column: "recorded_by_id"
+  add_foreign_key "document_files", "document_folders"
+  add_foreign_key "document_files", "users", column: "uploaded_by_id"
+  add_foreign_key "document_folders", "document_folders", column: "parent_id"
+  add_foreign_key "document_folders", "users", column: "created_by_id"
   add_foreign_key "event_costs", "events"
   add_foreign_key "event_organizers", "events"
   add_foreign_key "event_organizers", "humans"

@@ -94,6 +94,27 @@ Rails.application.routes.draw do
     # « Voir la procédure » : l'écran qui renvoie à une page.
     resources :screen_links, only: %i[new create destroy]
   end
+  # Les Documents du collectif (Michael, 2026-11-12) : dossiers emboîtés,
+  # fichiers de tout type, corbeille. Section d'accès `:documents`.
+  get "documents", to: "documents/folders#index", as: :documents
+  namespace :documents do
+    resources :folders, path: "dossiers", only: %i[show create update]
+    resources :files, path: "fichiers", only: %i[show create update] do
+      member do
+        get :download
+        # Le nom du fichier en bout d'adresse : la visionneuse PDF du
+        # navigateur le montre comme titre, et l'enregistre sous ce nom.
+        get "voir(/:filename)", action: :raw, as: :raw, format: false, constraints: { filename: %r{[^/]+} }
+        get :thumb
+      end
+    end
+    # Les gestes sur une sélection (un élément ou plusieurs, glissés ou cochés).
+    patch "deplacer", to: "items#move", as: :move
+    post "jeter", to: "items#trash", as: :throw
+    get "corbeille", to: "trash#index", as: :trash
+    patch "corbeille/restaurer", to: "trash#restore", as: :restore
+    delete "corbeille", to: "trash#destroy", as: :purge
+  end
   get "organisation/decisions", to: "decisions#index", as: :organisation_decisions
   resources :experiences do
     member do

@@ -6,6 +6,7 @@
 - customers = search.customers
 - humans = search.humans
 - pages = search.guide_pages
+- documents = search.documents
 - screens = command_screens(q)
 - actions = command_actions(q, customer: customers.first)
 - index = 0
@@ -62,6 +63,23 @@
         span.ui-cmd-t
           b = command_highlight(page.title, q)
           small = page.chapter&.title
+
+- if documents.any?
+  .ui-cmd-g(role="group" aria-label="Documents")
+    p.ui-cmd-gl Documents
+    - documents.each do |doc|
+      - if doc.is_a?(DocumentFolder)
+        a *option.(documents_folder_path(doc))
+          span.ui-cmd-ic = ui_icon(:folder, size: 18)
+          span.ui-cmd-t
+            b = command_highlight(doc.name, q)
+            small = ["dossier", doc.parent&.name].compact.join(" · dans ")
+      - else
+        a *option.(documents_file_path(doc))
+          span.ui-cmd-ic = ui_icon(:files, size: 18)
+          span.ui-cmd-t
+            b = command_highlight(doc.name, q)
+            small = [doc.kind_label, (doc.folder ? "dans #{doc.folder.name}" : "Documents")].join(" · ")
 
 - if actions.any?
   .ui-cmd-g(role="group" aria-label="Actions")

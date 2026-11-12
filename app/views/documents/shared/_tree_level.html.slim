@@ -1,0 +1,19 @@
+ul.ui-docs-tree-l(role=(depth.zero? ? "tree" : "group") aria-label=(depth.zero? ? "Dossiers" : nil))
+  - tree.children(parent_id).each do |node|
+    - has_children = tree.children?(node.id)
+    - expanded = open.include?(node.id)
+    li(role="treeitem" aria-expanded=(has_children ? expanded.to_s : nil))
+      .ui-docs-node-w(style="--depth: #{depth}")
+        - if has_children
+          button.ui-docs-twist(type="button" aria-label=(expanded ? "Replier #{node.name}" : "Déplier #{node.name}") data-action="documents#twist")
+            = ui_icon(:right, size: 14)
+        - else
+          span.ui-docs-twist-ph
+        = link_to documents_folder_path(node.id), class: "ui-docs-node", aria: { current: (current_id == node.id ? "page" : nil) }, data: drop.merge(folder_id: node.id) do
+          = ui_icon(:folder, size: 17)
+          span.ui-docs-node-t = node.name
+          - if node.files_count.positive?
+            span.ui-docs-node-n = node.files_count
+      - if has_children
+        div(hidden=!expanded)
+          = render "documents/shared/tree_level", tree: tree, parent_id: node.id, current_id: current_id, open: open, drop: drop, depth: depth + 1

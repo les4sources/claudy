@@ -1,0 +1,23 @@
+/ Une ligne de fichier. Le lien ouvre l'aperçu ; la ligne se glisse sur un
+  dossier pour l'y ranger.
+- data = { "documents-target" => "item", "kind" => "file", "id" => file.id, "name" => file.name }
+- if writer
+  - data = data.merge("action" => "dragstart->documents#dragStart dragend->documents#dragEnd")
+.ui-docs-row(role="listitem" draggable=(writer ? "true" : nil) data=data class=("is-fresh" if fresh))
+  - if writer
+    label.ui-check.ui-docs-check
+      input.ui-check-i(type="checkbox" data-action="documents#toggle" aria-label="Choisir #{file.name}")
+      span.ui-check-b(aria-hidden="true") = ui_icon(:check, size: 14)
+  = link_to documents_file_path(file), class: "ui-docs-row-a", draggable: "false" do
+    = document_icon(file)
+    span.ui-row-m
+      span.ui-docs-row-t = query ? document_highlight(file.name, query) : file.name
+      span.ui-row-s
+        - if query && file.document_folder_id
+          = "Dans #{tree.path(file.document_folder_id)} · "
+        = document_meta(file)
+  span.ui-docs-row-size = document_size(file.byte_size)
+  = link_to download_documents_file_path(file), class: "ui-ibtn ui-docs-dl", title: "Télécharger", "aria-label": "Télécharger #{file.name}", draggable: "false", data: { turbo: false } do
+    = ui_icon(:download, size: 18)
+  - if writer
+    = render "documents/shared/menu", kind: "file", item: file, url: documents_file_path(file)

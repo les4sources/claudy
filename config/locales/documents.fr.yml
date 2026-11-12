@@ -1,0 +1,12 @@
+fr:
+  activerecord:
+    models:
+      document_folder: Dossier
+      document_file: Fichier
+    attributes:
+      document_folder:
+        name: Le nom
+        parent: Le dossier d’arrivée
+      document_file:
+        name: Le nom
+        file: Le fichier

@@ -27,6 +27,14 @@ RSpec.describe Access do
       expect(described_class.level(%w[administratif], :map)).to be_nil
     end
 
+    it "ouvre les Documents aux Sourciers et à l'Administratif, à personne d'autre" do
+      expect(described_class.level(%w[sourcier], :documents)).to eq(:write)
+      expect(described_class.level(%w[administratif], :documents)).to eq(:write)
+      (Access::ROLE_NAMES - %w[sourcier administratif]).each do |role|
+        expect(described_class.level([role], :documents)).to be_nil
+      end
+    end
+
     it "additionne les droits de plusieurs rôles, en gardant le plus fort" do
       roles = %w[kid communication]
       expect(described_class.level(roles, :map)).to eq(:read)

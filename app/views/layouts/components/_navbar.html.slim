@@ -142,6 +142,19 @@ nav.bg-4s-main.shadow-sm.lg:px-6.relative.z-40
                 path[d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"]
               span.sr-only Comptabilité
 
+        / Documents (Michael, 2026-11-12) : l'icône juste à côté de la
+          Comptabilité, comme demandé. Les fichiers du collectif, rangés en dossiers.
+        - if section_readable?(:documents)
+          li
+            = link_to documents_path,
+                      class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{!@documents_view.nil? ? nav_active : 'text-white/50 hover:text-white hover:bg-white/10'}",
+                      title: "Documents" do
+              svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+                path[d="M20 7h-3a2 2 0 0 1-2-2V2"]
+                path[d="M9 18a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h7l4 4v10a2 2 0 0 1-2 2Z"]
+                path[d="M3 7.6v12.8A1.6 1.6 0 0 0 4.6 22h9.8"]
+              span.sr-only Documents
+
         / Carte — la carte du domaine (epic #348). En ICÔNE et non en libellé : la
           barre a été allégée le 2026-09-20 parce que six libellés la faisaient
           déborder, et la carte se consulte comme l'activité récente plutôt

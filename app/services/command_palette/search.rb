@@ -49,6 +49,15 @@ module CommandPalette
       @guide_pages ||= GuidePage.readable_by(@user).search(@query).includes(:chapter).order(:title).limit(LIMIT).to_a
     end
 
+    # Les Documents (2026-11-12) : dossiers et fichiers par leur nom, pour qui
+    # ouvre la section.
+    def documents
+      return [] unless searching? && @query.length >= MIN_LENGTH && @user.can_read?(:documents)
+
+      @documents ||= DocumentFolder.kept.named_like(@query).order(:name).limit(3).to_a +
+                     DocumentFile.kept.named_like(@query).includes(:folder).order(created_at: :desc).limit(LIMIT).to_a
+    end
+
     private
 
     def stay_id

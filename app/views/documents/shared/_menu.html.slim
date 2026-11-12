@@ -1,0 +1,19 @@
+/ Le menu ⋯ d'un dossier ou d'un fichier : les gestes qu'on fait aussi en
+  glissant, pour le clavier et le téléphone.
+details.ui-docs-menu(data-action="toggle->documents#menuToggle")
+  summary.ui-ibtn(aria-label="Actions sur #{item.name}" title="Actions")
+    = ui_icon(:dots, size: 18)
+  .ui-docs-menu-p(role="menu")
+    - if kind == "file"
+      = link_to download_documents_file_path(item), class: "ui-docs-mi", role: "menuitem", data: { turbo: false } do
+        = ui_icon(:download, size: 16)
+        | Télécharger
+    button.ui-docs-mi(type="button" role="menuitem" data-action="documents#rename" data-documents-url-param=url data-documents-name-param=item.name data-documents-kind-param=kind)
+      = ui_icon(:pencil, size: 16)
+      | Renommer
+    button.ui-docs-mi(type="button" role="menuitem" data-action="documents#moveOne" data-documents-id-param=item.id data-documents-kind-param=kind data-documents-name-param=item.name)
+      = ui_icon(:folder_move, size: 16)
+      | Déplacer vers…
+    button.ui-docs-mi.ui-docs-mi-danger(type="button" role="menuitem" data-action="documents#trashOne" data-documents-id-param=item.id data-documents-kind-param=kind data-documents-name-param=item.name)
+      = ui_icon(:trash, size: 16)
+      | Mettre à la corbeille

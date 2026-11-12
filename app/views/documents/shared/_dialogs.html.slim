@@ -1,0 +1,43 @@
+/ Les fenêtres des gestes : nouveau dossier, renommer, déplacer. De vraies
+  <dialog> que `documents_controller.js` remplit (adresse, nom, éléments)
+  avant de les ouvrir ; chaque formulaire repart sur la page, mise à jour.
+dialog.ui-docs-dlg(data-action="click->documents#backdrop" data-documents-target="folderDialog" aria-labelledby="docs-dlg-folder-t")
+  = form_with url: documents_folders_path, method: :post, class: "ui-docs-dlg-f" do
+    h2.ui-h2#docs-dlg-folder-t Nouveau dossier
+    p.ui-muted.ui-small = parent ? "Dans « #{parent.name} »" : "À la racine des documents"
+    = hidden_field_tag "folder[parent_id]", parent&.id, id: nil
+    label.ui-quick-l(for="docs-folder-name") Nom du dossier
+    = text_field_tag "folder[name]", "", id: "docs-folder-name", class: "ui-input", required: true, maxlength: 180, autocomplete: "off", placeholder: "Ex. Contrats, Statuts, Assurances…"
+    .ui-docs-dlg-a
+      button.ui-btn(type="button" data-action="documents#closeDialog") Annuler
+      button.ui-btn.ui-btn-p(type="submit") Créer le dossier
+
+dialog.ui-docs-dlg(data-action="click->documents#backdrop" data-documents-target="renameDialog" aria-labelledby="docs-dlg-rename-t")
+  = form_with url: documents_path, method: :patch, class: "ui-docs-dlg-f", data: { documents_target: "renameForm" } do
+    h2.ui-h2#docs-dlg-rename-t Renommer
+    label.ui-quick-l(for="docs-rename-name" data-documents-target="renameLabel") Nouveau nom
+    = text_field_tag "name", "", id: "docs-rename-name", class: "ui-input", required: true, maxlength: 180, autocomplete: "off", data: { documents_target: "renameInput" }
+    p.ui-muted.ui-small(data-documents-target="renameHint" hidden) L’extension du fichier reste la même.
+    .ui-docs-dlg-a
+      button.ui-btn(type="button" data-action="documents#closeDialog") Annuler
+      button.ui-btn.ui-btn-p(type="submit") Renommer
+
+dialog.ui-docs-dlg.ui-docs-dlg-move(data-action="click->documents#backdrop" data-documents-target="moveDialog" aria-labelledby="docs-dlg-move-t")
+  = form_with url: documents_move_path, method: :patch, class: "ui-docs-dlg-f", data: { documents_target: "moveForm" } do
+    h2.ui-h2#docs-dlg-move-t Déplacer vers…
+    p.ui-muted.ui-small(data-documents-target="moveWhat")
+    div(data-documents-target="moveIds")
+    div(class="relative" data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un dossier…" data-searchable-select-max-value="200")
+      label.ui-quick-l(for="docs-move-target") Dossier d’arrivée
+      select#docs-move-target(name="target_folder_id" required data-searchable-select-target="select" data-documents-target="moveSelect")
+        option(value="") Choisir un dossier
+        - document_move_options(tree).each do |row|
+          option(value=row[:value] data-path=row[:path]) = row[:label]
+      = render "shared/searchable_select_search", label: "Chercher un dossier"
+    .ui-docs-dlg-a
+      button.ui-btn(type="button" data-action="documents#closeDialog") Annuler
+      button.ui-btn.ui-btn-p(type="submit") Déplacer
+  template(data-documents-target="moveOptions")
+    option(value="") Choisir un dossier
+    - document_move_options(tree).each do |row|
+      option(value=row[:value] data-path=row[:path]) = row[:label]
