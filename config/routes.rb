@@ -481,6 +481,9 @@ Rails.application.routes.draw do
         # la ligne du relevé arrivée depuis, ou retirer la déclaration.
         post :record_bank_payment
         post :unsettle
+        # « Pas de virement à faire » sur une facture déjà comptabilisée :
+        # domiciliée, ou déjà débitée (Michael, 2026-11-12, SWDE #33).
+        post :declare_settlement
         # La pièce se remplace quel que soit le statut : ce n'est pas une
         # donnée comptable, et une facture comptabilisée ne se modifie plus.
         post :replace_document

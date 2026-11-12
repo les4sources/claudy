@@ -20,6 +20,12 @@ module Mcp
           "relier_paiement" => "une facture « à payer » déjà payée par une ligne affectée au 440000 SANS la facture (règle " \
                                "d'affectation, domiciliation) : relie cette affectation à la facture, qui passe payée, sans " \
                                "repayer ; `ligne` (facultatif : l'aperçu sans ligne liste les candidates)",
+          "domicilier" => "la banque prélèvera la facture (domiciliation) : elle reste « à payer » et attendue en trésorerie " \
+                          "à `date` (défaut : l'échéance), mais sort du fichier de virements SEPA ; payée au rapprochement de la ligne",
+          "compenser" => "la facture est réglée par compensation avec d'autres dettes, sans argent : elle sort de « à payer », " \
+                         "du fichier SEPA et de la trésorerie ; la dette reste au 440000 jusqu'à l'écriture de compensation " \
+                         "(`date`, défaut aujourd'hui ; le `motif`, s'il est donné, s'ajoute aux notes)",
+          "virer" => "annule une domiciliation ou un règlement déclaré : la facture redevient à virer (fichier SEPA)",
           "payer_en_especes" => "le fournisseur est payé en caisse : crée la sortie de caisse affectée et comptabilisée",
           "payee_par_membre" => "un membre l'a payée en magasin et se la fait rembourser : la dépense va sur sa note de " \
                                 "frais (`membre`, ajoutée à sa note enregistrée ou à une nouvelle) ou se relie à celle " \
@@ -48,7 +54,9 @@ module Mcp
                properties: {
                  facture: FACTURE,
                  geste: { type: "string", enum: GESTES.keys },
-                 date: DATE.merge(description: "Pour payer_en_especes : la date du paiement. Défaut : aujourd'hui."),
+                 date: DATE.merge(description: "Pour payer_en_especes : la date du paiement (défaut : aujourd'hui). " \
+                                               "Pour domicilier : la date du prélèvement (défaut : l'échéance). " \
+                                               "Pour compenser : la date de la compensation (défaut : aujourd'hui)."),
                  caisse: { type: "string", description: "Pour payer_en_especes : la caisse, s'il y en a plusieurs." },
                  puis: { type: "string", enum: %w[contestee a_traiter],
                          description: "Pour defaire_passation : contestee (défaut, la facture sort de la file) ou a_traiter (à corriger)." },
@@ -110,6 +118,16 @@ module Mcp
               resultat = ::Finance::LinkOrphanPayment.new(purchase_invoice: facture, allocation: CashAllocation.find(d[:affectation]),
                                                           whodunnit: whodunnit).run!
               "Paiement relié : #{ligne_facture(resultat.invoice)}\n#{ligne_tresorerie(resultat.cash_entry)}"
+            when "domicilier"
+              facture.update!(settled_via: "direct_debit", settled_on: d[:date])
+              "Facture domiciliée, prélèvement attendu le #{facture.settled_on} : #{ligne_facture(facture)}"
+            when "compenser"
+              notes = [facture.notes.presence, ("Réglée par compensation : #{d[:motif]}" if d[:motif].present?)].compact.join("\n")
+              facture.update!(settled_via: "offset", settled_on: d[:date], notes: notes.presence)
+              "Facture réglée par compensation le #{facture.settled_on}, sortie de « à payer » : #{ligne_facture(facture)}"
+            when "virer"
+              facture.update!(settled_via: nil)
+              "Facture remise à virer : #{ligne_facture(facture)}"
             when "payer_en_especes"
               ::PurchaseInvoices::PayInCash.new(purchase_invoice: facture, paid_on: d[:date], cash_account: CashAccount.find(d[:caisse]),
                                                 whodunnit: whodunnit).run!
@@ -140,6 +158,12 @@ module Mcp
             ["→ Note de crédit comptabilisée (440000 au débit, charges au crédit)" +
              (facture.credited_invoice ? ", imputée sur ce qui reste à payer de la facture ##{facture.credited_invoice_id}" : "") +
              " ; le reste éventuel attend le remboursement du fournisseur.", {}]
+          elsif facture.direct_debit?
+            ["→ À PAYER, domiciliée : écriture d'achat passée, hors fichier de virements, attendue en trésorerie le " \
+             "#{facture.settled_on || facture.due_on || facture.issued_on} ; payée quand la ligne du prélèvement y sera rapprochée.", {}]
+          elsif facture.settled_by_offset?
+            ["→ Écriture d'achat passée. Réglée par compensation : elle ne va pas dans « à payer », la dette reste au 440000 " \
+             "jusqu'à l'écriture de compensation.", {}]
           elsif facture.settled_by_bank?
             ["→ Écriture d'achat passée. Déjà réglée par la banque le #{facture.settled_on} : elle ne va pas dans « à payer », " \
              "elle passera payée quand la ligne du relevé y sera rapprochée (rapprocher_ligne).", {}]
@@ -255,6 +279,34 @@ module Mcp
           ["→ PAYÉE PAR UN MEMBRE : #{lignes} dépense(s) de #{euros(facture.total_cents)} #{cible}, avec la pièce de la " \
            "facture comme justificatif et ses comptes et pôles. La note portera la charge ; la facture ne se comptabilise pas.",
            { membre: humain.id }]
+        end
+
+        def plan_domicilier(facture, arguments)
+          raise Error, "Une note de crédit ne se domicilie pas." if facture.credit_note?
+          raise Error, "Cette facture est #{facture.status_label.downcase} : plus rien à prélever." if facture.paid? || facture.member_paid?
+
+          date = date_ou_nil(arguments["date"], "date") || facture.due_on || facture.issued_on
+          ["→ DOMICILIÉE : la banque la prélèvera le #{date}. Elle reste dans « à payer » et en trésorerie à cette date, " \
+           "mais n'ira plus dans le fichier de virements. Elle passera payée au rapprochement de la ligne du prélèvement.",
+           { date: date&.iso8601 }]
+        end
+
+        def plan_compenser(facture, arguments)
+          raise Error, "Une note de crédit ne se compense pas ici." if facture.credit_note?
+          raise Error, "Cette facture est #{facture.status_label.downcase} : plus rien à régler." if facture.paid? || facture.member_paid?
+
+          date = date_ou_nil(arguments["date"], "date") || Date.current
+          motif = arguments["motif"].to_s.strip.presence
+          ["→ RÉGLÉE PAR COMPENSATION le #{date}#{" (#{motif})" if motif} : elle sort de « à payer », du fichier de virements " \
+           "et de la trésorerie. La dette reste au 440000 (« Compensée, à justifier ») jusqu'à l'écriture de compensation.",
+           { date: date.iso8601, motif: motif }]
+        end
+
+        def plan_virer(facture, _arguments)
+          raise Error, "Cette facture n'est ni domiciliée ni déclarée réglée." unless facture.settled_beforehand?
+          raise Error, "Cette facture est déjà payée." if facture.paid?
+
+          ["→ À VIRER : la domiciliation ou le règlement déclaré est retiré, la facture revient dans le fichier de virements.", {}]
         end
 
         def plan_payer_en_especes(facture, arguments)

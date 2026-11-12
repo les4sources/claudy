@@ -62,7 +62,10 @@
               span.ml-1.font-mono.text-gray-600= @invoice.payment_reference
           p.mt-1.text-xs.text-gray-400= @invoice.legal_entity.name
           - if @invoice.settled_beforehand? && !@invoice.credit_note?
-            p.mt-1.text-xs.font-medium.text-teal-700= "Déjà réglée #{@invoice.settlement_label} le #{l(@invoice.settled_on, format: :short)}"
+            - if @invoice.direct_debit?
+              p.mt-1.text-xs.font-medium.text-teal-700= "Domiciliée : prélèvement prévu le #{l(@invoice.settled_on, format: :short)}"
+            - else
+              p.mt-1.text-xs.font-medium.text-teal-700= "Déjà réglée #{@invoice.settlement_label} le #{l(@invoice.settled_on, format: :short)}"
           / Le lien entre une note de crédit et la facture qu'elle corrige, dans
             les deux sens.
           - if @invoice.credited_invoice
@@ -110,11 +113,18 @@
 
           / Déjà réglée par la banque (2026-11-12) : rien à virer. On attend la
             ligne du relevé, et si elle est déjà là, on la relie d'un clic.
-          - if @invoice.awaiting_bank_line?
+            Domiciliée : même attente, mais elle reste dans « À payer » et la
+            trésorerie jusqu'au prélèvement, sans pouvoir partir en virement.
+          - if @invoice.expects_bank_line?
             .mt-3.rounded-lg.border.border-teal-200.bg-teal-50.px-3.py-3
-              p.text-sm.font-medium.text-teal-900 Réglée par la banque le #{l(@invoice.settled_on, format: :short)}
-              p.mt-1.text-xs.text-teal-900
-                | Elle n'est ni dans « À payer » ni dans le fichier de virements. Elle passera « Payée » quand la ligne du relevé y sera rapprochée : ici, ou depuis « À affecter », où Claudy la propose.
+              - if @invoice.direct_debit?
+                p.text-sm.font-medium.text-teal-900 Domiciliée : prélèvement prévu le #{l(@invoice.settled_on, format: :short)}
+                p.mt-1.text-xs.text-teal-900
+                  | Pas de virement à faire : elle n'ira pas dans le fichier SEPA. Elle reste dans « À payer » et dans la trésorerie jusqu'au prélèvement, puis passe « Payée » quand la ligne du relevé y est rapprochée : ici, ou depuis « À affecter », où Claudy la propose.
+              - else
+                p.text-sm.font-medium.text-teal-900 Réglée par la banque le #{l(@invoice.settled_on, format: :short)}
+                p.mt-1.text-xs.text-teal-900
+                  | Elle n'est ni dans « À payer » ni dans le fichier de virements. Elle passera « Payée » quand la ligne du relevé y sera rapprochée : ici, ou depuis « À affecter », où Claudy la propose.
               - if @bank_line_candidates.present?
                 ul.mt-2.space-y-2
                   - @bank_line_candidates.each do |entry|
@@ -127,6 +137,13 @@
                       = button_to "C'est ce paiement", record_bank_payment_finance_purchase_invoice_path(@invoice), method: :post, params: { cash_entry_id: entry.id }, class: "rounded-md border border-transparent bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800"
               - else
                 p.mt-2.text-xs.text-teal-800 Aucune ligne du relevé de ce montant pour l'instant : elle arrivera avec le prochain import.
+          / Réglée par compensation (Michael, 2026-11-12, loyer SSI #19) : aucun
+            argent ne bouge, la comptable passe l'écriture qui solde le 440000.
+          - if @invoice.awaiting_offset_entry?
+            .mt-3.rounded-lg.border.border-amber-200.bg-amber-50.px-3.py-3
+              p.text-sm.font-medium.text-amber-900 Réglée par compensation le #{l(@invoice.settled_on, format: :short)}
+              p.mt-1.text-xs.text-amber-900
+                | Éteinte avec d'autres dettes, sans mouvement d'argent : elle n'est ni dans « À payer », ni dans le fichier de virements, ni dans la trésorerie. La dette reste au 440000 tant que l'écriture de compensation n'est pas passée : à justifier avec la comptable.
           / Déjà payée par une ligne passée au 440000 SANS la facture (une
             règle d'affectation a pris la domiciliation) : on relie, on ne
             repaie pas (Michael, 2026-11-05).
@@ -149,7 +166,7 @@
           / L'IBAN et la communication COPIABLES (epic #240, phase 4) : on les
             recopie à l'œil dans l'interface de la banque, et une faute de frappe
             sur un IBAN envoie l'argent ailleurs.
-          - if @invoice.to_pay? && !@invoice.awaiting_bank_line?
+          - if @invoice.to_pay? && !@invoice.expects_bank_line? && !@invoice.awaiting_offset_entry?
             .mt-3.space-y-2.rounded-lg.bg-gray-50.px-3.py-2.text-xs
               - if @invoice.payable_iban.present?
                 .flex.flex-wrap.items-center.justify-between.gap-2
@@ -264,6 +281,10 @@
           p.text-xs.text-gray-400 Déjà réglée par la banque : l'écriture passe au journal des achats, mais la facture n'ira pas dans « À payer ».
         - elsif @invoice.settled_in_cash?
           p.text-xs.text-gray-400 Payée en espèces : la sortie de caisse se crée en même temps que l'écriture.
+        - elsif @invoice.direct_debit?
+          p.text-xs.text-gray-400 Domiciliée : elle ira dans « À payer » sans pouvoir partir en virement, la banque la prélève.
+        - elsif @invoice.settled_by_offset?
+          p.text-xs.text-gray-400 Réglée par compensation : l'écriture passe au journal des achats, mais la facture n'ira pas dans « À payer ».
         - if @invoice.requires_validation?
           p.text-xs.text-gray-400
             | Cette facture demande l'aval du pôle #{@invoice.validation_team&.name || "concerné"} : elle s'arrêtera à « À valider ».
@@ -304,10 +325,44 @@
             | Comptabilisée. Le fournisseur nous doit encore #{number_to_currency(@invoice.remaining_cents / 100.0)} : son virement se rapproche depuis « À affecter ».
           - elsif @invoice.awaiting_bank_line?
             | Comptabilisée et déjà réglée par la banque : elle attend la ligne du relevé, hors de « À payer ».
+          - elsif @invoice.awaiting_direct_debit?
+            | Comptabilisée et domiciliée : la banque la prélève, pas de virement à faire.
+          - elsif @invoice.awaiting_offset_entry?
+            | Comptabilisée et réglée par compensation : hors « À payer », la dette attend son écriture de compensation.
           - else
             | Prête à payer : elle est dans la file « À payer ».
         - if @invoice.awaiting_bank_line?
           = button_to "Pas encore réglée ? La remettre dans « À payer »", unsettle_finance_purchase_invoice_path(@invoice), method: :post, class: "w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+        - elsif @invoice.awaiting_offset_entry?
+          = button_to "Pas compensée ? La remettre dans « À payer »", unsettle_finance_purchase_invoice_path(@invoice), method: :post, class: "w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+        - elsif @invoice.awaiting_direct_debit?
+          = button_to "Pas domiciliée ? La payer par virement", unsettle_finance_purchase_invoice_path(@invoice), method: :post, class: "w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+        / Pas de virement à faire sur une facture déjà comptabilisée (Michael,
+          2026-11-12, SWDE #33) : la banque la prélèvera, ou l'a déjà débitée.
+        - elsif !@invoice.credit_note? && !@invoice.settled_beforehand?
+          details.rounded-md.border.border-gray-200.px-3.py-2(open=false)
+            summary.cursor-pointer.select-none.text-sm.text-gray-700 Pas de virement à faire ?
+            = form_with url: declare_settlement_finance_purchase_invoice_path(@invoice), method: :post, class: "mt-2 space-y-2" do
+              label.flex.items-start.gap-2.text-sm
+                = radio_button_tag :settled_via, "direct_debit", true, class: "mt-0.5"
+                span
+                  span.block.font-medium.text-gray-900 Domiciliation
+                  span.block.text-xs.text-gray-500 La banque la prélèvera : hors fichier SEPA, toujours attendue en trésorerie.
+              label.flex.items-start.gap-2.text-sm
+                = radio_button_tag :settled_via, "bank", false, class: "mt-0.5"
+                span
+                  span.block.font-medium.text-gray-900 Déjà réglée par la banque
+                  span.block.text-xs.text-gray-500 Carte ou virement déjà fait : elle sort de « À payer ».
+              label.flex.items-start.gap-2.text-sm
+                = radio_button_tag :settled_via, "offset", false, class: "mt-0.5"
+                span
+                  span.block.font-medium.text-gray-900 Réglée par compensation
+                  span.block.text-xs.text-gray-500 Éteinte avec d'autres dettes, sans argent : hors « À payer » et trésorerie.
+              label.block.text-xs.font-medium.text-gray-500(for="declare_reason") Précision (facultatif)
+              = text_field_tag :reason, nil, id: "declare_reason", placeholder: "Compensée avec les dettes de la SRL envers la SSI", class: "w-full rounded-md border-gray-300 text-sm shadow-sm"
+              label.block.text-xs.font-medium.text-gray-500(for="declare_settled_on") Prélevée ou réglée le
+              = date_field_tag :settled_on, @invoice.due_on, id: "declare_settled_on", class: "w-full rounded-md border-gray-300 text-sm shadow-sm"
+              button.w-full.rounded-md.border.border-gray-300.bg-white.px-4.py-2.text-sm.font-medium.text-gray-700.shadow-sm(type="submit" class="hover:bg-gray-50") Enregistrer
         / Défaire la passation (Michael, 2026-11-05) : un doublon, une facture
           qui n'est pas pour nous. L'écriture d'achat est contre-passée.
         - if @unpost_refusal.nil?

@@ -118,8 +118,10 @@
         h3.text-xs.uppercase.tracking-wide.text-gray-400 Règlement
         .grid.gap-2(class="sm:grid-cols-2")
           - [["", "À payer", "Elle rejoindra la file « À payer » une fois comptabilisée."],
-             ["bank", "Déjà réglée par la banque", "Domiciliation, carte ou virement déjà fait : la ligne du relevé la soldera."],
+             ["direct_debit", "Domiciliation", "La banque la prélèvera : pas de virement à faire, elle reste attendue en trésorerie."],
+             ["bank", "Déjà réglée par la banque", "Carte ou virement déjà fait : la ligne du relevé la soldera."],
              ["cash", "Payée en espèces", "La sortie de caisse se crée quand elle est comptabilisée."],
+             ["offset", "Réglée par compensation", "Éteinte avec d'autres dettes, sans argent : hors « À payer » et trésorerie."],
              ["member", "Payée par un membre", "Elle va sur sa note de frais, qui la rembourse et porte la charge."]].each do |value, label, hint|
             label.flex.cursor-pointer.items-start.gap-2.rounded-lg.px-3.py-2.ring-1.ring-gray-200(class="has-[:checked]:bg-blue-50 has-[:checked]:ring-blue-300")
               = radio_button_tag "purchase_invoice[settled_via]", value, settlement == value, id: "purchase_invoice_settled_via_#{value.presence || 'none'}", class: "mt-0.5", data: { purchase_invoice_form_target: "settlement", action: "change->purchase-invoice-form#toggleSettlement" }
@@ -127,10 +129,10 @@
                 span.block.font-medium.text-gray-900= label
                 span.block.text-xs.text-gray-500= hint
         .grid.gap-3(class="sm:grid-cols-2")
-          div(data-purchase-invoice-form-target="settledOn" hidden=!%w[bank cash].include?(settlement))
-            label.block.text-xs.font-medium.text-gray-500(for="purchase_invoice_settled_on") Réglée le
+          div(data-purchase-invoice-form-target="settledOn" hidden=!%w[bank cash direct_debit offset].include?(settlement))
+            label.block.text-xs.font-medium.text-gray-500(for="purchase_invoice_settled_on") Réglée ou prélevée le
             = f.date_field :settled_on, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
-            p.mt-1.text-xs.text-gray-400 Sans date, celle de la pièce.
+            p.mt-1.text-xs.text-gray-400 Sans date : l'échéance pour une domiciliation, sinon la date de la pièce.
           div(data-purchase-invoice-form-target="settledByMember" hidden=(settlement != "member") class="sm:col-span-2")
             div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un membre…" data-searchable-select-clearable-value="true" class="relative")
               label.block.text-xs.font-medium.text-gray-500(for="purchase_invoice_settled_by_human_id") Le membre qui a payé

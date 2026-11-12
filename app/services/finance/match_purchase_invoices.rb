@@ -55,7 +55,7 @@ module Finance
                     confidence: IBAN_CONFIDENCE)
         elsif du == montant && settled_around?(invoice, entry)
           Match.new(invoice: invoice, third_party: invoice.third_party, due_cents: du,
-                    reason: "#{invoice.payable_label} est déclarée réglée par la banque le " \
+                    reason: "#{invoice.payable_label} est #{invoice.direct_debit? ? 'domiciliée, prélèvement prévu' : 'déclarée réglée par la banque'} le " \
                             "#{I18n.l(invoice.settled_on, format: :short)}, pour ce montant",
                     confidence: SETTLED_CONFIDENCE)
         elsif du == montant
@@ -79,14 +79,15 @@ module Finance
     private
 
     def settled_around?(invoice, entry)
-      return false unless invoice.settled_by_bank? && invoice.settled_on
+      return false unless (invoice.settled_by_bank? || invoice.direct_debit?) && invoice.settled_on
 
       ((invoice.settled_on - PurchaseInvoices::BankLineCandidates::BEFORE)..
         (invoice.settled_on + PurchaseInvoices::BankLineCandidates::AFTER)).cover?(entry.entry_date)
     end
 
     def invoices
-      @invoices ||= PurchaseInvoice.with_status("to_pay")
+      # Une facture compensée n'attend aucun argent : ne pas la proposer.
+      @invoices ||= PurchaseInvoice.with_status("to_pay").where("COALESCE(purchase_invoices.settled_via, '') <> 'offset'")
                                    .includes(:third_party, :legal_entity, :cash_allocations, :credited_invoice).to_a
     end
 

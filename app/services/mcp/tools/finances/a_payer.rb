@@ -22,6 +22,7 @@ module Mcp
           queue = ::Finance::PayableQueue.new
           lignes = queue.rows.map do |dette|
             retard = dette.payable_overdue? ? " · EN RETARD de #{dette.payable_days_late} j" : ""
+            retard += " · DOMICILIÉE (prélevée par la banque, pas de virement)" if dette.try(:direct_debit?)
             "#{dette.payable_label} (#{dette.class.name} ##{dette.id}) · #{dette.payable_beneficiary} · reste #{euros(dette.remaining_cents)}" \
               "#{" sur #{euros(dette.payable_amount_cents)}" if dette.partially_paid?} · échéance #{dette.payable_due_on || '—'}#{retard} · " \
               "communication « #{dette.payable_communication} » · #{dette.payable_ready? ? 'IBAN connu' : 'IBAN MANQUANT'}"
