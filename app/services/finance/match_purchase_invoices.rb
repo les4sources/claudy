@@ -24,6 +24,9 @@ module Finance
 
     COMMUNICATION_CONFIDENCE = 99
     IBAN_CONFIDENCE   = 95
+    # Une facture déclarée réglée par la banque (2026-11-12) attend SA ligne :
+    # le même montant autour de la date du règlement vaut presque l'IBAN.
+    SETTLED_CONFIDENCE = 90
     AMOUNT_CONFIDENCE = 70
 
     def initialize(invoices: nil)
@@ -50,6 +53,11 @@ module Finance
           Match.new(invoice: invoice, third_party: invoice.third_party, due_cents: du,
                     reason: "L'IBAN de la ligne est celui de #{invoice.third_party&.name}",
                     confidence: IBAN_CONFIDENCE)
+        elsif du == montant && settled_around?(invoice, entry)
+          Match.new(invoice: invoice, third_party: invoice.third_party, due_cents: du,
+                    reason: "#{invoice.payable_label} est déclarée réglée par la banque le " \
+                            "#{I18n.l(invoice.settled_on, format: :short)}, pour ce montant",
+                    confidence: SETTLED_CONFIDENCE)
         elsif du == montant
           Match.new(invoice: invoice, third_party: invoice.third_party, due_cents: du,
                     reason: "#{invoice.payable_label} #{invoice.credit_note? ? 'nous doit' : 'attend'} exactement ce montant",
@@ -69,6 +77,13 @@ module Finance
     end
 
     private
+
+    def settled_around?(invoice, entry)
+      return false unless invoice.settled_by_bank? && invoice.settled_on
+
+      ((invoice.settled_on - PurchaseInvoices::BankLineCandidates::BEFORE)..
+        (invoice.settled_on + PurchaseInvoices::BankLineCandidates::AFTER)).cover?(entry.entry_date)
+    end
 
     def invoices
       @invoices ||= PurchaseInvoice.with_status("to_pay")

@@ -9,6 +9,11 @@ module PurchaseInvoices
     class AlreadyPayable < StandardError; end
     class MissingReason < StandardError; end
 
+    # Ce qui a empêché la sortie de caisse d'une facture déclarée payée en
+    # espèces (pas de caisse, mois arrêté…) : la facture reste comptabilisée,
+    # « À payer », et le bouton « Payée en caisse » de sa fiche prend le relais.
+    attr_reader :settlement_error
+
     def initialize(purchase_invoice:, whodunnit: nil)
       @invoice = purchase_invoice
       @whodunnit = whodunnit
@@ -43,6 +48,7 @@ module PurchaseInvoices
         end
       end
 
+      settle_in_cash if @invoice.to_pay? && @invoice.settled_in_cash?
       @invoice.reload
     end
 
@@ -76,6 +82,26 @@ module PurchaseInvoices
     end
 
     private
+
+    # Déclarée payée en espèces à l'encodage (2026-11-12) : les billets sont
+    # partis, la sortie de caisse naît maintenant que la dette est au grand
+    # livre — avant, elle n'aurait rien à solder. Hors de la transaction de
+    # passation : une caisse absente ne doit pas défaire l'écriture d'achat.
+    def settle_in_cash
+      caisses = CashAccount.actives.where(kind: "cash", legal_entity_id: @invoice.legal_entity_id).count
+      if caisses > 1
+        # Plusieurs caisses : la première venue serait un choix muet.
+        @settlement_error = "#{@invoice.legal_entity.name} a plusieurs caisses : dis de laquelle l'argent est sorti " \
+                            "avec « Payée en caisse »."
+        return
+      end
+
+      PayInCash.new(purchase_invoice: @invoice.reload, paid_on: @invoice.settled_on, whodunnit: @whodunnit).run!
+    rescue PayInCash::BadStatus, PayInCash::NoCashAccount, PayInCash::MonthClosed, PayInCash::MissingAccount,
+           Accounting::PostCashEntry::NotFullyAllocated, Accounting::PostDocument::MissingFiscalYear,
+           ActiveRecord::RecordInvalid => e
+      @settlement_error = e.message
+    end
 
     # Payée par un membre, la facture est le justificatif de sa note de frais :
     # l'envoyer au paiement passerait sa charge une seconde fois.

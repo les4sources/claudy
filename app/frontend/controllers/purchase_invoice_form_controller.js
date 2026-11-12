@@ -8,11 +8,13 @@ import { Controller } from "@hotwired/stimulus"
 // validation, une fois les vingt lignes tapées.
 export default class extends Controller {
   static targets = ["rows", "template", "row", "total", "allocated", "vat", "remaining", "verdict", "mode", "kind", "creditedOnly",
+                    "invoiceOnly", "settlement", "settledOn", "settledByMember",
                     "dropzone", "file", "filename", "previewFrame", "previewImage", "previewEmpty"]
 
   connect() {
     this.counter = 0
     this.toggleKind()
+    this.toggleSettlement()
     this.refresh()
   }
 
@@ -21,6 +23,16 @@ export default class extends Controller {
   toggleKind() {
     const creditNote = this.kindTargets.find((input) => input.checked)?.value === "credit_note"
     this.creditedOnlyTargets.forEach((element) => { element.hidden = !creditNote })
+    // Une note de crédit ne se paie pas : le bloc « Règlement » disparaît.
+    this.invoiceOnlyTargets.forEach((element) => { element.hidden = creditNote })
+  }
+
+  // Déjà réglée (2026-11-12) : la date pour la banque et les espèces, le
+  // membre pour « Payée par un membre ».
+  toggleSettlement() {
+    const choice = this.settlementTargets.find((input) => input.checked)?.value ?? ""
+    this.settledOnTargets.forEach((element) => { element.hidden = !["bank", "cash"].includes(choice) })
+    this.settledByMemberTargets.forEach((element) => { element.hidden = choice !== "member" })
   }
 
   add(event) {

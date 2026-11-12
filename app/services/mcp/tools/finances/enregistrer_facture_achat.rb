@@ -14,6 +14,9 @@ module Mcp
         include Commun
 
         TYPES = { "facture" => "invoice", "note_de_credit" => "credit_note" }.freeze
+        # Déjà réglée à l'encodage (2026-11-12), comme le bloc « Règlement » du
+        # formulaire. Payée par un membre : geste_facture_achat payee_par_membre.
+        REGLEMENTS = { "non" => nil, "banque" => "bank", "especes" => "cash" }.freeze
 
         LIGNE_FACTURE = {
           type: "object",
@@ -39,7 +42,11 @@ module Mcp
                           "l'emportent), joint son PDF et classe le mail. Sinon la pièce PDF se dépose dans Claudy. " \
                           "Une NOTE DE CRÉDIT fournisseur : `type` note_de_credit (repris d'office d'une pièce lue " \
                           "comme telle), montants positifs, `facture_corrigee` facultative ; une fois soumise, elle " \
-                          "s'impute sur ce qui reste à payer de cette facture, le reste est « à rembourser » par le fournisseur.",
+                          "s'impute sur ce qui reste à payer de cette facture, le reste est « à rembourser » par le fournisseur. " \
+                          "DÉJÀ RÉGLÉE avant d'arriver en compta : `deja_reglee` banque (domiciliation, carte, virement " \
+                          "déjà fait : une fois soumise, elle ne va pas dans « à payer » et attend sa ligne du relevé) ou " \
+                          "especes (la sortie de caisse se crée à la soumission), `reglee_le` = date du règlement (défaut : " \
+                          "date de la pièce). Payée par un membre : geste_facture_achat payee_par_membre.",
              schema: {
                properties: {
                  facture: FACTURE.merge(description: "Pour corriger : la facture (#88). Absente : nouvelle facture."),
@@ -55,6 +62,8 @@ module Mcp
                  communication: { type: "string", description: "Communication de paiement (structurée +++…+++ ou libre)." },
                  validation: { type: "string", description: "Pôle qui valide avant paiement, ou « aucune »." },
                  notes: { type: "string" },
+                 deja_reglee: { type: "string", enum: REGLEMENTS.keys, description: "Déjà réglée : banque, especes, ou non (défaut)." },
+                 reglee_le: DATE.merge(description: "Date du règlement déclaré. Défaut : date de la pièce."),
                  lignes: { type: "array", items: LIGNE_FACTURE }
                }
              }
@@ -87,6 +96,10 @@ module Mcp
             resume << (brouillon.credited_invoice ? "Corrige #{ligne_facture(brouillon.credited_invoice)}" : "Sans facture corrigée : le fournisseur nous remboursera.")
           end
           resume << "Validation par le pôle #{brouillon.validation_team&.name}" if brouillon.requires_validation?
+          if brouillon.settled_via.present? && !brouillon.credit_note?
+            suite = brouillon.settled_by_bank? ? "elle n'ira pas dans « à payer », elle attendra sa ligne du relevé." : "la sortie de caisse se créera à la soumission."
+            resume << "Déjà réglée #{brouillon.settlement_label} le #{brouillon.settled_on || brouillon.issued_on} : #{suite}"
+          end
           if attributs[:lignes]
             resume << "Lignes#{' (remplacent les actuelles)' if facture} :"
             resume += attributs[:lignes].map { |l| "  #{decrire_ligne(l)}" }
@@ -151,6 +164,10 @@ module Mcp
             end
           end
           a[:lignes] = lignes!(arguments["lignes"]) if arguments.key?("lignes")
+          if arguments["deja_reglee"].present?
+            a[:settled_via] = REGLEMENTS.fetch(arguments["deja_reglee"]) { raise Error, "deja_reglee : banque, especes ou non." }
+          end
+          a[:settled_on] = date!(arguments["reglee_le"], "reglee_le") if arguments["reglee_le"].present?
           note_de_credit!(a, arguments, facture)
           a
         end

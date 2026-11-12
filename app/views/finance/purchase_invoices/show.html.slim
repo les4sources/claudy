@@ -61,6 +61,8 @@
               | Communication :
               span.ml-1.font-mono.text-gray-600= @invoice.payment_reference
           p.mt-1.text-xs.text-gray-400= @invoice.legal_entity.name
+          - if @invoice.settled_beforehand? && !@invoice.credit_note?
+            p.mt-1.text-xs.font-medium.text-teal-700= "Déjà réglée #{@invoice.settlement_label} le #{l(@invoice.settled_on, format: :short)}"
           / Le lien entre une note de crédit et la facture qu'elle corrige, dans
             les deux sens.
           - if @invoice.credited_invoice
@@ -106,10 +108,48 @@
           p.mt-2.text-xs.text-gray-400
             | Le paiement est un rapprochement : la facture passera « Payée » quand une ligne de trésorerie affectée sur le 440000 la désignera pour son montant.
 
+          / Déjà réglée par la banque (2026-11-12) : rien à virer. On attend la
+            ligne du relevé, et si elle est déjà là, on la relie d'un clic.
+          - if @invoice.awaiting_bank_line?
+            .mt-3.rounded-lg.border.border-teal-200.bg-teal-50.px-3.py-3
+              p.text-sm.font-medium.text-teal-900 Réglée par la banque le #{l(@invoice.settled_on, format: :short)}
+              p.mt-1.text-xs.text-teal-900
+                | Elle n'est ni dans « À payer » ni dans le fichier de virements. Elle passera « Payée » quand la ligne du relevé y sera rapprochée : ici, ou depuis « À affecter », où Claudy la propose.
+              - if @bank_line_candidates.present?
+                ul.mt-2.space-y-2
+                  - @bank_line_candidates.each do |entry|
+                    li.flex.flex-wrap.items-center.justify-between.gap-2.rounded-md.bg-white.px-3.py-2.ring-1.ring-teal-200
+                      .min-w-0.text-xs
+                        p.font-medium.text-gray-900
+                          = link_to "Ligne ##{entry.id} du #{l(entry.entry_date, format: :short)}", finance_cash_entry_path(entry), class: "text-blue-500 hover:text-blue-700"
+                          = " · #{number_to_currency(entry.amount_cents / 100.0)} · #{entry.counterparty_name.presence || entry.label}"
+                        p.text-gray-500= "#{entry.cash_account.name}, encore à affecter"
+                      = button_to "C'est ce paiement", record_bank_payment_finance_purchase_invoice_path(@invoice), method: :post, params: { cash_entry_id: entry.id }, class: "rounded-md border border-transparent bg-teal-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-teal-800"
+              - else
+                p.mt-2.text-xs.text-teal-800 Aucune ligne du relevé de ce montant pour l'instant : elle arrivera avec le prochain import.
+          / Déjà payée par une ligne passée au 440000 SANS la facture (une
+            règle d'affectation a pris la domiciliation) : on relie, on ne
+            repaie pas (Michael, 2026-11-05).
+          - if @invoice.to_pay? && @orphan_payments.present?
+            .mt-3.rounded-lg.border.border-green-200.bg-green-50.px-3.py-3
+              p.text-sm.font-medium.text-green-900 Déjà payée ?
+              p.mt-1.text-xs.text-green-900
+                | Cette sortie est affectée au 440000 sans facture. La relier solde la facture, sans repayer ni rien ajouter au grand livre.
+              ul.mt-2.space-y-2
+                - @orphan_payments.each do |candidate|
+                  - entry = candidate.cash_entry
+                  li.flex.flex-wrap.items-center.justify-between.gap-2.rounded-md.bg-white.px-3.py-2.ring-1.ring-green-200
+                    .min-w-0.text-xs
+                      p.font-medium.text-gray-900
+                        = link_to "Ligne ##{entry.id} du #{l(entry.entry_date, format: :short)}", finance_cash_entry_path(entry), class: "text-blue-500 hover:text-blue-700"
+                        = " · #{number_to_currency(entry.amount_cents / 100.0)} · #{entry.counterparty_name.presence || entry.label}"
+                      p.text-gray-500= "#{candidate.reason} (#{candidate.confidence} %)"
+                    = button_to "Relier ce paiement", link_payment_finance_purchase_invoice_path(@invoice), method: :post, params: { allocation_id: candidate.allocation.id }, class: "rounded-md border border-transparent bg-green-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-800"
+
           / L'IBAN et la communication COPIABLES (epic #240, phase 4) : on les
             recopie à l'œil dans l'interface de la banque, et une faute de frappe
             sur un IBAN envoie l'argent ailleurs.
-          - if @invoice.to_pay?
+          - if @invoice.to_pay? && !@invoice.awaiting_bank_line?
             .mt-3.space-y-2.rounded-lg.bg-gray-50.px-3.py-2.text-xs
               - if @invoice.payable_iban.present?
                 .flex.flex-wrap.items-center.justify-between.gap-2
@@ -126,25 +166,8 @@
                   span.font-mono = @invoice.payable_communication
                 button.rounded-md.bg-white.font-medium.text-gray-700.ring-1.ring-gray-300(class="px-2 py-0.5 hover:bg-gray-100" type="button" data-controller="copy" data-copy-value-value=@invoice.payable_communication data-action="copy#copy") Copier
 
-            / Déjà payée par une ligne passée au 440000 SANS la facture (une
-              règle d'affectation a pris la domiciliation) : on relie, on ne
-              repaie pas (Michael, 2026-11-05).
-            - if @orphan_payments.present?
-              .mt-3.rounded-lg.border.border-green-200.bg-green-50.px-3.py-3
-                p.text-sm.font-medium.text-green-900 Déjà payée ?
-                p.mt-1.text-xs.text-green-900
-                  | Cette sortie est affectée au 440000 sans facture. La relier solde la facture, sans repayer ni rien ajouter au grand livre.
-                ul.mt-2.space-y-2
-                  - @orphan_payments.each do |candidate|
-                    - entry = candidate.cash_entry
-                    li.flex.flex-wrap.items-center.justify-between.gap-2.rounded-md.bg-white.px-3.py-2.ring-1.ring-green-200
-                      .min-w-0.text-xs
-                        p.font-medium.text-gray-900
-                          = link_to "Ligne ##{entry.id} du #{l(entry.entry_date, format: :short)}", finance_cash_entry_path(entry), class: "text-blue-500 hover:text-blue-700"
-                          = " · #{number_to_currency(entry.amount_cents / 100.0)} · #{entry.counterparty_name.presence || entry.label}"
-                        p.text-gray-500= "#{candidate.reason} (#{candidate.confidence} %)"
-                      = button_to "Relier ce paiement", link_payment_finance_purchase_invoice_path(@invoice), method: :post, params: { allocation_id: candidate.allocation.id }, class: "rounded-md border border-transparent bg-green-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-800"
-
+            - if @invoice.settled_in_cash?
+              p.mt-3.text-xs.font-medium.text-amber-800 Déclarée payée en espèces : la sortie de caisse n'a pas pu se créer seule, clique « Payée en caisse ».
             /  Le règlement en ESPÈCES : le fournisseur du marché repart avec ses
                billets. Le bouton crée une vraie sortie de caisse affectée sur le
                440000 — sinon la dette reste au grand livre et la caisse est fausse.
@@ -235,7 +258,12 @@
     .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-3
       h3.text-xs.uppercase.tracking-wide.text-gray-400 Et maintenant ?
       - if @invoice.to_process? || @invoice.disputed?
-        = button_to (@invoice.credit_note? ? "Comptabiliser la note de crédit" : "Envoyer au paiement"), submit_finance_purchase_invoice_path(@invoice), method: :post, class: "w-full rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
+        - submit_label = if @invoice.credit_note? then "Comptabiliser la note de crédit" elsif @invoice.settled_beforehand? then "Comptabiliser" else "Envoyer au paiement" end
+        = button_to submit_label, submit_finance_purchase_invoice_path(@invoice), method: :post, class: "w-full rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white shadow-sm bg-4s-main hover:opacity-90"
+        - if @invoice.settled_by_bank?
+          p.text-xs.text-gray-400 Déjà réglée par la banque : l'écriture passe au journal des achats, mais la facture n'ira pas dans « À payer ».
+        - elsif @invoice.settled_in_cash?
+          p.text-xs.text-gray-400 Payée en espèces : la sortie de caisse se crée en même temps que l'écriture.
         - if @invoice.requires_validation?
           p.text-xs.text-gray-400
             | Cette facture demande l'aval du pôle #{@invoice.validation_team&.name || "concerné"} : elle s'arrêtera à « À valider ».
@@ -274,8 +302,12 @@
         p.text-sm.text-gray-600
           - if @invoice.credit_note?
             | Comptabilisée. Le fournisseur nous doit encore #{number_to_currency(@invoice.remaining_cents / 100.0)} : son virement se rapproche depuis « À affecter ».
+          - elsif @invoice.awaiting_bank_line?
+            | Comptabilisée et déjà réglée par la banque : elle attend la ligne du relevé, hors de « À payer ».
           - else
             | Prête à payer : elle est dans la file « À payer ».
+        - if @invoice.awaiting_bank_line?
+          = button_to "Pas encore réglée ? La remettre dans « À payer »", unsettle_finance_purchase_invoice_path(@invoice), method: :post, class: "w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
         / Défaire la passation (Michael, 2026-11-05) : un doublon, une facture
           qui n'est pas pour nous. L'écriture d'achat est contre-passée.
         - if @unpost_refusal.nil?

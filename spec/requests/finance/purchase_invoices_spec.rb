@@ -523,4 +523,85 @@ RSpec.describe "Comptabilité > Achats", type: :request do
       expect(response.body).to match(/value="credit_note"[^>]*checked|checked[^>]*value="credit_note"/)
     end
   end
+
+  # « Déjà réglée » à l'encodage (Michael, 2026-11-12).
+  describe "une facture déjà réglée" do
+    let!(:banque) { build_cash_account(entity, build_general_account(code: "550000", name: "Banque")) }
+    let!(:marie) { Human.create!(name: "Marie Test") }
+
+    def params_facture(**extra)
+      { purchase_invoice: {
+        legal_entity_id: entity.id, third_party_id: antargaz.id, number: "F-REG-1",
+        issued_on: "2026-06-01", total_euros: "120,00",
+        purchase_invoice_lines_attributes: { "0" => { general_account_id: charges.id, amount_euros: "120,00" } }
+      }.merge(extra) }
+    end
+
+    it "propose le bloc « Règlement » dans le formulaire" do
+      get new_finance_purchase_invoice_path
+
+      expect(response.body).to include("Règlement", "Déjà réglée par la banque", "Payée en espèces", "Payée par un membre")
+    end
+
+    it "enregistre une facture réglée par la banque, à comptabiliser hors « À payer »" do
+      post finance_purchase_invoices_path, params: params_facture(settled_via: "bank", settled_on: "2026-06-03")
+
+      facture = PurchaseInvoice.last
+      expect(facture).to have_attributes(settled_via: "bank", settled_on: Date.new(2026, 6, 3), status: "to_process")
+      follow_redirect!
+      expect(response.body).to include("Déjà réglée par la banque", "Comptabiliser")
+      expect(response.body).not_to include("Envoyer au paiement")
+
+      post submit_finance_purchase_invoice_path(facture)
+      follow_redirect!
+      expect(response.body).to include("Réglée, à rapprocher", "Réglée par la banque le", "prochain import")
+      expect(response.body).not_to include("Copier l&#39;IBAN")
+    end
+
+    it "relie depuis la fiche la ligne du relevé déjà importée" do
+      post finance_purchase_invoices_path, params: params_facture(settled_via: "bank")
+      facture = PurchaseInvoice.last
+      post submit_finance_purchase_invoice_path(facture)
+      ligne = build_cash_entry(banque, amount_cents: -12_000, entry_date: Date.new(2026, 6, 4), label: "Carte Antargaz")
+
+      get finance_purchase_invoice_path(facture)
+      expect(response.body).to include("C&#39;est ce paiement", "Ligne ##{ligne.id}")
+
+      post record_bank_payment_finance_purchase_invoice_path(facture), params: { cash_entry_id: ligne.id }
+
+      expect(facture.reload).to be_paid
+      follow_redirect!
+      expect(response.body).to include("rapprochée")
+    end
+
+    it "remet dans « À payer » une facture qui n'était pas réglée" do
+      post finance_purchase_invoices_path, params: params_facture(settled_via: "bank")
+      facture = PurchaseInvoice.last
+      post submit_finance_purchase_invoice_path(facture)
+
+      post unsettle_finance_purchase_invoice_path(facture)
+
+      expect(facture.reload.settled_via).to be_nil
+      expect(PurchaseInvoice.payable).to include(facture)
+    end
+
+    it "met une facture payée par un membre sur sa note de frais dès l'enregistrement" do
+      post finance_purchase_invoices_path, params: params_facture(settled_via: "member", settled_by_human_id: marie.id)
+
+      facture = PurchaseInvoice.last
+      expect(facture).to be_member_paid
+      expect(facture.settled_via).to be_nil
+      expect(ExpenseReport.last.human).to eq(marie)
+      follow_redirect!
+      expect(response.body).to include("Payée par Marie Test")
+    end
+
+    it "enregistre quand même la facture si le membre manque, et le dit" do
+      post finance_purchase_invoices_path, params: params_facture(settled_via: "member")
+
+      expect(PurchaseInvoice.last).to be_to_process
+      follow_redirect!
+      expect(response.body).to include("Choisis le membre qui a payé")
+    end
+  end
 end

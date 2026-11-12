@@ -108,6 +108,36 @@
             span.font-semibold.text-gray-900(data-purchase-invoice-form-target="remaining") —
           p(data-purchase-invoice-form-target="verdict")
 
+      / Déjà réglée (Michael, 2026-11-12) : domiciliation, carte, virement déjà
+        fait, billets, ou un membre qui avance. On le DIT ici, sans cocher
+        « Payée » : le paiement reste un rapprochement, mais la facture ne part
+        pas dans « À payer » pour être payée une seconde fois.
+      - humans = local_assigns[:humans] || []
+      - settlement = (params.dig(:purchase_invoice, :settled_via) == "member" ? "member" : invoice.settled_via.presence) || ""
+      .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-3(data-purchase-invoice-form-target="invoiceOnly" hidden=invoice.credit_note?)
+        h3.text-xs.uppercase.tracking-wide.text-gray-400 Règlement
+        .grid.gap-2(class="sm:grid-cols-2")
+          - [["", "À payer", "Elle rejoindra la file « À payer » une fois comptabilisée."],
+             ["bank", "Déjà réglée par la banque", "Domiciliation, carte ou virement déjà fait : la ligne du relevé la soldera."],
+             ["cash", "Payée en espèces", "La sortie de caisse se crée quand elle est comptabilisée."],
+             ["member", "Payée par un membre", "Elle va sur sa note de frais, qui la rembourse et porte la charge."]].each do |value, label, hint|
+            label.flex.cursor-pointer.items-start.gap-2.rounded-lg.px-3.py-2.ring-1.ring-gray-200(class="has-[:checked]:bg-blue-50 has-[:checked]:ring-blue-300")
+              = radio_button_tag "purchase_invoice[settled_via]", value, settlement == value, id: "purchase_invoice_settled_via_#{value.presence || 'none'}", class: "mt-0.5", data: { purchase_invoice_form_target: "settlement", action: "change->purchase-invoice-form#toggleSettlement" }
+              span.text-sm
+                span.block.font-medium.text-gray-900= label
+                span.block.text-xs.text-gray-500= hint
+        .grid.gap-3(class="sm:grid-cols-2")
+          div(data-purchase-invoice-form-target="settledOn" hidden=!%w[bank cash].include?(settlement))
+            label.block.text-xs.font-medium.text-gray-500(for="purchase_invoice_settled_on") Réglée le
+            = f.date_field :settled_on, label: false, class: "mt-1 w-full rounded-md border-gray-300 text-sm shadow-sm"
+            p.mt-1.text-xs.text-gray-400 Sans date, celle de la pièce.
+          div(data-purchase-invoice-form-target="settledByMember" hidden=(settlement != "member") class="sm:col-span-2")
+            div(data-controller="searchable-select" data-searchable-select-placeholder-value="Chercher un membre…" data-searchable-select-clearable-value="true" class="relative")
+              label.block.text-xs.font-medium.text-gray-500(for="purchase_invoice_settled_by_human_id") Le membre qui a payé
+              = select_tag "purchase_invoice[settled_by_human_id]", options_from_collection_for_select(humans, :id, :name, params.dig(:purchase_invoice, :settled_by_human_id)), include_blank: true, id: "purchase_invoice_settled_by_human_id", class: "mt-1 block w-full rounded-md border-gray-300 text-sm", data: { searchable_select_target: "select" }
+              = render "shared/searchable_select_search", label: "Chercher un membre"
+            p.mt-1.text-xs.text-gray-400 La dépense s'ajoute à sa note de frais encore enregistrée, ou à une nouvelle note.
+
       .grid.gap-4(class="sm:grid-cols-2")
         .rounded-2xl.bg-white.ring-1.ring-gray-200.px-4.py-4.space-y-3
           h3.text-xs.uppercase.tracking-wide.text-gray-400 Validation par un pôle
