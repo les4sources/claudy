@@ -15,7 +15,14 @@
     .space-y-3
       - @experience_bookings.each do |booking|
         .flex.items-center.justify-between.gap-4.p-4.bg-white.rounded-lg.shadow-sm border=1
-          .min-w-0
+          / L'avatar de qui a tenu l'activité (Michael, 2026-11-12) : la personne
+            nommée sur la réservation, sinon le porteur (`ExperienceBooking#carrier`).
+          - carrier = booking.carrier
+          - if carrier
+            .shrink-0 title=carrier.name
+              = ui_avatar(carrier.name, human: carrier)
+              span.ui-sr = "Tenue par #{carrier.name}"
+          .min-w-0.flex-1
             /  La fiche de la réservation (epic #242, phase 4) : c'est là que vit
                son fil de commentaires, et c'est l'adresse des notifications.
             .font-semibold = link_to booking.experience.name, experience_booking_path(booking), class: "claudy-link"
