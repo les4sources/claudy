@@ -1,0 +1,42 @@
+/ La photo de la feuille papier du mois (Michael, 2026-11-12). Une par mois,
+  pour référence : on la garde sous la main en complétant les lignes. Elle ne
+  passe aucune écriture, d'où sa place aussi sur un mois arrêté.
+  `multipart: true` à la main : un `file_field_tag` ne le pose pas, et Turbo
+  jetterait le fichier sans rien dire.
+- photo = sheet.photo
+- mois = l(sheet.month, format: "%B %Y")
+- scope = { month: sheet.month.strftime("%Y-%m"), cash_account_id: sheet.account.id }
+#cash-sheet-photo.mb-4.rounded-lg.bg-white.ring-1.ring-gray-200.px-4.py-3
+  .flex.flex-wrap.items-center.gap-4
+    - if photo&.file&.attached?
+      - voir = rails_blob_path(photo.file, disposition: "inline")
+      = link_to voir, target: "_blank", rel: "noopener", class: "shrink-0", title: "Ouvrir la feuille en grand" do
+        - if photo.displayable_image?
+          = image_tag voir, alt: "Feuille papier de caisse de #{mois}", class: "h-20 w-16 rounded-md object-cover ring-1 ring-gray-200"
+        - else
+          .flex.h-20.w-16.items-center.justify-center.rounded-md.bg-gray-50.text-xs.font-semibold.uppercase.text-gray-500.ring-1.ring-gray-200
+            = photo.pdf? ? "PDF" : "📷"
+      .min-w-0.flex-1
+        p.text-sm.font-medium.text-gray-900 Feuille papier de #{mois}
+        p.truncate.text-xs.text-gray-400
+          = photo.file.filename.to_s
+          |  · jointe le #{l(photo.updated_at.to_date, format: :short)}
+          - if photo.uploaded_by
+            |  par #{photo.uploaded_by.display_name}
+      .flex.flex-wrap.items-center.gap-3.text-sm
+        = link_to "Voir", voir, target: "_blank", rel: "noopener", class: "rounded-md border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+        = form_with url: finance_cash_sheet_photo_path(scope), multipart: true, class: "inline" do
+          label(class="cursor-pointer text-gray-500 hover:underline")
+            | Remplacer…
+            = file_field_tag :photo, accept: "image/*,application/pdf", class: "hidden", onchange: "this.form.requestSubmit()"
+        = button_to "Retirer", finance_cash_sheet_photo_path(scope), method: :delete, class: "text-red-600 hover:underline",
+                    form: { class: "inline", data: { turbo_confirm: "Retirer la photo de la feuille de #{mois} ?" } }
+    - else
+      .flex.h-12.w-12.shrink-0.items-center.justify-center.rounded-full.bg-gray-50.text-xl.ring-1.ring-gray-200 📷
+      .min-w-0.flex-1
+        p.text-sm.font-medium.text-gray-900 Feuille papier de #{mois}
+        p.text-xs.text-gray-500 Joins la photo (ou le PDF) de la feuille tenue au bar : elle reste ici pour compléter et vérifier les lignes du mois.
+      = form_with url: finance_cash_sheet_photo_path(scope), multipart: true, class: "inline" do
+        label(class="cursor-pointer inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")
+          | Joindre la photo
+          = file_field_tag :photo, accept: "image/*,application/pdf", class: "hidden", onchange: "this.form.requestSubmit()"

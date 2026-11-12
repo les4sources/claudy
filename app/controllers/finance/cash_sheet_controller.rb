@@ -81,6 +81,33 @@ module Finance
       refuse_in_modal(e.message)
     end
 
+    # La photo de la feuille papier du mois (Michael, 2026-11-12). Pour
+    # référence seulement : elle ne passe aucune écriture, et se joint donc
+    # aussi à un mois arrêté. En joindre une autre remplace la précédente.
+    def attach_photo
+      month = parsed_month
+      return redraw(month: month, alert: "Aucune caisse active.") unless @account
+      return redraw(month: month, alert: "Choisis une photo ou un PDF de la feuille.") if params[:photo].blank?
+
+      photo = CashSheetPhoto.find_or_initialize_by(cash_account: @account, month: month)
+      replacing = photo.persisted?
+      # Affecter (et non `attach`) : sur une fiche déjà enregistrée, `attach`
+      # sauverait tout de suite, avant la validation du type de fichier.
+      photo.file = params[:photo]
+      photo.uploaded_by = current_user
+      if photo.save
+        redraw(month: month, notice: replacing ? "Photo de la feuille remplacée." : "Photo de la feuille jointe au mois.")
+      else
+        redraw(month: month, alert: photo.errors.full_messages.to_sentence)
+      end
+    end
+
+    def remove_photo
+      month = parsed_month
+      CashSheetPhoto.for(@account, month)&.destroy! if @account
+      redraw(month: month, notice: "Photo de la feuille retirée.")
+    end
+
     private
 
     # Un seul rendu pour les trois gestes : le tableau, ses soldes et le

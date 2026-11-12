@@ -32,9 +32,22 @@ module Mcp
             "#{caisse.name} — #{nom_mois(feuille.month)}#{' (MOIS ARRÊTÉ : plus de saisie)' if feuille.closed?}",
             "Ouverture : #{euros(feuille.opening_cents)} · entrées #{euros(feuille.incoming_cents)} · sorties " \
             "#{euros(feuille.outgoing_cents.abs)} · clôture #{euros(feuille.closing_cents)}",
+            feuille_papier(feuille),
             lignes.presence&.join("\n") || "Aucune ligne ce mois-ci.",
             ("Retirées :\n#{retirees.join("\n")}" if retirees.any?)
           ].compact.join("\n")
+        end
+
+        private
+
+        # La photo de la feuille papier du mois, jointe à l'écran (Michael,
+        # 2026-11-12). Le fichier ne passe pas par ici : on dit seulement s'il y
+        # en a une.
+        def feuille_papier(feuille)
+          photo = feuille.photo
+          return "Feuille papier : pas encore de photo jointe." unless photo&.file&.attached?
+
+          "Feuille papier : photo jointe (#{photo.file.filename}, le #{photo.updated_at.to_date})."
         end
       end
     end
