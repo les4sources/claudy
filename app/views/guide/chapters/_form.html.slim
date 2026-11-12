@@ -11,8 +11,8 @@
                    hint: "Une phrase sous le titre, dans le sommaire."
 
     fieldset
-      legend.text-sm.font-medium.text-gray-700 Qui lit ce chapitre
-      p.mt-1.text-xs.text-gray-500 Les Sourciers lisent tous les chapitres. Porteur·euse : les comptes restreints à leurs activités, et ceux qui ont ce rôle.
+      legend.text-sm.font-medium.text-gray-700 Qui lit cette section
+      p.mt-1.text-xs.text-gray-500 Les Sourciers lisent toutes les sections. Porteur·euse : les comptes restreints à leurs activités, et ceux qui ont ce rôle.
       = hidden_field_tag "guide_chapter[access_roles][]", "", id: nil
       .mt-3.grid.gap-2.sm:grid-cols-2
         - GuideChapter::READER_ROLES.each do |role|
@@ -25,12 +25,12 @@
   .mt-8.flex.flex-wrap.items-center.justify-between.gap-4.border-t.border-stone-200.pt-6
     .flex.items-center.gap-3
       button.inline-flex.items-center.rounded-lg.bg-emerald-600.px-4.py-2.text-sm.font-medium.text-white.shadow-sm.hover:bg-emerald-700(type="submit")
-        = chapter.persisted? ? "Enregistrer" : "Créer le chapitre"
+        = chapter.persisted? ? "Enregistrer" : "Créer la section"
       = link_to "Annuler", guide_root_path, class: "text-sm font-medium text-stone-600 hover:underline"
     - if chapter.persisted?
       - if chapter.removable?
-        = link_to "Supprimer le chapitre", guide_chapter_path(chapter),
+        = link_to "Supprimer la section", guide_chapter_path(chapter),
                   class: "text-sm font-medium text-red-600 hover:underline",
-                  data: { turbo_method: :delete, turbo_confirm: "Supprimer le chapitre « #{chapter.title} » ?" }
+                  data: { turbo_method: :delete, turbo_confirm: "Supprimer la section « #{chapter.title} » ?" }
       - else
-        span.text-xs.text-stone-500 Pour supprimer ce chapitre, déplace ou retire d'abord ses pages.
+        span.text-xs.text-stone-500 Pour supprimer cette section, déplace ou retire d'abord ses chapitres.

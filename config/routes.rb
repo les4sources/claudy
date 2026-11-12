@@ -82,7 +82,10 @@ Rails.application.routes.draw do
   # `section_writable?(:guide)`, cf. `Guide::BaseController`.
   namespace :guide do
     root to: "pages#index"
-    resources :chapters, only: %i[new create edit update destroy] do
+    # Un chapitre = une « section » à l'écran (Michael, 2026-11-12) ; ses
+    # pages sont les « chapitres ». `show` ouvre la section dans la nouvelle
+    # interface.
+    resources :chapters, only: %i[show new create edit update destroy] do
       collection { patch :reorder }
       member { patch :reorder_pages }
     end

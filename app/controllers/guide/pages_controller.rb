@@ -9,6 +9,7 @@ module Guide
       @results = readable_pages.search(@query).includes(:chapter, last_editor: :human).order(:title) if @query.present?
       @recent_pages = readable_pages.where.not(last_edited_at: nil).includes(:chapter, last_editor: :human)
                                .order(last_edited_at: :desc).limit(5)
+      render "guide/pages/v2/index" if current_user.new_interface?
     end
 
     def show
@@ -21,25 +22,26 @@ module Guide
       @contributors = @page.contributors
       @backlinks = @page.backlinks.select { |other| other.chapter.readable_by?(current_user) }
       @screen_links = @page.screen_links.to_a
-      breadcrumb @page.chapter.title, guide_root_path(anchor: "chapitre-#{@page.chapter.id}")
+      breadcrumb @page.chapter.title, guide_chapter_path(@page.chapter)
       breadcrumb @page.title, guide_page_path(@page)
+      render "guide/pages/v2/show" if current_user.new_interface?
     end
 
     def new
       chapter = GuideChapter.find_by(id: params[:chapter_id]) || GuideChapter.ordered.first
-      return redirect_to(new_guide_chapter_path, alert: "Crée d'abord un chapitre.") if chapter.nil?
+      return redirect_to(new_guide_chapter_path, alert: "Crée d'abord une section.") if chapter.nil?
 
       # `title` : depuis un lien `[[Titre]]` vers une page qui n'existe pas encore.
       @page = GuidePage.new(chapter: chapter, title: params[:title].to_s.squish.first(160).presence)
-      breadcrumb "Nouvelle page", new_guide_page_path
+      breadcrumb "Nouveau chapitre", new_guide_page_path
     end
 
     def create
       @page = GuidePage.new
       if Guide::SavePage.new(@page, user: current_user).call(page_params)
-        redirect_to guide_page_path(@page), notice: "La page est publiée dans le Guide."
+        redirect_to guide_page_path(@page), notice: "Le chapitre est publié dans le Guide."
       else
-        breadcrumb "Nouvelle page", new_guide_page_path
+        breadcrumb "Nouveau chapitre", new_guide_page_path
         render :new, status: :unprocessable_content
       end
     end
@@ -51,7 +53,7 @@ module Guide
 
     def update
       if Guide::SavePage.new(@page, user: current_user).call(page_params)
-        redirect_to guide_page_path(@page), notice: "La page est enregistrée."
+        redirect_to guide_page_path(@page), notice: "Le chapitre est enregistré."
       else
         breadcrumb @page.title_was, guide_page_path(@page)
         render :edit, status: :unprocessable_content
@@ -60,7 +62,7 @@ module Guide
 
     def destroy
       @page.soft_delete!(validate: false)
-      redirect_to guide_root_path, notice: "La page « #{@page.title} » est retirée du Guide."
+      redirect_to guide_chapter_path(@page.chapter), notice: "Le chapitre « #{@page.title} » est retiré du Guide."
     end
 
     private

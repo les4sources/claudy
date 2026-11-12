@@ -12,7 +12,9 @@ import Sortable from "sortablejs"
 //         li(data-id="12") button(data-guide-sortable-handle="page")
 export default class extends Controller {
   static targets = ["chapter", "pages"]
-  static values = { url: String }
+  // `reload` : la page montre l'ordre ailleurs que dans la liste rangée (les
+  // chapitres d'une section, lus d'affilée) ; elle se recharge après le dépôt.
+  static values = { url: String, reload: Boolean }
 
   connect() {
     this.sortables = [
@@ -55,6 +57,10 @@ export default class extends Controller {
         "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content,
       },
       body: JSON.stringify({ ids }),
+    }).then((response) => {
+      if (response.ok && this.reloadValue && window.Turbo) {
+        window.Turbo.visit(window.location.href, { action: "replace" })
+      }
     })
   }
 

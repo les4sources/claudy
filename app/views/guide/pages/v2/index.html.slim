@@ -1,0 +1,117 @@
+/ LE GUIDE, nouvelle interface (Michael, 2026-11-12) : d'abord toutes les
+  sections, une carte chacune ; la carte ouvre sa section (`guide/chapters#show`),
+  où l'on lit ses chapitres. À l'écran, une section est un `GuideChapter` et un
+  chapitre une `GuidePage`. L'ancienne interface garde `guide/pages/index`.
+header.ui-phead
+  .ui-phead-t
+    p.ui-over Le collectif
+    h1.ui-h1 Le Guide des 4 Sources
+    p.ui-gd-intro Le manuel du collectif : les procédures, l’arrivée et le départ, les coordonnées administratives, et tout ce qu’on se transmet pour faire vivre le lieu.
+  - if guide_writer?
+    .ui-actions
+      = link_to new_guide_chapter_path, class: "ui-btn" do
+        = ui_icon(:plus, size: 16)
+        | Nouvelle section
+      = link_to new_guide_page_path, class: "ui-btn ui-btn-p" do
+        = ui_icon(:pencil, size: 16)
+        | Nouveau chapitre
+
+= form_with url: guide_root_path, method: :get, class: "ui-gd-search", data: { turbo_frame: "_top" } do |f|
+  = ui_icon(:search, size: 18)
+  = f.search_field :q, value: @query, placeholder: "Chercher dans le Guide…", autocomplete: "off",
+                   class: "ui-input", aria: { label: "Chercher dans le Guide" }
+
+- if @query.present?
+  section.ui-card.ui-gd-results
+    .ui-card-h
+      h2.ui-h3
+        = pluralize(@results.size, "chapitre trouvé", plural: "chapitres trouvés")
+        span.ui-muted =< "pour « #{@query} »"
+      = link_to "Toutes les sections", guide_root_path, class: "ui-card-link"
+    .ui-card-b
+      - if @results.empty?
+        p.ui-empty
+          = ui_icon(:search, size: 18)
+          | Rien ne correspond.
+      - else
+        .ui-rows
+          - @results.each do |page|
+            = link_to guide_page_path(page), class: "ui-row" do
+              .ui-row-m
+                span.ui-gd-kicker = page.chapter.title
+                span.ui-row-t = page.title
+                span.ui-row-s = page.excerpt
+
+- elsif @chapters.empty?
+  section.ui-card
+    .ui-card-b
+      p.ui-empty
+        = ui_icon(:book, size: 18)
+        - if guide_writer?
+          | Le Guide est encore vide. Commence par une section, par exemple « Procédures » ou « Arriver aux 4 Sources ».
+        - elsif GuideChapter.exists?
+          | Aucune section n’est encore ouverte à ton rôle.
+        - else
+          | Le Guide est encore vide : les Sourciers y rangeront bientôt les procédures et les infos utiles.
+
+- else
+  .ui-split.ui-gd-home
+    / Les sections. Les rédacteurs les rangent au glisser-déposer (poignée).
+    .ui-gd-grid(data-controller=("guide-sortable" if guide_writer?)
+                data-guide-sortable-url-value=(reorder_guide_chapters_path if guide_writer?))
+      - @chapters.each do |chapter|
+        - pages = chapter.pages.to_a
+        - last = pages.select(&:last_edited_at).max_by(&:last_edited_at)
+        article.ui-gd-card(data-id=chapter.id data-guide-sortable-target="chapter")
+          .ui-gd-card-top
+            span.ui-gd-card-ico = ui_icon(:book, size: 20)
+            - if guide_writer?
+              button.ui-gd-grip(type="button" data-guide-sortable-handle="chapter" title="Glisser pour déplacer la section" aria-label="Déplacer « #{chapter.title} »")
+                svg(width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true")
+                  circle(cx="9" cy="6" r="1.8")
+                  circle(cx="15" cy="6" r="1.8")
+                  circle(cx="9" cy="12" r="1.8")
+                  circle(cx="15" cy="12" r="1.8")
+                  circle(cx="9" cy="18" r="1.8")
+                  circle(cx="15" cy="18" r="1.8")
+          h2.ui-gd-card-t
+            = link_to chapter.title, guide_chapter_path(chapter), class: "ui-gd-card-a"
+          - if chapter.description.present?
+            p.ui-gd-card-d = chapter.description
+          - if pages.any?
+            ol.ui-gd-card-l
+              - pages.first(4).each do |page|
+                li = page.title
+              - if pages.size > 4
+                li.ui-gd-card-more = "et #{pages.size - 4} autre#{'s' if pages.size - 4 > 1}"
+          footer.ui-gd-card-f
+            span.ui-gd-card-n
+              = pages.empty? ? "Aucun chapitre" : pluralize(pages.size, "chapitre", plural: "chapitres")
+            - if last&.last_editor
+              span.ui-gd-by(title="Modifiée par #{last.last_editor.display_name} le #{guide_date(last.last_edited_at)}")
+                = guide_avatar(last.last_editor, size: :sm)
+                = ui_short_date(last.last_edited_at.to_date)
+          - if guide_writer?
+            - labels = chapter.reader_labels
+            p.ui-gd-card-who
+              = labels.any? ? "Lue par les Sourciers et : #{labels.join(', ')}" : "Lue par les Sourciers seulement"
+
+    aside.ui-stack(aria-label="Modifié récemment")
+      section.ui-card
+        .ui-card-h
+          h2.ui-h3
+            = ui_icon(:clock, size: 18)
+            | Modifié récemment
+        .ui-card-b
+          - if @recent_pages.empty?
+            p.ui-empty Rien pour l’instant.
+          - else
+            .ui-rows
+              - @recent_pages.each do |page|
+                = link_to guide_page_path(page), class: "ui-row" do
+                  = guide_avatar(page.last_editor, size: :md)
+                  .ui-row-m
+                    span.ui-row-t = page.title
+                    span.ui-row-s
+                      = page.chapter.title
+                      = " · #{page.last_editor&.display_name}, il y a #{time_ago_in_words(page.last_edited_at)}"

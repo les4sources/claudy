@@ -1,0 +1,7 @@
+/ UN CHAPITRE DU GUIDE, nouvelle interface (Michael, 2026-11-12) : le chapitre
+  seul, et à droite le menu de sa section (les autres chapitres, ses
+  intertitres, le retour à toutes les sections).
+.ui-gd-layout
+  = render "guide/pages/article", last_revision: @page.revisions.first
+  = render "guide/chapters/menu", chapter: @page.chapter, pages: @page.chapter.pages.to_a,
+           chapters: @chapters, current: @page, headings: @markdown.headings

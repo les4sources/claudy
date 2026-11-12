@@ -1,0 +1,54 @@
+/ UNE SECTION DU GUIDE, nouvelle interface (Michael, 2026-11-12) : tous ses
+  chapitres à lire d'affilée, et à droite le menu pour sauter de l'un à
+  l'autre ou revenir à toutes les sections. À l'écran, une section est un
+  `GuideChapter` et un chapitre une `GuidePage`.
+- reader_labels = @chapter.reader_labels
+header.ui-phead
+  .ui-phead-t
+    p.ui-over = link_to "Le Guide des 4 Sources", guide_root_path, class: "ui-gd-over"
+    h1.ui-h1 = @chapter.title
+    - if @chapter.description.present?
+      p.ui-gd-intro = @chapter.description
+    - if guide_writer?
+      p.ui-muted.ui-small
+        = reader_labels.any? ? "Lue par les Sourciers et : #{reader_labels.join(', ')}" : "Lue par les Sourciers seulement"
+  - if guide_writer?
+    .ui-actions
+      = link_to edit_guide_chapter_path(@chapter), class: "ui-btn" do
+        = ui_icon(:pencil, size: 16)
+        | Modifier la section
+      = link_to new_guide_page_path(chapter_id: @chapter.id), class: "ui-btn ui-btn-p" do
+        = ui_icon(:plus, size: 16)
+        | Ajouter un chapitre
+
+.ui-gd-layout(data-controller="guide-toc")
+  .ui-gd-read
+    - if @pages.empty?
+      section.ui-card
+        .ui-card-b
+          p.ui-empty
+            = ui_icon(:book, size: 18)
+            | Cette section n’a pas encore de chapitre.
+    - @pages.each_with_index do |page, index|
+      article.ui-gd-chap(id="chapitre-#{page.id}" data-guide-toc-target="section" aria-labelledby="chapitre-#{page.id}-t")
+        header.ui-gd-chap-h
+          p.ui-over = "Chapitre #{index + 1}"
+          h2.ui-gd-chap-t(id="chapitre-#{page.id}-t")
+            = link_to page.title, guide_page_path(page)
+          .ui-gd-chap-meta
+            - if page.last_editor
+              span.ui-gd-by
+                = guide_avatar(page.last_editor, size: :sm)
+                span
+                  = page.last_editor.display_name
+                  span.ui-muted =< "· #{ui_short_date(page.last_edited_at.to_date)}"
+            = link_to "Historique", guide_page_revisions_path(page), class: "ui-gd-chap-link"
+            - if guide_writer?
+              = link_to "Modifier", edit_guide_page_path(page), class: "ui-gd-chap-link"
+        - if page.body.blank?
+          p.ui-muted.ui-small Ce chapitre n’a pas encore de contenu.
+        - else
+          .guide-content.prose.prose-stone.max-w-none.prose-headings:font-semibold.prose-a:text-emerald-700.prose-img:rounded-lg.prose-img:shadow-sm
+            = @renders.fetch(page.id).to_html
+
+  = render "guide/chapters/menu", chapter: @chapter, pages: @pages, chapters: @chapters
