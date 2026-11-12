@@ -90,8 +90,8 @@ RSpec.describe "Chapitres du Guide par rôle", type: :request do
     sign_in sourcier
 
     get guide_root_path
-    expect(response.body).to include("Rentrer une note de frais", "Lu par les Sourciers seulement",
-                                     "Lu par les Sourciers et : Kid, Porteur·euse")
+    expect(response.body).to include("Rentrer une note de frais", "Lue par les Sourciers seulement",
+                                     "Lue par les Sourciers et : Kid, Porteur·euse")
     get guide_page_path(note)
     expect(response).to have_http_status(:ok)
   end

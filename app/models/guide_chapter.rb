@@ -46,6 +46,10 @@ class GuideChapter < ApplicationRecord
 
   scope :ordered, -> { order(:position, :id) }
 
+  # `/guide/chapters/6-porter-une-activite` : l'adresse dit de quelle section
+  # il s'agit.
+  def to_param = [id, title.to_s.parameterize.presence].compact.join("-")
+
   # Les chapitres que ce compte lit. Personne de connecté : aucun.
   scope :readable_by, lambda { |user|
     next none if user.nil?

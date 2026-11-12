@@ -1,0 +1,61 @@
+/ Le menu de droite d'une section du Guide (Michael, 2026-11-12) : revenir à
+  toutes les sections, sauter d'un chapitre à l'autre, passer à une autre
+  section. Sur la section, les liens descendent dans la page (`#chapitre-12`)
+  et suivent la lecture (`guide-toc`) ; sur un chapitre seul, ils ouvrent
+  chaque chapitre, et celui qu'on lit déplie ses intertitres.
+  Locaux : chapter, pages, chapters, current (GuidePage ou nil), headings.
+- current = local_assigns[:current]
+- headings = local_assigns[:headings] || []
+- sortable = guide_writer? && current.nil? && pages.size > 1
+nav.ui-gd-menu(aria-label="Chapitres de la section")
+  = link_to guide_root_path, class: "ui-gd-back" do
+    = ui_icon(:left, size: 16)
+    | Toutes les sections
+
+  .ui-gd-menu-box
+    p.ui-gd-menu-l Dans cette section
+    = link_to chapter.title, guide_chapter_path(chapter), class: "ui-gd-menu-sec", aria: { current: (current.nil? ? "page" : nil) }
+    - if pages.empty?
+      p.ui-muted.ui-small Aucun chapitre pour l’instant.
+    - else
+      / Les rédacteurs rangent les chapitres ici, au glisser-déposer : la
+        section se recharge dans le nouvel ordre.
+      div(data-controller=("guide-sortable" if sortable) data-guide-sortable-reload-value=("true" if sortable))
+        ol.ui-gd-menu-list(data-guide-sortable-target=("pages" if sortable) data-url=(reorder_pages_guide_chapter_path(chapter) if sortable))
+          - pages.each_with_index do |page, index|
+            - here = current && page.id == current.id
+            li(data-id=page.id class=("is-here" if here))
+              - if sortable
+                button.ui-gd-grip(type="button" data-guide-sortable-handle="page" title="Glisser pour déplacer le chapitre" aria-label="Déplacer « #{page.title} »")
+                  svg(width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true")
+                    circle(cx="9" cy="6" r="1.8")
+                    circle(cx="15" cy="6" r="1.8")
+                    circle(cx="9" cy="12" r="1.8")
+                    circle(cx="15" cy="12" r="1.8")
+                    circle(cx="9" cy="18" r="1.8")
+                    circle(cx="15" cy="18" r="1.8")
+              - if current
+                = link_to guide_page_path(page), class: "ui-gd-menu-a", aria: { current: (here ? "page" : nil) } do
+                  span.ui-gd-menu-n = index + 1
+                  span = page.title
+              - else
+                = link_to "#chapitre-#{page.id}", class: "ui-gd-menu-a", data: { guide_toc_target: "link", turbo: false } do
+                  span.ui-gd-menu-n = index + 1
+                  span = page.title
+              - if here && headings.size >= 2
+                ul.ui-gd-menu-sub
+                  - headings.each do |heading|
+                    li(class=("is-h3" if heading.level >= 3))
+                      = link_to heading.text, "##{heading.anchor}", data: { turbo: false }
+    - if guide_writer?
+      = link_to new_guide_page_path(chapter_id: chapter.id), class: "ui-gd-menu-add" do
+        = ui_icon(:plus, size: 15)
+        | Ajouter un chapitre
+
+  - others = chapters.reject { |other| other.id == chapter.id }
+  - if others.any?
+    .ui-gd-menu-box
+      p.ui-gd-menu-l Autres sections
+      ul.ui-gd-menu-others
+        - others.each do |other|
+          li = link_to other.title, guide_chapter_path(other)

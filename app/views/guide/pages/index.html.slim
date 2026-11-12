@@ -4,8 +4,8 @@
 - content_for :page_header do
   = render "layouts/components/page_header",
            title: "Le Guide des 4 Sources",
-           links: (guide_writer? ? [link_to("Nouveau chapitre", new_guide_chapter_path, class: secondary_button),
-                                    link_to("Nouvelle page", new_guide_page_path, class: primary_button)] : [])
+           links: (guide_writer? ? [link_to("Nouvelle section", new_guide_chapter_path, class: secondary_button),
+                                    link_to("Nouveau chapitre", new_guide_page_path, class: primary_button)] : [])
 
 p.-mt-4.mb-6.max-w-3xl.text-sm.text-stone-600
   | Le manuel du collectif : les procédures, l'arrivée et le départ, les coordonnées administratives, et tout ce qu'on se transmet pour faire vivre le lieu.
@@ -25,7 +25,7 @@ p.-mt-4.mb-6.max-w-3xl.text-sm.text-stone-600
 - if @query.present?
   section
     h2.mb-3.text-sm.font-semibold.text-stone-700
-      = pluralize(@results.size, "page trouvée", plural: "pages trouvées")
+      = pluralize(@results.size, "chapitre trouvé", plural: "chapitres trouvés")
       span.font-normal.text-stone-500 =< "pour « #{@query} »"
     - if @results.empty?
       .rounded-xl.border.border-dashed.border-stone-300.bg-white.p-8.text-center.text-sm.text-stone-600
@@ -45,10 +45,10 @@ p.-mt-4.mb-6.max-w-3xl.text-sm.text-stone-600
     .mb-2.text-4xl 📖
     .text-sm.font-medium.text-stone-700 Le Guide est encore vide.
     - if guide_writer?
-      .mt-1.text-xs.text-stone-500 Commence par un chapitre, par exemple « Procédures » ou « Arriver aux 4 Sources ».
-      = link_to "Créer le premier chapitre", new_guide_chapter_path, class: "mt-4 #{primary_button}"
+      .mt-1.text-xs.text-stone-500 Commence par une section, par exemple « Procédures » ou « Arriver aux 4 Sources ».
+      = link_to "Créer la première section", new_guide_chapter_path, class: "mt-4 #{primary_button}"
     - elsif GuideChapter.exists?
-      .mt-1.text-xs.text-stone-500 Aucun chapitre n'est encore ouvert à ton rôle.
+      .mt-1.text-xs.text-stone-500 Aucune section n'est encore ouverte à ton rôle.
     - else
       .mt-1.text-xs.text-stone-500 Les Sourciers y rangeront bientôt les procédures et les infos utiles.
 
@@ -62,7 +62,7 @@ p.-mt-4.mb-6.max-w-3xl.text-sm.text-stone-600
         section.rounded-xl.border.border-stone-200.bg-white.shadow-sm(id="chapitre-#{chapter.id}" data-id=chapter.id data-guide-sortable-target="chapter")
           header.flex.items-start.gap-3.border-b.border-stone-100.px-5.py-4
             - if guide_writer?
-              button.mt-1.cursor-grab.text-stone-300.hover:text-stone-500(type="button" data-guide-sortable-handle="chapter" title="Glisser pour déplacer le chapitre" aria-label="Déplacer le chapitre")
+              button.mt-1.cursor-grab.text-stone-300.hover:text-stone-500(type="button" data-guide-sortable-handle="chapter" title="Glisser pour déplacer la section" aria-label="Déplacer la section")
                 svg.h-4.w-4(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor")
                   circle(cx="9" cy="6" r="1.5")
                   circle(cx="15" cy="6" r="1.5")
@@ -78,17 +78,17 @@ p.-mt-4.mb-6.max-w-3xl.text-sm.text-stone-600
               - if guide_writer?
                 p.mt-1.text-xs.text-stone-400
                   - labels = chapter.reader_labels
-                  = labels.any? ? "Lu par les Sourciers et : #{labels.join(', ')}" : "Lu par les Sourciers seulement"
+                  = labels.any? ? "Lue par les Sourciers et : #{labels.join(', ')}" : "Lue par les Sourciers seulement"
             - if guide_writer?
               .flex.shrink-0.items-center.gap-3.text-xs
-                = link_to "Ajouter une page", new_guide_page_path(chapter_id: chapter.id), class: "font-medium text-emerald-700 hover:underline"
+                = link_to "Ajouter un chapitre", new_guide_page_path(chapter_id: chapter.id), class: "font-medium text-emerald-700 hover:underline"
                 = link_to "Modifier", edit_guide_chapter_path(chapter), class: "font-medium text-stone-500 hover:underline"
 
           ul.divide-y.divide-stone-100(data-guide-sortable-target="pages" data-url=reorder_pages_guide_chapter_path(chapter))
             - chapter.pages.each do |page|
               li.flex.items-center.gap-3.px-5.py-3.hover:bg-stone-50(data-id=page.id)
                 - if guide_writer?
-                  button.cursor-grab.text-stone-300.hover:text-stone-500(type="button" data-guide-sortable-handle="page" title="Glisser pour déplacer la page" aria-label="Déplacer la page")
+                  button.cursor-grab.text-stone-300.hover:text-stone-500(type="button" data-guide-sortable-handle="page" title="Glisser pour déplacer le chapitre" aria-label="Déplacer le chapitre")
                     svg.h-4.w-4(xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor")
                       circle(cx="9" cy="8" r="1.5")
                       circle(cx="15" cy="8" r="1.5")
@@ -102,7 +102,7 @@ p.-mt-4.mb-6.max-w-3xl.text-sm.text-stone-600
                     = l(page.last_edited_at.to_date, format: :short)
             - if chapter.pages.empty?
               li.px-5.py-3.text-sm.italic.text-stone-400(data-guide-sortable-empty)
-                | Aucune page dans ce chapitre.
+                | Aucun chapitre dans cette section.
 
     aside
       .rounded-xl.border.border-stone-200.bg-white.shadow-sm

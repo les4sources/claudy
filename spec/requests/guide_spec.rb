@@ -32,7 +32,7 @@ RSpec.describe "Le Guide des 4 Sources", type: :request do
 
     it "cherche dans le Guide" do
       get guide_root_path(q: "ticket admin")
-      expect(response.body).to include("1 page trouvée", "Soumettre une note de frais")
+      expect(response.body).to include("1 chapitre trouvé", "Soumettre une note de frais")
     end
 
     it "lit l'historique, mais ne modifie rien" do
@@ -113,6 +113,61 @@ RSpec.describe "Le Guide des 4 Sources", type: :request do
     end
   end
 
+  # Nouvelle interface (Michael, 2026-11-12) : l'accueil montre les sections,
+  # une section ses chapitres à lire d'affilée avec le menu à droite.
+  describe "dans la nouvelle interface" do
+    let!(:deuxieme) do
+      GuidePage.new.tap do |p|
+        Guide::SavePage.new(p, user: sourcier).call(guide_chapter_id: chapitre.id, title: "Payer une facture",
+                                                    body: "Virement depuis **Triodos**.")
+      end
+    end
+
+    it "montre les sections, puis une section avec tous ses chapitres et le menu" do
+      kid.update!(new_interface: true)
+      sign_in kid
+
+      get guide_root_path
+      expect(response.body).to include("ui-gd-card", guide_chapter_path(chapitre), "2 chapitres", "Payer une facture")
+      expect(response.body).not_to include(new_guide_chapter_path)
+
+      get guide_chapter_path(chapitre)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Les gestes du quotidien", "<strong>Admin</strong>", "<strong>Triodos</strong>",
+                                       %(href="#chapitre-#{page.id}"), %(href="#chapitre-#{deuxieme.id}"),
+                                       "Toutes les sections")
+      expect(response.body).not_to include(edit_guide_chapter_path(chapitre), "data-guide-sortable-handle")
+
+      get guide_page_path(deuxieme)
+      expect(response.body).to include("Toutes les sections", guide_page_path(page), "← Précédent")
+    end
+
+    it "donne aux rédacteurs de quoi modifier et ranger la section" do
+      sourcier.update!(new_interface: true)
+      sign_in sourcier
+
+      get guide_chapter_path(chapitre)
+      expect(response.body).to include(edit_guide_chapter_path(chapitre), new_guide_page_path(chapter_id: chapitre.id),
+                                       reorder_pages_guide_chapter_path(chapitre), "Lue par les Sourciers et")
+
+      patch guide_chapter_path(chapitre), params: { guide_chapter: { title: "Procédures du quotidien" } }
+      expect(response).to redirect_to(guide_chapter_path(chapitre.reload))
+    end
+
+    it "garde une section fermée au rôle, et renvoie l'ancienne interface au sommaire" do
+      chapitre.update!(access_roles: [])
+      kid.update!(new_interface: true)
+      sign_in kid
+      get guide_chapter_path(chapitre)
+      expect(response).to redirect_to(guide_root_path)
+
+      chapitre.update!(access_roles: %w[kid])
+      kid.update!(new_interface: false)
+      get guide_chapter_path(chapitre)
+      expect(response).to redirect_to(guide_root_path(anchor: "chapitre-#{chapitre.id}"))
+    end
+  end
+
   describe "« Voir la procédure » depuis un écran" do
     let(:communication) { User.create!(email: "com@les4sources.be", password: "password123", access_roles: %w[communication]) }
 
@@ -175,7 +230,7 @@ RSpec.describe "Le Guide des 4 Sources", type: :request do
       end
 
       get guide_page_path(page)
-      expect(response.body).to include("Pages qui renvoient ici", guide_page_path(accueil))
+      expect(response.body).to include("Chapitres qui renvoient ici", guide_page_path(accueil))
 
       get guide_page_path(accueil)
       expect(response.body).to include(%(class="guide-wikilink">Soumettre une note de frais</a>),

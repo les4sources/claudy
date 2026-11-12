@@ -1,19 +1,41 @@
 module Guide
   class ChaptersController < BaseController
-    before_action :require_guide_writer!
+    before_action :require_guide_writer!, except: :show
     before_action :set_chapter, only: %i[edit update destroy reorder_pages]
+
+    # Une section du Guide (Michael, 2026-11-12) : tous ses chapitres à lire
+    # d'affilée, et à droite un menu pour sauter de l'un à l'autre ou revenir
+    # à toutes les sections. Nouvelle interface seulement : l'ancienne garde
+    # son sommaire d'un seul tenant.
+    def show
+      @chapter = readable_chapters.find_by(id: params[:id].to_i)
+      if @chapter.nil?
+        raise ActiveRecord::RecordNotFound unless GuideChapter.exists?(params[:id].to_i)
+
+        return redirect_to(guide_root_path, alert: "Cette section n'est pas ouverte à ton rôle.")
+      end
+      return redirect_to(guide_root_path(anchor: "chapitre-#{@chapter.id}")) unless current_user.new_interface?
+
+      @pages = @chapter.pages.includes(last_editor: :human).to_a
+      readable = readable_pages
+      @renders = @pages.to_h do |page|
+        [page.id, Guide::Markdown.render(page.body, new_page_links: guide_writer?, pages: readable)]
+      end
+      @chapters = readable_chapters.ordered.to_a
+      breadcrumb @chapter.title, guide_chapter_path(@chapter)
+    end
 
     def new
       @chapter = GuideChapter.new
-      breadcrumb "Nouveau chapitre", new_guide_chapter_path
+      breadcrumb "Nouvelle section", new_guide_chapter_path
     end
 
     def create
       @chapter = GuideChapter.new(chapter_params)
       if @chapter.save
-        redirect_to guide_root_path(anchor: "chapitre-#{@chapter.id}"), notice: "Le chapitre est créé."
+        redirect_to chapter_return_path, notice: "La section est créée."
       else
-        breadcrumb "Nouveau chapitre", new_guide_chapter_path
+        breadcrumb "Nouvelle section", new_guide_chapter_path
         render :new, status: :unprocessable_content
       end
     end
@@ -24,7 +46,7 @@ module Guide
 
     def update
       if @chapter.update(chapter_params)
-        redirect_to guide_root_path(anchor: "chapitre-#{@chapter.id}"), notice: "Le chapitre est enregistré."
+        redirect_to chapter_return_path, notice: "La section est enregistrée."
       else
         breadcrumb @chapter.title_was, edit_guide_chapter_path(@chapter)
         render :edit, status: :unprocessable_content
@@ -34,11 +56,11 @@ module Guide
     def destroy
       unless @chapter.removable?
         return redirect_to(edit_guide_chapter_path(@chapter),
-                           alert: "Ce chapitre a encore des pages : déplace-les ou retire-les d'abord.")
+                           alert: "Cette section a encore des chapitres : déplace-les ou retire-les d'abord.")
       end
 
       @chapter.soft_delete!(validate: false)
-      redirect_to guide_root_path, notice: "Le chapitre « #{@chapter.title} » est retiré du Guide."
+      redirect_to guide_root_path, notice: "La section « #{@chapter.title} » est retirée du Guide."
     end
 
     # Glisser-déposer des chapitres dans le sommaire.
@@ -55,6 +77,12 @@ module Guide
     end
 
     private
+
+    # Après l'enregistrement : la section elle-même dans la nouvelle interface,
+    # sa place dans le sommaire dans l'ancienne.
+    def chapter_return_path
+      current_user.new_interface? ? guide_chapter_path(@chapter) : guide_root_path(anchor: "chapitre-#{@chapter.id}")
+    end
 
     def set_chapter
       @chapter = GuideChapter.find(params[:id].to_i)
