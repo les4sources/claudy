@@ -142,6 +142,18 @@ nav.bg-4s-main.shadow-sm.lg:px-6.relative.z-40
                 path[d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"]
               span.sr-only Comptabilité
 
+        / Situation financière (Michael, 2026-11-12) : réservée aux Sourciers,
+          elle n'existe que dans la nouvelle interface ; l'icône y invite.
+        - if section_readable?(:situation)
+          li
+            = link_to finance_situation_path,
+                      class: "flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 #{!@situation_view.nil? ? nav_active : 'text-white/50 hover:text-white hover:bg-white/10'}",
+                      title: "Situation financière" do
+              svg.w-5.h-5[xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"]
+                path[d="M3 3v18h18"]
+                path[d="m19 9-5 5-4-4-3 3"]
+              span.sr-only Situation financière
+
         / Documents (Michael, 2026-11-12) : l'icône juste à côté de la
           Comptabilité, comme demandé. Les fichiers du collectif, rangés en dossiers.
         - if section_readable?(:documents)

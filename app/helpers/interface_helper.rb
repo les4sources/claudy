@@ -18,6 +18,7 @@ module InterfaceHelper
     guide: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
     external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
     map: '<path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15M9 3.236v15"/>',
+    chart: '<path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>',
     wallet: '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
     book: '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
     receipt: '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8M12 17.5v-11"/>',
@@ -167,10 +168,13 @@ module InterfaceHelper
         nav_entry(:documents, "Documents", :files, documents_path, section_readable?(:documents)),
         nav_entry(:map, "Carte du domaine", :map, map_path, section_readable?(:map))
       ]],
+      # Situation financière (Sourciers) et Comptabilité (Administratifs),
+      # séparées le 2026-11-12 : chacun la sienne, dans cet ordre.
       ["Argent", [
-        nav_entry(:accounts, "Comptes", :wallet, finance_accounts_path, section_readable?(:accounts)),
+        nav_entry(:situation, "Situation financière", :chart, finance_situation_path, section_readable?(:situation)),
         nav_entry(:accounting, "Comptabilité", :book, finance_accounting_path, section_readable?(:accounting)),
-        nav_entry(:invoicing, "Facturation", :receipt, invoicing_path, section_readable?(:full))
+        nav_entry(:invoicing, "Facturation", :receipt, invoicing_path, section_readable?(:full)),
+        nav_entry(:accounts, "Comptes", :wallet, finance_accounts_path, section_readable?(:accounts))
       ]]
     ].map { |label, entries| [label, entries.compact] }.reject { |_, entries| entries.empty? }
   end
@@ -217,6 +221,7 @@ module InterfaceHelper
       elsif @map_view then :map
       elsif @guide_view then :guide
       elsif @documents_view then :documents
+      elsif @situation_view then :situation
       elsif @accounting_view then :accounting
       elsif @finance_view then :accounts
       elsif @organisation_view then :cycles

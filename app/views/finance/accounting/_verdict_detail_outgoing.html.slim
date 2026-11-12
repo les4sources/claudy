@@ -27,14 +27,14 @@
               td.py-2.px-3.whitespace-nowrap.text-gray-500= l(outflow.due_on, format: :ddmmyyyy)
               td.py-2.px-3.text-gray-900
                 - if outflow.liability?
-                  = link_to outflow.liability.label, edit_finance_liability_path(outflow.liability),
+                  = situation_link_to outflow.liability.label, edit_finance_liability_path(outflow.liability),
                             data: { turbo_frame: "_top" }, class: "text-blue-600 hover:text-blue-800"
                   span.ml-2.inline-flex.rounded-full.bg-amber-100.px-2.py-0.5.text-xs.text-amber-800= outflow.liability.kind_label.downcase
                 - elsif outflow.recurring?
-                  = link_to outflow.recurring_expense.label, edit_finance_recurring_expense_path(outflow.recurring_expense),
+                  = situation_link_to outflow.recurring_expense.label, edit_finance_recurring_expense_path(outflow.recurring_expense),
                             data: { turbo_frame: "_top" }, class: "text-blue-600 hover:text-blue-800"
                 - elsif outflow.payable.payable_path
-                  = link_to outflow.payable.payable_label, outflow.payable.payable_path,
+                  = situation_link_to outflow.payable.payable_label, outflow.payable.payable_path,
                             data: { turbo_frame: "_top" }, class: "text-blue-600 hover:text-blue-800"
                 - else
                   = outflow.payable.payable_label
@@ -51,4 +51,4 @@
           td.py-2.px-3.font-medium.text-gray-700(colspan="3") Total
           td.py-2.px-3.text-right.font-semibold.tabular-nums.text-gray-900= euros.(outflows.sum(&:amount_cents))
   p.mt-4.text-xs.text-gray-500
-    = link_to "Ouvrir la file « À payer »", finance_payables_path, data: { turbo_frame: "_top" }, class: "text-blue-600 hover:text-blue-800"
+    = situation_link_to "Ouvrir la file « À payer »", finance_payables_path, nav: true, data: { turbo_frame: "_top" }, class: "text-blue-600 hover:text-blue-800"

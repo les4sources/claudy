@@ -6,9 +6,9 @@ section.rounded-2xl.bg-white.ring-1.ring-gray-200.overflow-hidden
       div
         h2.text-sm.font-semibold.uppercase.tracking-wide.text-gray-500 = "Derniers mouvements #{accounts.year}"
         p.mt-1.text-xs.text-gray-500 = "Les #{Teams::Accounts::RECENT_LIMIT} dernières affectations de trésorerie du pôle, la plus récente d'abord."
-      = link_to "Balance analytique #{accounts.year} →",
+      = situation_link_to "Balance analytique #{accounts.year} →",
                 finance_analytic_balance_path(from: accounts.period.begin, to: accounts.period.end),
-                class: "text-xs font-medium text-4s-main hover:underline"
+                class: "text-xs font-medium text-4s-main hover:underline", nav: true
 
   - if accounts.recent_allocations.empty?
     .px-6.py-8.text-center.text-sm.text-gray-500

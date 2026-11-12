@@ -6,6 +6,12 @@ module Finance
   # blocage implicite, donc invisible, et on découvrait au moment de payer que
   # personne n'avait dit oui.
   class PurchaseInvoicesController < Finance::AccountingBaseController
+    # La validation par le pôle reste l'affaire des membres du pôle (Michael,
+    # 2026-11-12) : la Comptabilité est aux Administratifs, mais un Sourcier
+    # ouvre la fiche d'une facture (lien du récapitulatif, page du pôle), la
+    # valide ou la conteste. Le reste de la fiche lui reste fermé.
+    access_section %i[accounting situation], only: %i[show validate_by_team dispute]
+
     before_action :get_invoice, only: %i[show edit update submit dispute reopen validate_by_team pay_in_cash paid_by_member
                                               replace_document unpost link_payment record_bank_payment unsettle declare_settlement]
     before_action :get_form_collections, only: %i[new create edit update]

@@ -4,9 +4,23 @@ require "rails_helper"
 # rôles s'additionnent.
 RSpec.describe Access do
   describe ".level" do
-    it "donne tout au Sourcier, y compris ce qui n'est attribué à aucun rôle" do
+    it "donne tout au Sourcier, y compris ce qui n'est attribué à aucun rôle, sauf la Comptabilité" do
       expect(described_class.level(%w[sourcier], :full)).to eq(:write)
-      expect(described_class.level(%w[sourcier], :accounting)).to eq(:write)
+      expect(described_class.level(%w[sourcier], :accounting)).to be_nil
+      expect(described_class.level(%w[sourcier], :situation)).to eq(:write)
+    end
+
+    # Michael, 2026-11-12 : la Comptabilité aux seuls Administratifs, la
+    # Situation financière aux seuls Sourciers. Les deux rôles se cumulent.
+    it "réserve la Comptabilité à l'Administratif et la Situation financière au Sourcier" do
+      (Access::ROLE_NAMES - %w[administratif]).each do |role|
+        expect(described_class.level([role], :accounting)).to be_nil
+      end
+      (Access::ROLE_NAMES - %w[sourcier]).each do |role|
+        expect(described_class.level([role], :situation)).to be_nil
+      end
+      expect(described_class.level(%w[sourcier administratif], :accounting)).to eq(:write)
+      expect(described_class.level(%w[sourcier administratif], :situation)).to eq(:write)
     end
 
     it "ouvre le calendrier et la carte en lecture seule au Kid, et rien d'autre" do
@@ -24,6 +38,7 @@ RSpec.describe Access do
     it "ouvre comptes et comptabilité à l'Administratif" do
       expect(described_class.level(%w[administratif], :accounting)).to eq(:write)
       expect(described_class.level(%w[administratif], :accounts)).to eq(:write)
+      expect(described_class.level(%w[administratif], :situation)).to be_nil
       expect(described_class.level(%w[administratif], :map)).to be_nil
     end
 

@@ -65,4 +65,4 @@
 
   .flex.items-center.gap-3
     = f.submit "Enregistrer la note", class: "inline-flex items-center rounded-md border border-transparent bg-4s-main px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
-    = link_to "Annuler", (report.persisted? ? finance_expense_report_path(report) : finance_expense_reports_path), class: "text-sm text-gray-500 hover:text-gray-700"
+    = link_to "Annuler", (report.persisted? ? finance_expense_report_path(report) : (section_readable?(:accounting) ? finance_expense_reports_path : dashboard_path)), class: "text-sm text-gray-500 hover:text-gray-700"

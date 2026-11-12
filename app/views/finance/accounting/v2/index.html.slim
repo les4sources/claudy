@@ -1,118 +1,63 @@
-/ COMPTABILITÉ, la page du collectif des administrateurs (Michael,
-  2026-10-30) : lisible par n'importe quel administrateur de l'une des
-  structures, comptable ou pas. Les structures côte à côte, une colonne
-  chacune, et trois horizons : aujourd'hui, les trois prochains mois, plus
-  loin. Puis ce qu'il faut trancher ensemble. `?entity=` zoome sur une seule
-  structure et ouvre le détail. Le travail des comptables est en bas, replié.
-  Tous les chiffres viennent de `Finance::Overview`, qui lit les briques
-  existantes ; la vue n'en calcule aucun.
-- full = @focus.present?
-- urgent = @signals.count { |signal| signal.level == :no }
-.ui-acc.ui-adm(data-overview=(full ? "entity" : "all"))
+/ COMPTABILITÉ, « À faire » (Michael, 2026-11-12) : la page des comptables.
+  La situation de chaque structure est partie dans la Situation financière
+  (`finance/situation`, Sourciers) ; ici, les files dans l'ordre du circuit,
+  ce que la loi demande sous 30 jours, la caisse et les repères.
+.ui-acc
   header.ui-phead
     .ui-phead-t
-      p.ui-over = [@focus&.entity&.name, l(Date.current, format: "%-d %B %Y")].compact.join(" · ")
-      h1.ui-h1 Comptabilité
-      p.ui-adm-lead
-        | Comment va chaque structure, ce qui l’attend, et ce qu’il faut trancher ensemble.
-        - if @signals.any?
-          = " "
-          = link_to "#a-trancher", class: "ui-adm-lead-a", data: { turbo: false } do
-            - if urgent.positive?
-              = "#{urgent} point#{'s' if urgent > 1} à traiter"
-            - else
-              = "#{@signals.size} point#{'s' if @signals.size > 1} à connaître"
-    nav.ui-seg(aria-label="Structure")
-      = link_to "Toutes", finance_accounting_path, class: "ui-seg-i", aria: { current: (full ? nil : "page") }
-      - @overview.entities.each do |health|
-        = link_to health.entity.form_label, finance_accounting_path(entity: health.entity.id), class: "ui-seg-i",
-                  aria: { current: (health == @focus ? "page" : nil) }, title: health.entity.name
+      p.ui-over = l(Date.current, format: "%-d %B %Y")
+      h1.ui-h1 À faire
+      p.ui-adm-lead Les files de travail dans l’ordre du circuit : commence par la première qui n’est pas à jour.
 
   = render "finance/shared/page_guide"
 
-  - cols = { style: "--adm-cols: #{@healths.size}" }
-  section.ui-adm-sec(data-overview-section="today" aria-labelledby="adm-today")
-    .ui-adm-sec-h
-      h2.ui-h2#adm-today Aujourd’hui
-      p Comment va chaque structure ?
-    .ui-adm-cols(*cols)
-      - @healths.each do |health|
-        = render "finance/accounting/v2/health_today", health: health, full: full
+  .ui-adm-work.ui-acc-work
+    = render "finance/accounting/v2/todo", todo: @todo
+    .ui-acc-side
+      / Ce que la loi demande sous 30 jours : l'encart ne crie que s'il y a du retard.
+      - deadlines = @deadlines_overdue + @deadlines_soon
+      section.ui-card(class=("is-warn" if @deadlines_overdue.any?) data-accounting-deadlines="")
+        .ui-card-h
+          h2.ui-h3
+            = ui_icon(:calendar, size: 18)
+            | Échéances légales sous 30 jours
+          = link_to "Tout voir", finance_compliance_deadlines_path, class: "ui-card-link"
+        - if deadlines.any?
+          ul.ui-acc-owed-l
+            - deadlines.first(4).each do |deadline|
+              li
+                = link_to finance_compliance_deadline_path(deadline) do
+                  span
+                    = deadline.display_title
+                    small = deadline.legal_entity&.form_label
+                  - if deadline.overdue?
+                    b.ui-acc-late en retard
+                  - else
+                    b = ui_short_date(deadline.due_on)
+        - else
+          p.ui-card-b.ui-muted.ui-small Rien à déclarer dans les 30 jours.
 
-  section.ui-adm-sec(data-overview-section="soon" aria-labelledby="adm-soon")
-    .ui-adm-sec-h
-      h2.ui-h2#adm-soon Les trois prochains mois
-      p = "Jusqu’au #{l(Date.current + Finance::Treasury::HORIZON_DAYS, format: '%-d %B')} : ce qui va rentrer, sortir, et ce que la loi demande."
-    .ui-adm-cols(*cols)
-      - @healths.each do |health|
-        = render "finance/accounting/v2/health_soon", health: health, full: full
+      - stale_count = @days_since_cash_count.nil? || @days_since_cash_count > 7
+      = link_to (stale_count ? new_finance_cash_count_path : finance_cash_counts_path), class: "ui-card ui-acc-stat#{' is-warn' if stale_count}", data: { cash_count_reminder: "" } do
+        span.ui-acc-stat-l Caisse du bar
+        - if @last_cash_count
+          b = accounting_euros(@last_cash_count.counted_cents)
+          span.ui-acc-stat-s = accounting_counted_ago(@days_since_cash_count)
+        - else
+          b —
+          span.ui-acc-stat-s jamais comptée : compter maintenant
 
-  section.ui-adm-sec(data-overview-section="later" aria-labelledby="adm-later")
-    .ui-adm-sec-h
-      h2.ui-h2#adm-later Plus loin
-      p L’année, le budget, les prêts et ce que vaut chaque structure.
-    .ui-adm-cols(*cols)
-      - @healths.each do |health|
-        = render "finance/accounting/v2/health_later", health: health, full: full
-
-  section.ui-adm-sec#a-trancher(data-overview-section="signals" aria-labelledby="adm-signals")
-    .ui-adm-sec-h
-      h2.ui-h2#adm-signals Ce qu’on doit trancher ensemble
-      p Ce que Claudy repère dans les chiffres, le plus urgent d’abord.
-    - if @signals.any?
-      ol.ui-card.ui-adm-sig
-        - @signals.each do |signal|
-          li(data-signal-level=signal.level)
-            = overview_level(signal)
-            p
-              - unless full
-                b.ui-adm-sig-e = signal.entity.form_label
-              = signal.text
-            - if signal.path
-              = link_to "Voir", signal.path, class: "ui-card-link"
-    - else
-      p.ui-card.ui-card-b.ui-adm-empty Rien de particulier : les chiffres ne signalent aucun point à trancher.
-
-  details.ui-adm-more(data-overview-glossary="")
-    summary
-      span Les mots de cette page
-      = ui_icon(:right, size: 16, css: "ui-adm-more-i")
-    dl.ui-adm-glossary
-      - AccountingOverviewHelper::OVERVIEW_GLOSSARY.each do |word, definition|
-        div
-          dt = word
-          dd = definition
-
-  / Le travail des comptables : les files dans l'ordre, la caisse, les repères.
-    Utile à qui tient les comptes, replié pour qui vient décider.
-  details.ui-adm-more(data-overview-work="")
-    summary
-      span Le travail des comptables
-      small = @todo.items.reject(&:waiting?).count(&:done?).then { |done| "#{done} file#{'s' if done > 1} sur #{@todo.items.reject(&:waiting?).size} à jour" }
-      = ui_icon(:right, size: 16, css: "ui-adm-more-i")
-    .ui-adm-work
-      = render "finance/accounting/v2/todo", todo: @todo
-      .ui-acc-side
-        - stale_count = @days_since_cash_count.nil? || @days_since_cash_count > 7
-        = link_to (stale_count ? new_finance_cash_count_path : finance_cash_counts_path), class: "ui-card ui-acc-stat#{' is-warn' if stale_count}", data: { cash_count_reminder: "" } do
-          span.ui-acc-stat-l Caisse du bar
-          - if @last_cash_count
-            b = accounting_euros(@last_cash_count.counted_cents)
-            span.ui-acc-stat-s = accounting_counted_ago(@days_since_cash_count)
-          - else
-            b —
-            span.ui-acc-stat-s jamais comptée : compter maintenant
-        nav.ui-acc-refs(aria-label="Repères")
-          = link_to finance_general_accounts_path do
-            | Plan comptable
-            span = @accounts_count
-          = link_to finance_ledger_path do
-            | Grand livre
-            span = @entries_count
-          = link_to finance_fiscal_years_path do
-            | Exercices ouverts
-            span = @open_years.size
-          = link_to "Comptes annuels", finance_annual_accounts_path
-          = link_to "Budget", finance_budget_path
-          = link_to "Dettes et litiges", finance_liabilities_path
-          = link_to "Guide de la compta", finance_guide_path
+      nav.ui-acc-refs(aria-label="Repères")
+        = link_to finance_general_accounts_path do
+          | Plan comptable
+          span = @accounts_count
+        = link_to finance_ledger_path do
+          | Grand livre
+          span = @entries_count
+        = link_to finance_fiscal_years_path do
+          | Exercices ouverts
+          span = @open_years.size
+        = link_to "Comptes annuels", finance_annual_accounts_path
+        = link_to "Budget", finance_budget_path
+        = link_to "Dettes et litiges", finance_liabilities_path
+        = link_to "Guide de la compta", finance_guide_path

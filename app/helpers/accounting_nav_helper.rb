@@ -18,7 +18,9 @@
 module AccountingNavHelper
   def accounting_nav_direct
     [
-      ["Vue d'ensemble", finance_accounting_path,
+      # Nouvelle interface (2026-11-12) : la porte de la Comptabilité est « À
+      # faire » ; la vue d'ensemble est partie dans la Situation financière.
+      [(respond_to?(:new_interface?) && new_interface? ? "À faire" : "Vue d'ensemble"), finance_accounting_path,
        %w[finance/accounting finance/treasury finance/general_accounts finance/fiscal_years]],
       ["Trésorerie", finance_cash_entries_path, %w[finance/cash_entries finance/cash_reallocations]],
       ["Arrêté du mois", finance_monthly_close_path, %w[finance/monthly_close]],
@@ -82,6 +84,7 @@ module AccountingNavHelper
   # forme [libellé, chemin, contrôleurs] reste celle que la spec recense.
   NAV_HINTS = {
     "Vue d'ensemble" => "Peut-on dépenser, et ce qui attend",
+    "À faire" => "Les files de travail, dans l'ordre du circuit",
     "Trésorerie" => "Tous les mouvements d'argent, et la file À affecter",
     "Arrêté du mois" => "Vérifier puis fermer le mois",
     "Échéancier" => "Les dates légales à tenir",

@@ -9,7 +9,7 @@ article.ui-card.ui-adm-ent(data-entity-soon=e.id)
   header.ui-adm-ent-h
     h3.ui-adm-ent-n = e.name
     - if health.tracked? && e.form == "foundation"
-      = link_to "Trésorerie", finance_treasury_path, class: "ui-card-link"
+      = situation_link_to "Trésorerie", finance_treasury_path, class: "ui-card-link", nav: true
   - if health.tracked? && v.verdict != "inconnu"
     .ui-adm-soon-b
       .ui-acc-chart.ui-adm-chart
@@ -19,7 +19,7 @@ article.ui-card.ui-adm-ent(data-entity-soon=e.id)
           dt Va rentrer
           dd
             - if health.incoming_cents.positive?
-              = link_to "+#{accounting_euros(health.incoming_cents)}", finance_accounting_verdict_detail_path(e, "incoming"), data: { turbo_frame: "modal" }, class: "ui-adm-amount"
+              = link_to "+#{accounting_euros(health.incoming_cents)}", finance_situation_verdict_detail_path(e, "incoming"), data: { turbo_frame: "modal" }, class: "ui-adm-amount"
             - else
               b = accounting_euros(0)
             small soldes des séjours confirmés
@@ -27,7 +27,7 @@ article.ui-card.ui-adm-ent(data-entity-soon=e.id)
           dt Va sortir
           dd
             - if health.outgoing_cents.positive?
-              = link_to "−#{accounting_euros(health.outgoing_cents)}", finance_accounting_verdict_detail_path(e, "outgoing"), data: { turbo_frame: "modal" }, class: "ui-adm-amount"
+              = link_to "−#{accounting_euros(health.outgoing_cents)}", finance_situation_verdict_detail_path(e, "outgoing"), data: { turbo_frame: "modal" }, class: "ui-adm-amount"
             - else
               b = accounting_euros(0)
             small factures, charges fixes, dettes
@@ -47,16 +47,16 @@ article.ui-card.ui-adm-ent(data-entity-soon=e.id)
 
   .ui-adm-dl-h
     h4 Obligations légales
-    = link_to "Échéancier", finance_compliance_deadlines_path, class: "ui-card-link"
+    = situation_link_to "Échéancier", finance_compliance_deadlines_path, class: "ui-card-link", nav: true
   - if deadlines.any?
     ul.ui-acc-dl.ui-adm-dl
       - deadlines.each do |deadline|
         li(class=("is-late" if deadline.overdue?))
           b.ui-acc-dl-d = l(deadline.due_on, format: "%-d %b")
           .ui-acc-dl-m
-            = link_to deadline.display_title, finance_compliance_deadline_path(deadline)
+            = situation_link_to deadline.display_title, finance_compliance_deadline_path(deadline)
           .ui-acc-dl-s = accounting_deadline_side(deadline)
     - if health.deadlines.size > deadlines.size
-      = link_to "et #{health.deadlines.size - deadlines.size} autre#{'s' if health.deadlines.size - deadlines.size > 1}", finance_accounting_path(entity: e.id), class: "ui-card-link ui-adm-zoom"
+      = link_to "et #{health.deadlines.size - deadlines.size} autre#{'s' if health.deadlines.size - deadlines.size > 1}", finance_situation_path(entity: e.id), class: "ui-card-link ui-adm-zoom"
   - else
     p.ui-adm-empty Rien à tenir dans les trois mois.

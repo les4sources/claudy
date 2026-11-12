@@ -36,4 +36,4 @@
           td.py-2.px-3.font-medium.text-gray-700(colspan="3") Total
           td.py-2.px-3.text-right.font-semibold.tabular-nums.text-gray-900= euros.(groups.sum { |_, rows| rows.sum(&:amount_cents) })
   p.mt-4.text-xs.text-gray-500
-    = link_to "Voir la trésorerie en détail", finance_treasury_path, data: { turbo_frame: "_top" }, class: "text-blue-600 hover:text-blue-800"
+    = situation_link_to "Voir la trésorerie en détail", finance_treasury_path, nav: true, data: { turbo_frame: "_top" }, class: "text-blue-600 hover:text-blue-800"

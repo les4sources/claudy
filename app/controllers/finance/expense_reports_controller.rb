@@ -14,6 +14,12 @@ module Finance
   # point d'entrée de toute action Rails (`AbstractController#process`), et
   # l'écraser casserait le contrôleur entier.
   class ExpenseReportsController < Finance::AccountingBaseController
+    # Rentrer une note est l'affaire de chaque membre (Michael, 2026-11-12) :
+    # la Comptabilité est aux Administratifs, mais la saisie reste ouverte à
+    # qui écrit dans les Comptes (Sourciers compris). Le traitement, lui, reste
+    # en Comptabilité.
+    access_section :accounts, only: %i[new create]
+
     before_action :get_report, only: %i[show edit update destroy start_processing reject pay_in_cash unprocess]
 
     breadcrumb "Notes de frais", :finance_expense_reports_path, match: :exact
@@ -53,8 +59,11 @@ module Finance
       @report.created_by = current_user
 
       if @report.save
-        redirect_to finance_expense_report_path(@report),
-                    notice: "Note enregistrée — #{@report.expense_lines.size} ligne(s), #{helpers.expense_amount(@report.total_cents)}."
+        notice = "Note enregistrée — #{@report.expense_lines.size} ligne(s), #{helpers.expense_amount(@report.total_cents)}."
+        # Sans la Comptabilité, la fiche de la note est fermée : retour au
+        # tableau de bord du membre, d'où vient le bouton.
+        target = current_user.can_read?(:accounting) ? finance_expense_report_path(@report) : dashboard_path(human_id: @report.human_id)
+        redirect_to target, notice: notice
       else
         load_form_collections
         render :new, status: :unprocessable_entity
@@ -178,6 +187,13 @@ module Finance
         total_cents: by_report.values.sum,
         to_pay_cents: scope.select(&:processing?).sum { |r| by_report[r.id].to_i }
       }
+    end
+
+    # Hors Comptabilité, la saisie s'affiche sans la barre de la Comptabilité.
+    def set_presenters
+      return super if current_user.nil? || current_user.can_read?(:accounting)
+
+      @menu_presenter = Components::MenuPresenter.new(active_primary: "dashboard")
     end
 
     def load_form_collections

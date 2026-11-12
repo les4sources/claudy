@@ -11,10 +11,10 @@
 # (veilleur, ligne de garde…), sans rapport avec ce qu'un compte peut ouvrir.
 module Access
   ROLES = {
-    "sourcier" => { label: "Sourcier", description: "Accès complet" },
+    "sourcier" => { label: "Sourcier", description: "Tout, sauf la Comptabilité ; seul à lire la Situation financière" },
     "communication" => { label: "Communication", description: "Événements et activités, calendrier en lecture" },
     "kid" => { label: "Kid", description: "Calendrier et carte, en lecture seule" },
-    "administratif" => { label: "Administratif", description: "Comptes, comptabilité et documents, calendrier en lecture" },
+    "administratif" => { label: "Administratif", description: "Seul à ouvrir la Comptabilité ; Comptes et documents, calendrier en lecture" },
     # Michael, 2026-10-13 : n'ouvrait rien ; le Guide (2026-10-19) est sa
     # première section, en attendant la sienne.
     "anier" => { label: "Ânier·ère", description: "Le Guide, en lecture (section à venir)" },
@@ -34,6 +34,9 @@ module Access
     events: "Événements et activités",
     accounts: "Comptes",
     accounting: "Comptabilité",
+    # Ce que les administrateurs lisent pour décider (Michael, 2026-11-12) :
+    # comment va chaque structure, ce qui l'attend, ce qu'il faut trancher.
+    situation: "Situation financière",
     map: "Carte du domaine",
     # Le Guide des 4 Sources (Michael, 2026-10-19) : lu par TOUS les rôles,
     # écrit par les Sourciers. Donner `:write` à un rôle lui ouvre l'admin.
@@ -55,6 +58,16 @@ module Access
 
   LEVELS = { read: 1, write: 2 }.freeze
 
+  # Les sections RÉSERVÉES (Michael, 2026-11-12) : elles n'appartiennent qu'aux
+  # rôles listés, Sourcier compris. La Comptabilité est l'outil de qui tient
+  # les comptes (Administratif) ; la Situation financière, la lecture de qui
+  # décide (Sourcier). Un Sourcier qui tient aussi les comptes porte les deux
+  # rôles.
+  EXCLUSIVE = {
+    accounting: %w[administratif],
+    situation: %w[sourcier]
+  }.freeze
+
   # Le niveau d'accès que des rôles donnent sur une section : `:write`, `:read`
   # ou `nil`. `:everyone` s'ouvre à tout compte dont un rôle ouvre au moins une
   # section : un rôle qui n'ouvrirait rien ne donnerait pas non plus l'espace
@@ -62,6 +75,9 @@ module Access
   def self.level(roles, section)
     roles = Array(roles).map(&:to_s) & ROLE_NAMES
     return nil if roles.empty?
+    if (allowed = EXCLUSIVE[section.to_sym])
+      return (roles & allowed).any? ? :write : nil
+    end
     return :write if roles.include?("sourcier")
 
     grants = roles.map { |role| GRANTS.fetch(role, {}) }

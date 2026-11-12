@@ -32,8 +32,9 @@ module CommandPaletteHelper
       actions << { label: "Nouveau séjour", path: new_stay_path, icon: :plus }
       actions << { label: "Nouvelle demande en cuisine", path: new_kitchen_order_path, icon: :chef }
     end
-    if section_writable?(:accounting)
-      actions << { label: "Compter la caisse", path: new_finance_cash_count_path, icon: :wallet }
+    actions << { label: "Compter la caisse", path: new_finance_cash_count_path, icon: :wallet } if section_writable?(:accounting)
+    # La saisie d'une note est ouverte aux Comptes (2026-11-12), pas seulement à la Comptabilité.
+    if section_writable?(:accounts)
       actions << { label: "Nouvelle note de frais", path: new_finance_expense_report_path(kind: "expenses", human_id: current_user.linked_human&.id), icon: :receipt }
     end
     return actions if query.blank?

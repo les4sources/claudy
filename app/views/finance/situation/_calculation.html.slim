@@ -4,7 +4,7 @@
   fenêtre.
 - detail = lambda do |part, cents|
   - next accounting_euros(cents) if cents.zero?
-  - link_to accounting_euros(cents), finance_accounting_verdict_detail_path(v.entity, part), data: { turbo_frame: "modal", spending_detail: part }
+  - link_to accounting_euros(cents), finance_situation_verdict_detail_path(v.entity, part), data: { turbo_frame: "modal", spending_detail: part }
 - unless v.verdict == "inconnu"
   dl.ui-acc-calc-dl
     div

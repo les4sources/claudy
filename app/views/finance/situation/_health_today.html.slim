@@ -60,6 +60,6 @@ article.ui-card.ui-adm-ent(data-entity-today=e.id data-status=health.status)
       summary Comment ce verdict est calculé
       .ui-acc-hero.ui-adm-calc-b
         .ui-acc-calc-b
-          = render "finance/accounting/v2/calculation", v: v
+          = render "finance/situation/calculation", v: v
   - elsif !full
-    = link_to "Voir #{accounting_entity_short(e)} en détail", finance_accounting_path(entity: e.id), class: "ui-card-link ui-adm-zoom"
+    = link_to "Voir #{accounting_entity_short(e)} en détail", finance_situation_path(entity: e.id), class: "ui-card-link ui-adm-zoom"

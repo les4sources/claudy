@@ -197,18 +197,18 @@ module Finance
       if verdict.verdict == "non" && verdict.margin_cents.negative?
         list << Signal.new(:no, health.entity, "#{name} : ce qui est en banque est déjà dû. Il manque " \
                                                "#{euros(-verdict.margin_cents)} pour couvrir les dettes, les prêts et les trois mois qui viennent.",
-                           routes.finance_accounting_path(entity: health.entity.id))
+                           routes.finance_situation_path(entity: health.entity.id))
       end
       low = health.lowest_point
       if low && low.balance_cents.negative?
         list << Signal.new(:no, health.entity, "La banque de #{name} passe sous zéro le " \
                                                "#{I18n.l(low.date, format: '%-d %B')} (#{euros(low.balance_cents)}) si rien ne change.",
-                           routes.finance_accounting_path(entity: health.entity.id))
+                           routes.finance_situation_path(entity: health.entity.id))
       end
       if verdict.verdict == "prudence"
         list << Signal.new(:warn, health.entity, "#{name} : il reste #{euros(verdict.margin_cents)} une fois tout payé, " \
                                                  "moins qu'un mois de charges fixes (#{euros(verdict.reserve_cents)}). " \
-                                                 "Seulement l'indispensable.", routes.finance_accounting_path(entity: health.entity.id))
+                                                 "Seulement l'indispensable.", routes.finance_situation_path(entity: health.entity.id))
       end
 
       list.concat(deadline_signals(health, routes))
@@ -226,7 +226,7 @@ module Finance
         lenders = health.lenders.reject(&:long_term?).size
         list << Signal.new(:warn, health.entity, "#{name} doit encore #{euros(health.short_term_loans_cents)} à " \
                                                  "#{lenders} prêteur#{'s' if lenders > 1} à court terme : de l'argent en banque qui n'est pas à elle.",
-                           routes.finance_accounting_path(entity: health.entity.id))
+                           routes.finance_situation_path(entity: health.entity.id))
       end
       if health.pending_count.positive?
         list << Signal.new(:info, health.entity, "#{health.pending_count} mouvement#{'s' if health.pending_count > 1} de banque " \

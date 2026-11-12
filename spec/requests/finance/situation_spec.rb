@@ -1,11 +1,11 @@
 require "rails_helper"
 require Rails.root.join("spec/support/finance_builders")
 
-# Comptabilité, nouvelle interface : la page du collectif des administrateurs
-# (Michael, 2026-10-30). Les structures côte à côte, trois horizons, puis ce
-# qu'il faut trancher ensemble ; `?entity=` zoome sur une seule. L'ancienne
-# interface est inchangée.
-RSpec.describe "Comptabilité — nouvelle interface", type: :request do
+# Situation financière (Michael, 2026-11-12, sortie de la Comptabilité) : la
+# page du collectif des administrateurs. Les structures côte à côte, trois
+# horizons, puis ce qu'il faut trancher ensemble ; `?entity=` zoome sur une
+# seule. Réservée aux Sourciers, nouvelle interface seulement.
+RSpec.describe "Situation financière", type: :request do
   include FinanceBuilders
   include ActiveSupport::Testing::TimeHelpers
 
@@ -37,7 +37,7 @@ RSpec.describe "Comptabilité — nouvelle interface", type: :request do
     post_simple_entry(entity: fondation, debit_account: bank, credit_account: ventes, amount_cents: 500_000)
     post_simple_entry(entity: fondation, debit_account: achats, credit_account: bank, amount_cents: 700_000)
 
-    get finance_accounting_path
+    get finance_situation_path
 
     expect(response).to have_http_status(:ok)
     expect(page.at_css("[data-overview]")["data-overview"]).to eq("all")
@@ -68,11 +68,22 @@ RSpec.describe "Comptabilité — nouvelle interface", type: :request do
     expect(signals).to include(a_string_including("Aucun compte bancaire de Écolieu"))
     expect(signals).to include(a_string_including("Pas encore de budget 2027"))
 
-    # Le travail des comptables reste là, replié ; l'aide de l'écran, une fois.
-    expect(page.at_css("details[data-overview-work]:not([open]) [data-accounting-todo]")).to be_present
-    expect(page.at_css("[data-cash-count-reminder]").text).to include("jamais comptée")
+    # Le travail des comptables n'est plus là : il est en Comptabilité.
+    expect(page.at_css("[data-overview-work]")).to be_nil
+    expect(page.at_css("[data-accounting-todo]")).to be_nil
     expect(page.at_css("[data-overview-glossary]").text).to include("Ce qu’elle vaut", "Mouvement pas classé")
     expect(page.css("[data-page-guide]").size).to eq(1)
+    expect(page.at_css("h1").text).to eq("Situation financière")
+    expect(page.at_css("[data-situation-reliability]").text).to include("Aucun mois arrêté")
+  end
+
+  it "dit jusqu'où les chiffres sont fiables : le dernier mois arrêté, ce qui reste à classer" do
+    anchor!(build_cash_account(fondation, bank, name: "Triodos"), 500_000)
+    MonthClosing.create!(period_month: Date.new(2026, 9, 1), closed_at: Time.current, closed_by: "test")
+
+    get finance_situation_path
+
+    expect(page.at_css("[data-situation-reliability]").text.squish).to include("Chiffres arrêtés au 30 septembre 2026")
   end
 
   it "met les retards légaux en tête de ce qu'il faut trancher" do
@@ -82,7 +93,7 @@ RSpec.describe "Comptabilité — nouvelle interface", type: :request do
     ComplianceDeadline.create!(compliance_obligation: tva, period_start: Date.current.beginning_of_year,
                                due_on: Date.current - 5)
 
-    get finance_accounting_path
+    get finance_situation_path
 
     first = page.at_css("[data-overview-section='signals'] li")
     expect(first["data-signal-level"]).to eq("no")
@@ -100,10 +111,10 @@ RSpec.describe "Comptabilité — nouvelle interface", type: :request do
     ComplianceDeadline.create!(compliance_obligation: assurance, period_start: Date.current.beginning_of_year,
                                due_on: Date.current + 10)
 
-    get finance_accounting_path
+    get finance_situation_path
     expect(page.at_css("[data-entity-soon='#{fondation.id}']").text).to include("Assurance incendie")
 
-    get finance_accounting_path(entity: srl.id)
+    get finance_situation_path(entity: srl.id)
 
     expect(page.at_css("[data-overview]")["data-overview"]).to eq("entity")
     expect(page.at_css(".ui-over").text).to include("Marco & Vespucci SRL")
@@ -114,12 +125,45 @@ RSpec.describe "Comptabilité — nouvelle interface", type: :request do
     expect(page.at_css("[data-entity-soon]").text).to include("Rien à tenir dans les trois mois")
   end
 
-  it "laisse l'ancienne page à l'ancienne interface" do
+  it "invite l'ancienne interface à basculer, sans rien calculer" do
     user.update!(new_interface: false)
 
-    get finance_accounting_path
+    get finance_situation_path
 
+    expect(response).to have_http_status(:ok)
     expect(page.at_css(".ui-acc")).to be_nil
-    expect(response.body).to include("Gérer les exercices")
+    expect(response.body).to include("Passer à la nouvelle interface")
+  end
+
+  describe "accès" do
+    it "est fermée à l'Administratif qui n'est pas Sourcier" do
+      user.update!(access_roles: %w[administratif])
+
+      get finance_situation_path
+
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to eq(AccessControl::NO_ACCESS)
+    end
+
+    it "mène le Sourcier qui ouvre la Comptabilité vers la Situation, en gardant la structure" do
+      user.update!(access_roles: %w[sourcier])
+
+      get finance_accounting_path(entity: fondation.id)
+
+      expect(response).to redirect_to(finance_situation_path(entity: fondation.id))
+    end
+
+    it "ne montre au Sourcier que des liens qu'il peut ouvrir" do
+      user.update!(access_roles: %w[sourcier])
+      anchor!(build_cash_account(fondation, bank, name: "Triodos"), 500_000)
+
+      get finance_situation_path(entity: fondation.id)
+
+      expect(response).to have_http_status(:ok)
+      hrefs = page.css("main a[href]").map { |a| a["href"] }.reject { |href| href.start_with?("#") }
+      forbidden = hrefs.select { |href| href.start_with?("/finance/") && !href.start_with?("/finance/situation") }
+      expect(forbidden).to eq([])
+      expect(page.css(".ui-v2-nav a, nav a").map(&:text).join(" ")).not_to include("Comptabilité")
+    end
   end
 end

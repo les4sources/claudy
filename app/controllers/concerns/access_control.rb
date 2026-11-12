@@ -4,6 +4,7 @@
 #
 #   access_section :events
 #   access_section :calendar, only: %i[calendar day]
+#   access_section %i[situation accounting], only: :show  # l'une OU l'autre
 #
 # Sans déclaration, la section est `:full` : réservée aux Sourciers. Un rôle
 # en lecture seule n'a que les requêtes GET ; toute écriture lui est refusée.
@@ -26,7 +27,8 @@ module AccessControl
   class_methods do
     def access_section(section, only: nil)
       keys = only ? Array(only).map(&:to_s) : ["*"]
-      self.access_sections = access_sections.merge(keys.index_with { section.to_sym })
+      value = section.is_a?(Array) ? section.map(&:to_sym) : section.to_sym
+      self.access_sections = access_sections.merge(keys.index_with { value })
     end
   end
 
@@ -50,7 +52,10 @@ module AccessControl
   def authorize_access!
     return if current_user.nil? || current_user.restricted_to_experiences?
 
-    level = current_user.access_level(current_access_section)
+    # Un écran partagé entre deux sections (`access_section [a, b]`) s'ouvre au
+    # meilleur des deux niveaux.
+    levels = Array(current_access_section).map { |section| current_user.access_level(section) }
+    level = levels.include?(:write) ? :write : levels.compact.first
     return if level == :write
     return if level == :read && (request.get? || request.head?)
 
@@ -64,6 +69,7 @@ module AccessControl
     return experiences_path if section_readable?(:events)
     return finance_accounts_path if section_readable?(:accounts)
     return finance_accounting_path if section_readable?(:accounting)
+    return finance_situation_path if section_readable?(:situation)
     return map_path if section_readable?(:map)
     return guide_root_path if section_readable?(:guide)
     return dashboard_path if section_readable?(:everyone)

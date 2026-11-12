@@ -7,10 +7,11 @@
   AUCUN MONTANT sur cette page : les prix sont l'affaire du Pôle Accueil.
 / Rentrer une note de frais ou de mission depuis son propre tableau de bord
   (Michael 2026-10-17). Le bénéficiaire est le membre affiché, prérempli dans le
-  formulaire. Les boutons ne s'affichent qu'à qui peut écrire en Comptabilité :
-  le formulaire vit là, et il refuserait les autres.
+  formulaire. Les boutons ne s'affichent qu'à qui peut écrire dans les Comptes
+  (Sourciers, Administratifs) : depuis le 2026-11-12, la saisie d'une note est
+  ouverte à cette section, le reste des notes de frais restant en Comptabilité.
 - note_links = []
-- if section_writable?(:accounting)
+- if section_writable?(:accounts)
   - note_links << link_to("➕ Note de frais",
                           new_finance_expense_report_path(kind: "expenses", human_id: @human&.id),
                           class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")
