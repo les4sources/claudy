@@ -840,8 +840,13 @@ a.ui-rib-ok:is(.ui-rib-k-activity, .ui-rib-k-meal):hover { color: var(--ui-ink);
    Le <dialog> de la fiche, où qu'il soit (agenda, Séjours, client, Facturation),
    devient un panneau qui glisse depuis la droite, pleine hauteur ; sur
    téléphone, il prend tout l'écran. La fiche défile, son pied reste en bas. */
+/* `margin: 0 !important` : sur Facturation, le <dialog> est un enfant du
+   `.space-y-8` de la page, dont la règle (`.space-y-8 > :not([hidden]) ~
+   :not([hidden])`, plus forte que celle-ci) lui ajoutait 32 px en haut : le
+   panneau descendait d'autant et son pied sortait de l'écran (Michael
+   2026-11-12). Le panneau colle aux bords, quelle que soit la page. */
 body.ui-v2 dialog[data-stay-details-target="dialog"] {
-  position: fixed; inset: 0 0 0 auto; margin: 0; width: min(640px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh;
+  position: fixed; inset: 0 0 0 auto; margin: 0 !important; width: min(640px, 100vw); max-width: 100vw; height: 100dvh; max-height: 100dvh;
   border-radius: 0; border: 0; padding: 0; overflow-y: auto; overscroll-behavior: contain;
   background: #fff; color: var(--ui-ink); box-shadow: -18px 0 40px -18px rgba(24, 47, 50, .45);
 }

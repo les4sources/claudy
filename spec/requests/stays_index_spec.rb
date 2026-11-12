@@ -132,7 +132,7 @@ RSpec.describe "Index Séjours (/stays)", type: :request do
       get stays_path(status: "all")
 
       expect(response.body).to include(">Facturation</th>")
-      expect(response.body).to include(">À fournir</span>")
+      expect(response.body).to include(">Facture à fournir</span>")
       expect(response.body).to include(">Facturée</span>")
       # Facture non requise : rien dans la cellule (Michael, 2026-10-19).
       expect(response.body).not_to include("Non requise")
