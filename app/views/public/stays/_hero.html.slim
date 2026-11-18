@@ -61,8 +61,9 @@ section.funnel-card.p-5.md:p-7(data-stay-hero="true")
      pages de réservation et s'était perdue avec la page séjour. Le numéro est
      celui de la veille, pas celui du Pôle Accueil (bloc « Nous joindre ») :
      c'est le veilleur ou la veilleuse du jour qui accueille. Seulement pour un
-     séjour réservé (confirmé ou pré-confirmé) dont le départ n'est pas passé.
-  - if @stay.status.in?(Stay::BLOCKING_STATUSES) && (@stay.departure_date.nil? || @stay.departure_date >= Date.current)
+     séjour confirmé dont le départ n'est pas passé : pas sur un séjour
+     seulement pré-confirmé (Michael, 2026-11-18).
+  - if @stay.status == "confirmed" && (@stay.departure_date.nil? || @stay.departure_date >= Date.current)
     .mt-4.flex.items-start.gap-3.rounded-xl.border.bg-forest-tint.p-4.md:p-5(class="border-forest/30" data-stay-arrival-call="true")
       span.text-forest.flex-shrink-0.mt-0.5
         = funnel_icon :phone, css_class: "w-6 h-6"

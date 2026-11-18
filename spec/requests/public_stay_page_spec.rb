@@ -216,14 +216,9 @@ RSpec.describe "Public /sejour/:token — page client enrichie", type: :request 
       expect(block).to include("+32 455 13 61 42")
     end
 
-    it "la montre aussi sur un séjour pré-confirmé" do
-      get "/sejour/#{build_stay(status: "pre_confirmed").token}"
-
-      expect(response.body).to include('data-stay-arrival-call="true"')
-    end
-
-    it "ne la montre ni sur une demande en attente, ni sur un séjour annulé ou passé" do
+    it "ne la montre ni sur une demande en attente ou pré-confirmée, ni sur un séjour annulé ou passé" do
       [build_stay(status: "pending"),
+       build_stay(status: "pre_confirmed"),
        build_stay(status: "canceled"),
        build_stay(arrival: Date.today - 5, departure: Date.today - 2)].each do |stay|
         get "/sejour/#{stay.token}"
