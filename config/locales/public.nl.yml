@@ -23,6 +23,8 @@ nl:
         canceled_intro: "Dit verblijf werd geannuleerd. Is dit een vergissing? Schrijf ons: we bekijken de beschikbaarheid en antwoorden u snel."
         arrival: "Aankomst"
         departure: "Vertrek"
+        arrival_call_heading: "Bij uw aankomst"
+        arrival_call_html: "Bel bij aankomst ter plaatse de Wachter van de dag op %{phone}; die komt u verwelkomen en laat u het domein ontdekken."
         occupants_heading: "U komt met"
         occupants_line: "%{adults} volwassene(n) · %{children} kind(eren)"
         notes_heading: "Een woordje van ons"

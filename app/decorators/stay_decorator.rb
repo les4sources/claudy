@@ -1,4 +1,10 @@
 class StayDecorator < ApplicationDecorator
+  # Numéro à appeler en arrivant sur place : la veille du jour, qui accueille et
+  # fait visiter (Michael, 2026-11-18). Distinct du numéro du Pôle Accueil, qui
+  # répond aux questions avant le séjour (bloc « Nous joindre »).
+  ARRIVAL_CALL_PHONE = "+32455136142".freeze
+  ARRIVAL_CALL_PHONE_LABEL = "+32 455 13 61 42".freeze
+
   delegate_all
 
   # Collection paginée (index Séjours) : préserve les méthodes will_paginate sur

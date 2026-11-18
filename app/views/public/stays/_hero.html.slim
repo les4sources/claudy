@@ -57,6 +57,22 @@ section.funnel-card.p-5.md:p-7(data-stay-hero="true")
                 strong = "#{t('public.stays.show.departure')} : "
                 = @stay.departure_time_label
 
+  /  Consigne d'arrivée (Michael, 2026-11-18) : elle figurait sur les anciennes
+     pages de réservation et s'était perdue avec la page séjour. Le numéro est
+     celui de la veille, pas celui du Pôle Accueil (bloc « Nous joindre ») :
+     c'est le veilleur ou la veilleuse du jour qui accueille. Seulement pour un
+     séjour confirmé dont le départ n'est pas passé : pas sur un séjour
+     seulement pré-confirmé (Michael, 2026-11-18).
+  - if @stay.status == "confirmed" && (@stay.departure_date.nil? || @stay.departure_date >= Date.current)
+    .mt-4.flex.items-start.gap-3.rounded-xl.border.bg-forest-tint.p-4.md:p-5(class="border-forest/30" data-stay-arrival-call="true")
+      span.text-forest.flex-shrink-0.mt-0.5
+        = funnel_icon :phone, css_class: "w-6 h-6"
+      div.min-w-0
+        p.text-sm.font-semibold.text-ink = t("public.stays.show.arrival_call_heading")
+        p.text-base.text-ink
+          == t("public.stays.show.arrival_call_html",
+               phone: link_to(StayDecorator::ARRIVAL_CALL_PHONE_LABEL, "tel:#{StayDecorator::ARRIVAL_CALL_PHONE}", class: "font-semibold underline underline-offset-2"))
+
   dl.mt-5.grid.grid-cols-1.gap-x-6.gap-y-4.sm:grid-cols-2
     .sm:col-span-1
       dt.text-sm.font-semibold(class="text-moss") = t("public.stays.show.contact_heading")

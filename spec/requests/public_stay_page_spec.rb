@@ -192,12 +192,39 @@ RSpec.describe "Public /sejour/:token — page client enrichie", type: :request 
     expect(contact).to include("+3281261882")
   end
 
-  # Michael, 2026-10-19 : le numéro à donner aux clients est celui du Pôle
-  # Accueil, pas l'ancien +32 455 13 61 42.
+  # Michael, 2026-10-19 : le numéro à donner aux clients pour leurs questions
+  # est celui du Pôle Accueil, pas le +32 455 13 61 42 (qui est celui de la
+  # veille, réservé à l'arrivée sur place).
   it "donne le numéro du Pôle Accueil pour les questions" do
     get "/sejour/#{build_stay.token}"
 
-    expect(response.body).to include('href="tel:+32490467710"')
-    expect(response.body).not_to include("455136142")
+    contact = response.body[/Nous joindre.*?<\/section>/m]
+    expect(contact).to include('href="tel:+32490467710"')
+    expect(contact).not_to include("455136142")
+  end
+
+  # Michael, 2026-11-18 : la consigne d'arrivée des anciennes pages de
+  # réservation, perdue avec la page séjour.
+  describe "consigne d'arrivée" do
+    it "demande d'appeler la veille du jour en arrivant" do
+      get "/sejour/#{build_stay.token}"
+
+      block = response.body[/data-stay-arrival-call="true".*?<\/p>\s*<\/div>/m]
+      expect(block).to be_present
+      expect(block).to include("veilleur·se du jour")
+      expect(block).to include('href="tel:+32455136142"')
+      expect(block).to include("+32 455 13 61 42")
+    end
+
+    it "ne la montre ni sur une demande en attente ou pré-confirmée, ni sur un séjour annulé ou passé" do
+      [build_stay(status: "pending"),
+       build_stay(status: "pre_confirmed"),
+       build_stay(status: "canceled"),
+       build_stay(arrival: Date.today - 5, departure: Date.today - 2)].each do |stay|
+        get "/sejour/#{stay.token}"
+
+        expect(response.body).not_to include('data-stay-arrival-call="true"')
+      end
+    end
   end
 end
