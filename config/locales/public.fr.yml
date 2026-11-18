@@ -19,6 +19,8 @@ fr:
         canceled_intro: "Ce séjour a été annulé. S'il s'agit d'une erreur, écrivez-nous : nous vérifions les disponibilités et vous répondons rapidement."
         arrival: "Arrivée"
         departure: "Départ"
+        arrival_call_heading: "À votre arrivée"
+        arrival_call_html: "En arrivant sur place, appelez la ou le veilleur·se du jour au %{phone}, qui viendra vous accueillir et vous fera découvrir les lieux."
         occupants_heading: "Vous serez"
         occupants_line: "%{adults} adulte(s) · %{children} enfant(s)"
         notes_heading: "Un mot de notre part"

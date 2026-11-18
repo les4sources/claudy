@@ -23,6 +23,8 @@ en:
         canceled_intro: "This stay has been cancelled. If this is a mistake, write to us: we will check availability and get back to you quickly."
         arrival: "Arrival"
         departure: "Departure"
+        arrival_call_heading: "When you arrive"
+        arrival_call_html: "When you arrive on site, call the day's Watchperson on %{phone}, who will come and welcome you and show you around."
         occupants_heading: "Your party"
         occupants_line: "%{adults} adult(s) · %{children} child(ren)"
         notes_heading: "A word from us"
