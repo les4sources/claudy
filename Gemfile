@@ -167,4 +167,4 @@ gem "pdf-reader", "~> 2.14"
 # Lecture de l'export Excel de Beobank (`lib/xlsx/reader.rb`) : un .xlsx est
 # une archive zip. Déjà tirée en test par selenium-webdriver, il la faut aussi
 # en production.
-gem "rubyzip", "~> 2.3"
+gem "rubyzip", "~> 3.7"
