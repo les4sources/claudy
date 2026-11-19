@@ -93,6 +93,23 @@ RSpec.describe "Paramètres > Pôles", type: :request do
     end
   end
 
+  describe "un membre passé inactif" do
+    it "ne casse ni la liste des pôles ni l'édition, et n'y apparaît plus" do
+      team = Team.create!(name: "Accueil")
+      partie = Human.create!(name: "Ancienne Membre")
+      TeamMembership.create!(team: team, human: partie, role: "referent")
+      partie.update!(status: "inactive")
+
+      get teams_path
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("Ancienne Membre")
+
+      get edit_team_path(team)
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("Ancienne Membre")
+    end
+  end
+
   describe "le bloc Membres" do
     let!(:team) { Team.create!(name: "Accueil") }
     let!(:malau) { Human.create!(name: "Malau") }

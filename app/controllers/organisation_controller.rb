@@ -7,7 +7,7 @@ class OrganisationController < BaseController
   # du pôle. Les enfants sont rangés sous leur parent, comme dans les Paramètres.
   def teams
     breadcrumb "Pôles", :organisation_teams_path, match: :exact
-    teams = Team.includes(:parent, :children, team_memberships: :human).ordered
+    teams = Team.includes(:parent, :children, active_memberships: :human).ordered
     roots, orphans = teams.partition { |team| team.parent_id.nil? }
     @rows = roots.flat_map { |root| [root] + teams.select { |t| t.parent_id == root.id } }
     @rows += orphans.reject { |team| @rows.include?(team) }

@@ -40,6 +40,8 @@ class Team < ApplicationRecord
   has_many :tasks, through: :bundles
   has_many :team_memberships, dependent: :destroy
   has_many :humans, through: :team_memberships
+  # Les adhésions dont l'humain est encore actif : ce que les écrans affichent.
+  has_many :active_memberships, -> { with_active_human }, class_name: "TeamMembership"
   has_many :analytic_accounts, dependent: :nullify
   # Les rassemblements du pôle (epic #239, phase 2).
   has_many :gathering_teams, dependent: :destroy
@@ -81,7 +83,7 @@ class Team < ApplicationRecord
   end
 
   def kind_label = kind.present? ? KIND_LABELS.fetch(kind, kind) : nil
-  def referents = team_memberships.referents.includes(:human).map(&:human)
+  def referents = active_memberships.referents.includes(:human).map(&:human)
 
   private
 

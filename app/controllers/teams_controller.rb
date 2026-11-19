@@ -6,7 +6,7 @@ class TeamsController < BaseController
     # Les pôles racines d'abord, chacun suivi de ses enfants : la hiérarchie à
     # deux niveaux se lit dans l'ordre de la liste, sans arborescence à replier.
     def index
-      teams = Team.includes(:parent, :children, team_memberships: :human).ordered
+      teams = Team.includes(:parent, :children, active_memberships: :human).ordered
       roots, orphans = teams.partition { |team| team.parent_id.nil? }
       @rows = roots.flat_map { |root| [root] + teams.select { |t| t.parent_id == root.id } }
       # Filet : un pôle dont le parent a disparu ne doit pas disparaître avec lui.
@@ -25,7 +25,7 @@ class TeamsController < BaseController
       @year = requested_year
       @accounts = Teams::Accounts.new(team: @team, year: @year)
       @project_board = Teams::ProjectBoard.new(team: @team)
-      @memberships = @team.team_memberships.includes(:human).sort_by { |m| [m.role == "referent" ? 0 : 1, m.human.name.to_s] }
+      @memberships = @team.active_memberships.includes(:human).sort_by { |m| [m.role == "referent" ? 0 : 1, m.human.name.to_s] }
       upcoming = @team.gatherings.upcoming.includes(:gathering_category).limit(5).to_a
       past = @team.gatherings.where("ends_at < ?", Time.current)
                   .includes(:gathering_category).order(starts_at: :desc).limit(5).to_a
@@ -98,7 +98,7 @@ class TeamsController < BaseController
     # Ce que le bloc « Membres » de l'écran d'édition a besoin de savoir : les
     # adhésions en place, et les humains actifs qu'on peut encore ajouter.
     def load_membership_form
-      @memberships = @team.team_memberships.includes(:human).sort_by { |m| m.human.name.to_s }
+      @memberships = @team.active_memberships.includes(:human).sort_by { |m| m.human.name.to_s }
       @addable_humans = Human.ordered_addable_to(@team)
       @membership ||= TeamMembership.new(team: @team, role: "member")
     end

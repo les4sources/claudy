@@ -46,8 +46,8 @@
                   = "#{pluralize(snapshot.to_validate_count, 'facture', plural: 'factures')} à valider"
 
           .mt-3.flex.items-center.gap-2.text-xs.text-gray-500
-            span.font-medium.text-gray-900 = team.team_memberships.size
-            = "#{"membre".pluralize(team.team_memberships.size)}"
+            span.font-medium.text-gray-900 = team.active_memberships.size
+            = "#{"membre".pluralize(team.active_memberships.size)}"
             - if team.analytic_code.present?
               span.text-gray-300 ·
               span.font-mono = team.analytic_code
