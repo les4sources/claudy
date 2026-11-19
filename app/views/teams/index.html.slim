@@ -43,6 +43,6 @@
               - referents = team.referents
               = referents.any? ? referents.map(&:name).join(", ") : content_tag(:span, "—", class: "text-gray-400")
             td.px-4.py-3.text-right.font-medium.text-gray-900
-              = team.team_memberships.size
+              = team.active_memberships.size
             td.px-4.py-3.text-right.whitespace-nowrap
               = link_to "Modifier", edit_team_path(team), class: "text-xs font-medium text-gray-700 hover:underline"

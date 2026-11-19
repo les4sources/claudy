@@ -43,7 +43,7 @@ class TeamMembershipsController < BaseController
   # Le bloc entier, remplacé sur place. Sans Turbo, on retombe sur l'écran
   # d'édition : les trois gestes restent utilisables.
   def render_members(status: :ok)
-    @memberships = @team.team_memberships.includes(:human).sort_by { |m| m.human.name.to_s }
+    @memberships = @team.active_memberships.includes(:human).sort_by { |m| m.human.name.to_s }
     @addable_humans = Human.ordered_addable_to(@team)
     @membership ||= TeamMembership.new(team: @team, role: "member")
 

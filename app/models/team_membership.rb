@@ -41,6 +41,10 @@ class TeamMembership < ApplicationRecord
   validates :human_id, uniqueness: { scope: :team_id }
 
   scope :referents, -> { where(role: "referent") }
+  # Un humain passé inactif (ou supprimé) garde son adhésion en base, mais le
+  # scope par défaut de Human le rend invisible : `membership.human` vaut nil.
+  # Toute liste de membres passe par ici pour ne montrer que les présents.
+  scope :with_active_human, -> { where(human_id: Human.unscope(:order).select(:id)) }
 
   def role_label = ROLE_LABELS.fetch(role, role)
 end

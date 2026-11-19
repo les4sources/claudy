@@ -38,6 +38,25 @@ RSpec.describe "Organisation — pôles", type: :request do
   end
 
   describe "la page du pôle" do
+    # Erreur 500 en prod sur /teams/4 (2026-11-19) : un membre passé inactif
+    # garde son adhésion, mais le scope par défaut de Human le cache.
+    it "s'affiche quand un membre est passé inactif, sans le montrer" do
+      partie = Human.create!(name: "Ancienne Membre", status: "active")
+      TeamMembership.create!(team: team, human: partie, role: "referent")
+      partie.update!(status: "inactive")
+
+      get team_path(team)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include("Stéphanie")
+      expect(response.body).not_to include("Ancienne Membre")
+
+      get organisation_teams_path
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).not_to include("Ancienne Membre")
+    end
+
     it "affiche l'en-tête, le parent et les référent·e·s" do
       get team_path(team)
 
