@@ -203,6 +203,10 @@ body.ui-v2-map .ui-main { height: 100dvh; }
 }
 .ui-subnav-list > li > a:hover, .ui-subnav-list > li > button:hover { color: var(--ui-ink) !important; border-bottom-color: var(--ui-line); }
 .ui-subnav-list > li > :is(a, button).bg-teal-100 { color: var(--ui-ink) !important; font-weight: 700 !important; border-bottom-color: var(--ui-yellow); }
+/* Compteur d'une file dans la barre de la Comptabilité (2026-11-12). */
+.ui-subnav-n { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--ui-yellow-tint); color: var(--ui-warn-ink); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+.ui-subnav-list > li > :is(a, button) .ui-subnav-n { margin-left: 2px; }
+.ui-subnav-list > li.ui-subnav-gear { margin-left: auto; }
 /* Les menus déroulants de la Comptabilité gardent leur forme de liste. */
 .ui-subnav-list ul a { border-radius: 8px; color: var(--ui-ink) !important; }
 .ui-subnav-list ul a.bg-teal-100 { background: var(--ui-yellow-tint) !important; font-weight: 700 !important; }
