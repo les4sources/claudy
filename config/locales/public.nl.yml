@@ -102,6 +102,16 @@ nl:
         intro: "Wat er op het domein gebeurt terwijl u er bent."
         datetime: "%A %-d %B, %H:%M"
         more: "Meer weten"
+      packing:
+        heading: "Neem mee"
+        towels: "Je handdoeken"
+        sheets: "Je beddengoed"
+        sheets_option_1: "Ofwel een hoeslaken met een slaapzak + een kussensloop"
+        sheets_option_2: "Ofwel een hoeslaken en een dekbedovertrek + een kussensloop"
+        sheets_provided: "Je beddengoed is geregeld: je hebt het voor iedereen gehuurd, het ligt ter plaatse klaar."
+        soap: "Biologisch afbreekbare zeep"
+        soap_note: "voor onze lagune, ons natuurlijk zuiveringssysteem"
+        toilet_paper: "Wat extra toiletpapier (als je langer dan een weekend blijft)"
       grocery:
         heading: "De kruidenier"
         body: "Op het domein wacht u een kleine zelfbedieningswinkel: pasta en rijst in bulk, melk, muesli, appelsap… Genoeg om u te behelpen zonder de auto te nemen."
