@@ -98,6 +98,16 @@ fr:
         intro: "Ce qui se passe au domaine pendant que vous êtes là."
         datetime: "%A %-d %B, %H:%M"
         more: "En savoir plus"
+      packing:
+        heading: "À emporter avec toi"
+        towels: "Tes essuies et serviettes de bain"
+        sheets: "Tes draps"
+        sheets_option_1: "Soit un drap de lit avec un sac de couchage + une taie d'oreiller"
+        sheets_option_2: "Soit un drap de lit et une housse de couette + une taie d'oreiller"
+        sheets_provided: "Tes draps sont prévus : tu les as loués pour tout le monde, ils t'attendent sur place."
+        soap: "Du savon biodégradable"
+        soap_note: "pour notre lagunage, notre système d'épuration naturel"
+        toilet_paper: "Du papier toilette de réserve (si tu viens plus d'un week-end)"
       grocery:
         heading: "L'épicerie"
         body: "Une petite épicerie en self-service vous attend sur le domaine : pâtes et riz en vrac, lait, muesli, jus de pommes… De quoi dépanner sans reprendre la voiture."

@@ -719,6 +719,39 @@ class StayDecorator < ApplicationDecorator
 
   # Occupants agrégés sur TOUS les hébergements du séjour — un groupe réparti
   # sur plusieurs gîtes doit apparaître comme un seul effectif.
+  # Bloc « À emporter avec toi » (Michael, 2026-11-25) : la liste des anciennes
+  # pages de réservation (serviettes, draps, savon biodégradable, papier
+  # toilette). Seulement si le séjour loge quelqu'un dans un gîte ou une
+  # chambre — pas pour un camping, une salle ou un séjour vide —, et ni sur un
+  # séjour annulé ni une fois le départ passé.
+  def show_packing_list?
+    return false if object.canceled?
+    return false if object.departure_date.present? && object.departure_date < Date.current
+
+    indoor_lodging?
+  end
+
+  # Un gîte entier, ou au moins une chambre intérieure. Les chambres de niveau
+  # -1 sont les espaces extérieurs (même règle que `Booking#for_rooms?`).
+  def indoor_lodging?
+    lodging_bookings.any? do |booking|
+      next false if %w[canceled declined].include?(booking.status)
+
+      booking.lodging_id.present? || booking.rooms.any? { |room| room.level != -1 }
+    end
+  end
+
+  # Draps loués pour TOUTES les personnes du séjour (Michael, 2026-11-25) : la
+  # page le dit et retire « Tes draps » de la liste. Un lit simple couvre une
+  # personne, un lit double deux. Sans personne déclarée, rien n'est couvert.
+  def linen_covers_everyone?
+    people = occupants.values.sum
+    return false if people.zero?
+
+    beds = linen_orders.sum { |order| order.quantity.to_i * (order.kind == "double_bed" ? 2 : 1) }
+    beds >= people
+  end
+
   def occupants
     bookables = lodging_bookings + camping_bookings + van_bookings
     {

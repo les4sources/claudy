@@ -45,6 +45,11 @@
       = render "public/stays/balance"
       = render "public/stays/payments"
 
+/ « Je peux préparer quoi ? » : ce qu'il faut emporter, juste après le
+/ paiement, avant le non essentiel. Seulement pour un gîte ou une chambre.
+- if @stay.show_packing_list?
+  = render "public/stays/packing"
+
 / Ce qui se passe au domaine pendant le séjour (epic #348, phase 5). Rien dans
 / la fenêtre : pas de bloc du tout. APRÈS le paiement (Michael, 2026-10-19) :
 / comme la carte, le pain, l'épicerie et le disc-golf qui suivent, c'est une

@@ -1,0 +1,38 @@
+/ « À emporter avec toi » (Michael, 2026-11-25) : la liste des anciennes pages
+  de réservation, reprise au tutoiement — serviettes, draps, savon
+  biodégradable, papier toilette. Rendue seulement si le séjour a un gîte ou
+  une chambre (`StayDecorator#show_packing_list?`). Des draps loués pour tout
+  le monde remplacent la ligne « Tes draps » par une mention.
+- linen_provided = @stay.linen_covers_everyone?
+section.funnel-card.mt-6.p-5.md:p-6(data-stay-packing="true")
+  .flex.items-start.gap-3
+    span.text-forest.flex-shrink-0.mt-0.5
+      = funnel_icon :briefcase, css_class: "w-6 h-6"
+    div.min-w-0.flex-1
+      h2.funnel-section-title.mb-3 = t("public.stays.packing.heading")
+
+      - if linen_provided
+        p.mb-4.flex.items-start.gap-2.rounded-xl.bg-forest-tint.p-3.text-base.text-ink(data-stay-linen-provided="true")
+          span.text-forest.flex-shrink-0.mt-0.5
+            = funnel_icon :bed, css_class: "w-5 h-5"
+          span = t("public.stays.packing.sheets_provided")
+
+      ul.space-y-3.text-base.text-ink(role="list")
+        li.flex.items-start.gap-2
+          span.text-forest.flex-shrink-0.mt-0.5 = funnel_icon :check, css_class: "w-5 h-5"
+          span.font-semibold = t("public.stays.packing.towels")
+        - unless linen_provided
+          li.flex.items-start.gap-2(data-stay-packing-sheets="true")
+            span.text-forest.flex-shrink-0.mt-0.5 = funnel_icon :check, css_class: "w-5 h-5"
+            span
+              span.font-semibold = t("public.stays.packing.sheets")
+              span.block.text-sm(class="text-moss") = t("public.stays.packing.sheets_option_1")
+              span.block.text-sm(class="text-moss") = t("public.stays.packing.sheets_option_2")
+        li.flex.items-start.gap-2
+          span.text-forest.flex-shrink-0.mt-0.5 = funnel_icon :check, css_class: "w-5 h-5"
+          span
+            span.font-semibold = t("public.stays.packing.soap")
+            span.block.text-sm(class="text-moss") = t("public.stays.packing.soap_note")
+        li.flex.items-start.gap-2
+          span.text-forest.flex-shrink-0.mt-0.5 = funnel_icon :check, css_class: "w-5 h-5"
+          span.font-semibold = t("public.stays.packing.toilet_paper")
