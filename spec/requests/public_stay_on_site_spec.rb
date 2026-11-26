@@ -31,7 +31,7 @@ RSpec.describe "Public /sejour/:token — pendant votre séjour (epic #348, phas
 
   def position(body, marker) = body.index(%(#{marker}="true")) || raise("#{marker} absent")
 
-  describe "« Pendant votre séjour »" do
+  describe "« Pendant ton séjour »" do
     it "liste les événements publiés entre l'arrivée et le départ, par date, avec le lien vers le site" do
       later = event("Concert au four", departure.in_time_zone.change(hour: 11), location: "La grange")
       sooner = event("Balade des plantes sauvages", arrival.in_time_zone.change(hour: 18, min: 30), location: "Le verger")
@@ -39,7 +39,7 @@ RSpec.describe "Public /sejour/:token — pendant votre séjour (epic #348, phas
       body = page_body
       section = Nokogiri::HTML(body).at_css("[data-stay-events]")
       expect(section.css("[data-stay-event]").map { |li| li["data-stay-event"].to_i }).to eq([sooner.id, later.id])
-      expect(section.text).to include("Pendant votre séjour", "Balade des plantes sauvages", "Le verger", "18:30")
+      expect(section.text).to include("Pendant ton séjour", "Balade des plantes sauvages", "Le verger", "18:30")
       expect(section.at_css("a[href='https://www.les4sources.be/evenements/#{sooner.slug}']")).to be_present
     end
 

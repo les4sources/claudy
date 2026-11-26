@@ -741,15 +741,13 @@ class StayDecorator < ApplicationDecorator
     end
   end
 
-  # Draps loués pour TOUTES les personnes du séjour (Michael, 2026-11-25) : la
-  # page le dit et retire « Tes draps » de la liste. Un lit simple couvre une
-  # personne, un lit double deux. Sans personne déclarée, rien n'est couvert.
-  def linen_covers_everyone?
-    people = occupants.values.sum
-    return false if people.zero?
-
-    beds = linen_orders.sum { |order| order.quantity.to_i * (order.kind == "double_bed" ? 2 : 1) }
-    beds >= people
+  # Prix de location des draps affiché dans « À emporter avec toi » (Michael,
+  # 2026-11-26) : le tarif paramétré (`Pricing::Catalog.linen_rate`), jamais un
+  # montant en dur, pour que la page suive Paramètres › Tarifs. Espace
+  # insécable : « 20 » et « € » ne se séparent pas en fin de ligne.
+  def linen_rental_price_label(kind)
+    cents = Pricing::Catalog.linen_rate(kind).to_i
+    h.number_to_currency(cents / 100.0, unit: "€", format: "%n\u00A0%u", precision: (cents % 100).zero? ? 0 : 2)
   end
 
   def occupants

@@ -58,7 +58,7 @@ RSpec.describe "Modification client — préremplissage de la grille Espaces (ep
   it "n'invente aucun écart sur un formulaire intact" do
     get new_public_stay_change_request_path(stay.token)
 
-    expect(response.body).to include("Votre nouveau devis")
+    expect(response.body).to include("Ton nouveau devis")
     totaux = response.body.scan(/Total actuel<\/span><span>([^<]+)/).flatten +
              response.body.scan(/Nouveau total<\/span><span>([^<]+)/).flatten
     expect(totaux.uniq.size).to eq(1)

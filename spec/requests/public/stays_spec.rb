@@ -63,7 +63,7 @@ RSpec.describe "Public::Stays (/sejour/:token)", type: :request do
       get "/sejour/#{stay.token}"
 
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include("Votre séjour aux 4 Sources")
+      expect(response.body).to include("Ton séjour aux 4 Sources")
       expect(response.body).to include("data-stay-items")
     end
 
