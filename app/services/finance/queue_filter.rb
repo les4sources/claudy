@@ -48,8 +48,10 @@ module Finance
       chips << { key: :q, label: "« #{q} »" } if q
       chips << { key: :cash_account_id, label: account.name } if account
       chips << { key: :kind, label: CashAccount::KIND_LABELS.fetch(kind, kind) } if kind
-      chips << { key: :from, label: "Depuis le #{I18n.l(from, format: :short)}" } if from
-      chips << { key: :to, label: "Jusqu'au #{I18n.l(to, format: :short)}" } if to
+      # Avec l'année (Michael, 2026-11-26) : « Depuis le 1 janvier » ne disait
+      # pas de quelle année.
+      chips << { key: :from, label: "Depuis le #{I18n.l(from, format: '%-d %B %Y')}" } if from
+      chips << { key: :to, label: "Jusqu'au #{I18n.l(to, format: '%-d %B %Y')}" } if to
       chips << { key: :sens, label: SENS.fetch(sens) } if sens
       chips << { key: :min, label: "≥ #{euros(min_cents)}" } if min_cents
       chips << { key: :max, label: "≤ #{euros(max_cents)}" } if max_cents
