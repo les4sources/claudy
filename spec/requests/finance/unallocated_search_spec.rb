@@ -52,6 +52,7 @@ RSpec.describe "Comptabilité — À affecter, recherche et filtres", type: :req
     loyer.update!(entry_date: Date.new(2026, 5, 2))
 
     get finance_unallocated_cash_entries_path(from: "2026-06-01", to: "2026-06-30")
+    expect(response.body).to include("Depuis le 1 juin 2026", "au 30 juin 2026")
     expect(response.body).to include("Bar Épicerie juin")
     expect(response.body).not_to include("Loyer juin")
 

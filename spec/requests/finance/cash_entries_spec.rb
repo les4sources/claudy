@@ -332,4 +332,28 @@ RSpec.describe "Finances > Trésorerie", type: :request do
       expect(response.body).to include("non affecté")
     end
   end
+
+  # Michael, 2026-11-26 : une recherche sur deux années mélangeait « 14 MARS »
+  # de 2025 et de 2026. La pastille porte l'année hors année en cours, et la
+  # date complète au survol.
+  describe "la pastille de date" do
+    include ActiveSupport::Testing::TimeHelpers
+
+    around { |ex| travel_to(Date.new(2026, 11, 26)) { ex.run } }
+
+    before do
+      build_cash_entry(cash_account, entry_date: Date.new(2025, 3, 14), label: "Ligne de 2025")
+      build_cash_entry(cash_account, entry_date: Date.new(2026, 3, 14), label: "Ligne de 2026")
+    end
+
+    it "donne la date complète au survol et l'année quand elle n'est pas l'année en cours" do
+      [finance_cash_entries_path, finance_unallocated_cash_entries_path].each do |chemin|
+        get chemin, params: { from: "2025-01-01", to: "2026-12-31" }
+
+        page = Nokogiri::HTML(response.body)
+        expect(page.at_css('[title="vendredi 14 mars 2025"]')&.text).to include("2025")
+        expect(page.at_css('[title="samedi 14 mars 2026"]')&.text).not_to include("2026")
+      end
+    end
+  end
 end
