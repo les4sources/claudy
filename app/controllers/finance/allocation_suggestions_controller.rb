@@ -35,21 +35,29 @@ module Finance
       apres_decision(suggestion, alert: e.message)
     end
 
-    # Acceptation en masse, bornée par règle et par seuil.
+    # Acceptation en masse, bornée par règle et par seuil — ou, depuis la revue
+    # des propositions (Michael, 2026-11-26), par un compte proposé par Jev et
+    # les cases que l'humain a laissées cochées.
     def bulk
       rule = AllocationRule.find_by(id: params[:allocation_rule_id])
+      jev_account = GeneralAccount.find_by(id: params[:jev_account_id]) if rule.nil?
+      ids = Array(params[:ids]).compact_blank.presence
+      retour = revue_path || finance_allocation_rules_path
 
-      if rule.nil?
-        return redirect_to finance_allocation_rules_path,
-                           alert: "Choisis une règle : il n'existe pas d'acceptation « toutes règles confondues »."
+      if rule.nil? && (jev_account.nil? || ids.nil?)
+        alerte = if revue_path
+                   "Coche au moins une ligne du lot."
+                 else
+                   "Choisis une règle : il n'existe pas d'acceptation « toutes règles confondues »."
+                 end
+        return redirect_to retour, alert: alerte
       end
 
-      lot = Finance::BulkAcceptSuggestions.new(rule: rule, threshold: params[:confidence], whodunnit: current_user&.email)
-      resultat = lot.run!
+      lot = Finance::BulkAcceptSuggestions.new(rule: rule, jev_account: jev_account, threshold: params[:confidence],
+                                               whodunnit: current_user&.email)
+      resultat = lot.run!(ids: ids)
 
-      redirect_to finance_allocation_rules_path,
-                  notice: "#{resultat.accepted} suggestion(s) acceptée(s) pour la règle « #{rule.label} » " \
-                          "au-dessus de #{lot.threshold} % de confiance."
+      redirect_to retour, notice: bulk_notice(resultat, lot, rule, jev_account)
     end
 
     private
@@ -66,11 +74,31 @@ module Finance
     # Depuis la file, la ligne répond en place ; d'ailleurs (fiche d'une
     # ligne), retour à la page d'où l'on vient, comme avant.
     def apres_decision(suggestion, notice: nil, alert: nil)
-      if depuis_la_file?
+      if depuis_la_revue?
+        flash.now[:notice] = notice if notice
+        flash.now[:alert] = alert if alert
+        render turbo_stream: [turbo_stream.replace("messages", partial: "layouts/components/messages"),
+                              turbo_stream.remove("proposition-#{suggestion.id}")]
+      elsif depuis_la_file?
         repondre_dans_la_file(suggestion.cash_entry, notice: notice, alert: alert)
       else
         redirect_back fallback_location: finance_unallocated_cash_entries_path, notice: notice, alert: alert
       end
+    end
+
+    # Le retour vers la revue d'où part le lot, avec ses filtres et sa page.
+    def revue_path
+      return nil unless params[:revue].is_a?(ActionController::Parameters)
+
+      finance_unallocated_propositions_path(params[:revue].permit(*Finance::QueueFilter::KEYS, :page).to_h.compact_blank)
+    end
+
+    def bulk_notice(resultat, lot, rule, jev_account)
+      borne = rule ? "la règle « #{rule.label} »" : "Jev → #{jev_account}"
+      texte = "#{resultat.accepted} ligne(s) acceptée(s) pour #{borne}"
+      texte += " au-dessus de #{lot.threshold} % de confiance" unless revue_path
+      texte += " ; #{resultat.skipped} sautée(s), déjà traitée(s) entre-temps" if resultat.skipped.positive?
+      "#{texte}."
     end
   end
 end

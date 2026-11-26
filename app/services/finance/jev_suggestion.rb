@@ -30,9 +30,22 @@ module Finance
       @history = history
     end
 
+    # Ce qu'on demande à Jev pour une ligne, préparé à partir de la base.
+    Prepared = Data.define(:state, :questions, :options, :neighbours, :same)
+
     # Rend une suggestion NON enregistrée, ou nil. Lève `Jev::Client::Error`
     # quand Jev est injoignable : l'appelant décide s'il réessaiera.
     def call
+      prepared = prepare
+      return nil if prepared.nil?
+
+      build(prepared, @jev.ask(state: prepared.state, questions: prepared.questions))
+    end
+
+    # La question, sans rien demander : tout ce qui lit la base est ici, pour
+    # que plusieurs lignes puissent ensuite interroger Jev EN MÊME TEMPS sans
+    # partager une connexion (`SuggestAllocations`). Nil : rien à demander.
+    def prepare
       return nil if @history.empty?
 
       neighbours = @history.neighbours(@entry)
@@ -42,10 +55,16 @@ module Finance
       return nil if accounts.empty?
 
       options = accounts.values.to_h { |account| [account.to_s, account] }
-      answer = @jev.ask(state: state(neighbours, same, accounts), questions: { "compte" => question(options) })["compte"]
+      Prepared.new(state: state(neighbours, same, accounts), questions: { "compte" => question(options) },
+                   options: options, neighbours: neighbours, same: same)
+    end
+
+    # La réponse de Jev devenue suggestion, ou nil sous le seuil.
+    def build(prepared, answers)
+      answer = answers["compte"]
       return nil if answer.nil?
 
-      account = options[answer["choice"]]
+      account = prepared.options[answer["choice"]]
       confidence = answer["confidence"].to_f
       return nil if account.nil? || confidence < MIN_CONFIDENCE
 
@@ -55,7 +74,7 @@ module Finance
         amount_cents: @entry.remaining_cents,
         confidence: (confidence * 100).floor,
         source: "jev",
-        rationale: rationale(account, neighbours, same)
+        rationale: rationale(account, prepared.neighbours, prepared.same)
       )
     end
 

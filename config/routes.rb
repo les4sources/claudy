@@ -369,6 +369,10 @@ Rails.application.routes.draw do
     # ressource : sinon `/finance/cash_entries/unallocated` serait capté par
     # `show` avec `id = "unallocated"`.
     get "cash_entries/unallocated", to: "cash_entries#unallocated", as: :unallocated_cash_entries
+    # « Proposer pour toutes les lignes affichées » (Michael, 2026-11-26) : Jev
+    # et les règles sur la page de la file, puis la revue des propositions.
+    get "cash_entries/unallocated/propositions", to: "cash_entries#propositions", as: :unallocated_propositions
+    post "cash_entries/unallocated/propositions", to: "cash_entries#propose"
     get "analytic_balance", to: "analytic_balance#index"
     resources :coda_imports, only: [:index, :show, :create]
     # L'arrêté du mois — la porte d'entrée de la comptabilité mensuelle.

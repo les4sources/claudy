@@ -219,12 +219,20 @@ module Finance
       ),
       "finance/cash_entries#unallocated" => Page.new(
         "La file des mouvements qu'il reste à expliquer. Ton travail : la vider, ligne par ligne ou par lots.",
-        ["Si une suggestion est proposée et juste, accepte-la.",
+        ["Clique « Proposer pour toutes les lignes affichées » : Jev et tes règles proposent, tu acceptes ce qui est " \
+         "juste, lot par lot.",
          "Sinon, rapproche la ligne de ce qu'elle paie (facture, note de frais, séjour, habitant) : c'est le geste le " \
          "plus sûr.",
          "S'il n'y a rien à rapprocher, affecte-la à un compte et à un pôle. En cas de doute, laisse un commentaire " \
          "et passe à la suivante."],
         %w[affecter rapprocher suggestion ventiler]
+      ),
+      "finance/cash_entries#propositions" => Page.new(
+        "Ce que Jev et tes règles proposent pour les lignes de la file que tu avais sous les yeux, rangé par lot.",
+        ["Parcours chaque lot : décoche une ligne qui n'y a pas sa place, puis « Accepter les lignes cochées ».",
+         "Une ligne douteuse se refuse seule : elle retourne dans la file sans proposition.",
+         "Une ligne qui a une autre piste (séjour, facture, habitant) arrive décochée : rapproche-la dans la file."],
+        %w[suggestion affecter rapprocher]
       ),
       "finance/cash_entries#show" => Page.new(
         "La fiche d'une ligne de trésorerie : d'où elle vient, à quoi elle est affectée, et son écriture.",

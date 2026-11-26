@@ -110,3 +110,7 @@ table[data-stacked-table] th.text-right,
 .file-jour:not(:has(.file-ligne)) { display: none; }
 .file-fin { display: none; }
 .file-page:not(:has(.file-ligne)) .file-fin { display: block; }
+
+/* La revue des propositions (Michael, 2026-11-26) : un lot dont toutes les
+   lignes ont été décidées une à une disparaît avec elles. */
+.revue-lot:not(:has(.revue-ligne)) { display: none; }
