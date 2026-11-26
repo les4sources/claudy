@@ -5,25 +5,10 @@
    `charger_pistes` pose dans les deux cas.
 - ouvert = local_assigns.fetch(:ouvert, false)
 - erreur = local_assigns[:erreur]
-/  L'indice en pastille sur la ligne repliée : la meilleure piste
-   qu'on ait, dans l'ordre où elle engage de l'argent. Ce n'est qu'un
-   aperçu — la proposition entière, avec sa raison, sa confiance et
+/  L'indice en pastille sur la ligne repliée (`indice_de_file`) : ce n'est
+   qu'un aperçu — la proposition entière, avec sa raison, sa confiance et
    son bouton, est dans le détail qui s'ouvre au clic.
-- indice = nil
-- if (piste = @settlement_matches[entry.id]&.first)
-  - indice = "#{piste.member_account.name} · #{piste.already_recorded? ? 'règlement déjà encodé' : piste.flow_label}"
-- elsif (piste = @payout_matches[entry.id]&.first)
-  - indice = "Virement à #{piste.member_account.name}"
-- elsif (piste = @stay_matches[entry.id])
-  - indice = "Séjour ##{piste[:match].stay.id}"
-- elsif (piste = @invoice_matches[entry.id]&.first)
-  - indice = piste.invoice.payable_label
-- elsif (piste = @expense_report_matches[entry.id]&.first)
-  - indice = piste.report.payable_label
-- elsif (piste = @consignment_report_matches&.dig(entry.id)&.first)
-  - indice = piste.report.payable_label
-- elsif (piste = @stripe_matches[entry.id]&.first)
-  - indice = "Versement Stripe"
+- indice = indice_de_file(entry)
 /  L'identifiant est la cible des réponses Turbo Stream (Michael,
    2026-09-30) : une ligne affectée depuis la file en sort sans recharger la
    page, une ligne encore incomplète se redessine ici même, déroulée.

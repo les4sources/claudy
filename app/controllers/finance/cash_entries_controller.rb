@@ -76,10 +76,36 @@ module Finance
       scope = @filter.scope
       @filtered_total = scope.count
 
-      @entries = scope.includes(:cash_account, :allocation_suggestions,
-                                cash_allocations: [:general_account, :team, :legal_entity])
-                      .paginate(page: params[:page], per_page: PAR_PAGE)
+      @entries = page_de_la_file(scope)
       charger_pistes(@entries)
+    end
+
+    # « Proposer pour toutes les lignes affichées » (Michael, 2026-11-26).
+    # Jev, qui ne se demandait qu'à l'ouverture d'une ligne, est demandé ici
+    # pour toute la page de la file — mêmes filtres, même page — en une fois.
+    # Rien n'est affecté : on n'écrit que des propositions, qui se revoient
+    # ensuite dans `propositions`.
+    def propose
+      @filter = Finance::QueueFilter.new(queue_filter_params)
+      jev = Jev::Client.new
+      Finance::SuggestAllocations.new(cash_entries: page_de_la_file(@filter.scope), whodunnit: current_user&.email,
+                                      jev: jev).run!
+
+      redirect_to finance_unallocated_propositions_path(revue_params),
+                  alert: (jev.configured? ? nil : "Jev n'est pas configuré : seules les règles ont pu proposer.")
+    end
+
+    # La revue des propositions de la page : rangées par lot (une règle, ou
+    # un compte proposé par Jev), chacune à valider ou à refuser, et chaque lot
+    # à accepter d'un coup, case par case. Cet écran ne demande RIEN à Jev :
+    # il lit ce que `propose` a posé.
+    def propositions
+      @filter = Finance::QueueFilter.new(queue_filter_params)
+      @pending_total = CashEntry.pending.count
+      @entries = page_de_la_file(@filter.scope)
+      charger_pistes(@entries)
+      @revue = Finance::ProposalReview.new(@entries, pistes: pistes_par_ligne(@entries))
+      @revue_params = revue_params
     end
 
     # Le cadre de la proposition d'une ligne de la file « À affecter ». Jev
@@ -457,6 +483,16 @@ module Finance
       permitted[:amount_cents] = Monetize.parse(amount.to_s).cents if amount.present?
       permitted
     end
+
+    # La page de la file telle qu'elle s'affiche : la revue des propositions
+    # porte sur EXACTEMENT les lignes que l'on avait sous les yeux.
+    def page_de_la_file(scope)
+      scope.includes(:cash_account, allocation_suggestions: [:general_account, :allocation_rule, :team],
+                     cash_allocations: [:general_account, :team, :legal_entity])
+           .paginate(page: params[:page], per_page: PAR_PAGE)
+    end
+
+    def revue_params = @filter.to_params.merge(page: params[:page].presence).compact
 
     def queue_filter_params
       params.slice(*Finance::QueueFilter::KEYS).permit(*Finance::QueueFilter::KEYS)

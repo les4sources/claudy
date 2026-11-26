@@ -1,0 +1,119 @@
+- retour_file = finance_unallocated_cash_entries_path(@revue_params)
+- content_for :page_header do
+  = render "layouts/components/page_header",
+           title: "Propositions",
+           links: [link_to("Retour à la file", retour_file, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50")]
+
+/  La revue des propositions d'une page de la file (Michael, 2026-11-26).
+   Rien n'est affecté tant qu'on n'a pas cliqué : chaque lot a sa borne (une
+   règle, ou un compte proposé par Jev), ses cases, et son bouton.
+- revue = @revue
+- page_label = @entries.total_pages > 1 ? "de la page #{@entries.current_page} de la file" : "de la file"
+
+.mb-6.rounded-lg.border.border-gray-100.bg-white.p-4
+  p.text-sm.text-gray-700
+    | Jev et tes règles ont regardé les
+    strong= " #{@entries.size} ligne(s) affichée(s) "
+    = page_label
+    - if @filter.active?
+      = " (filtrée sur #{@filter.chips.map { |chip| chip[:label] }.join(', ')})"
+    | .
+    = " "
+    - if revue.proposals_count.positive?
+      strong= "#{revue.proposals_count} ont une proposition"
+      | , rangées par lot. Décoche ce qui ne va pas, puis accepte le lot ; ou décide ligne par ligne.
+    - else
+      | Aucune n'a de proposition assez sûre.
+  p.mt-1.text-xs.text-gray-500
+    | Une ligne acceptée est affectée au compte proposé et se comptabilise toute seule. Une ligne qui a aussi une piste
+      de rapprochement (séjour, facture, habitant…) arrive décochée : rapproche-la plutôt dans la file, pour garder le lien
+      avec ce qu'elle paie.
+
+- revue.lots.each do |lot|
+  / `revue-lot` : un lot dont toutes les lignes ont été décidées une à une
+    disparaît avec elles (`finance_tables.css`).
+  .revue-lot.mb-6.overflow-hidden.rounded-2xl.border.border-gray-200.bg-white.shadow-sm(id=lot.dom_id data-controller="proposal-lot")
+    .flex.flex-wrap.items-center.justify-between.gap-3.border-b.border-gray-100.px-4.py-3(class="bg-gray-50/60")
+      div
+        p.font-semibold.text-gray-900
+          - if lot.rule
+            = "Règle « #{lot.rule.label} »"
+          - else
+            = lot.general_account.to_s
+        p.text-xs.text-gray-500
+          - if lot.rule
+            = "→ #{lot.general_account}"
+          - elsif lot.jev?
+            | proposé par Jev
+          - else
+            | précédent du même IBAN
+          = " · #{lot.size} ligne(s) · #{number_to_currency(lot.total_cents / 100.0)}"
+      - if lot.bulk?
+        = form_with url: bulk_finance_allocation_suggestions_path, method: :post, id: "#{lot.dom_id}-form", class: "flex items-center gap-3" do
+          - if lot.rule
+            = hidden_field_tag :allocation_rule_id, lot.rule.id, id: nil
+          - else
+            = hidden_field_tag :jev_account_id, lot.general_account.id, id: nil
+          = hidden_field_tag :confidence, lot.min_confidence, id: nil
+          / Toujours au moins la page : c'est ce qui ramène à la revue.
+          - @revue_params.merge(page: @entries.current_page).each do |cle, valeur|
+            = hidden_field_tag "revue[#{cle}]", valeur, id: nil
+          button.text-xs.font-medium.text-gray-500(class="hover:text-gray-700" type="button" data-proposal-lot-target="toggle" data-action="proposal-lot#toggleAll") Tout décocher
+          span.text-sm.tabular-nums.text-gray-600(data-proposal-lot-target="total")
+          button.inline-flex.items-center.rounded-md.border.border-transparent.bg-4s-main.px-3.py-1.5.text-sm.font-medium.text-white.shadow-sm(class="hover:opacity-90 disabled:opacity-40" type="submit" data-proposal-lot-target="submit" data-turbo-submits-with="Affectation…")
+            span(data-proposal-lot-target="count")= "Accepter les #{lot.checked_count} lignes cochées"
+
+    .divide-y.divide-gray-100
+      - lot.rows.each do |row|
+        - entry = row.entry
+        - suggestion = row.suggestion
+        - principal = libelle_principal(entry)
+        .revue-ligne.flex.flex-wrap.items-center.gap-4.px-4.py-3(id="proposition-#{suggestion.id}")
+          - if lot.bulk?
+            = check_box_tag "ids[]", suggestion.id, row.checked?, id: dom_id(suggestion, :choix), form: "#{lot.dom_id}-form", class: "h-4 w-4 rounded border-gray-300 text-4s-main", aria: { label: "Inclure #{principal.presence || entry.counterparty_name} dans le lot" }, data: { proposal_lot_target: "checkbox", cents: suggestion.amount_cents, action: "proposal-lot#refresh" }
+          .flex-shrink-0.text-sm.tabular-nums.text-gray-500(style="width: 84px")= l(entry.entry_date, format: "%d/%m/%Y")
+          .min-w-0.flex-grow(style="flex-basis: 16rem")
+            = link_to detail_finance_cash_entry_path(entry), data: { turbo_frame: "modal" }, title: "Voir le détail de la ligne", class: "font-semibold leading-snug hover:underline decoration-gray-300 underline-offset-4 #{principal.present? ? 'text-gray-900' : 'text-gray-400'}" do
+              = principal.presence || "Sans communication"
+            p.text-sm.text-gray-500= entry.counterparty_name.presence || entry.cash_account.name
+            p.mt-0.5.text-xs.text-gray-500
+              = suggestion.rationale
+              = " (#{suggestion.source_label}, #{suggestion.confidence} % de confiance)"
+              - if suggestion.team
+                = " · pôle #{suggestion.team.name}"
+          - if row.hint
+            .flex-shrink-0.inline-flex.items-center.gap-2.rounded-full.border.border-amber-200.bg-amber-50.px-2.5(style="height: 26px" title="Rapproche plutôt cette ligne dans la file")
+              span.whitespace-nowrap.font-medium.text-amber-800(style="font-size: 11.5px")= "Autre piste : #{row.hint}"
+          .flex-shrink-0.text-right.font-semibold.tabular-nums(class="#{entry.incoming? ? 'text-forest' : 'text-[#7A2E1F]'}" style="width: 112px")
+            = number_to_currency(entry.amount_cents / 100.0)
+          .flex-shrink-0
+            = render "finance/cash_entries/suggestion_actions", entry: entry, suggestion: suggestion
+
+- if revue.without_proposal.any?
+  - a_demander = revue.without_proposal.select { |entry| entry.jev_checked_at.nil? && entry.cash_allocations.empty? }
+  .mb-6.overflow-hidden.rounded-2xl.border.border-gray-200.bg-white
+    .flex.flex-wrap.items-center.justify-between.gap-3.border-b.border-gray-100.px-4.py-3
+      div
+        p.font-semibold.text-gray-900= "Sans proposition (#{revue.without_proposal.size})"
+        p.text-xs.text-gray-500 Elles restent dans la file : rapproche-les ou affecte-les à la main.
+      .flex.items-center.gap-3
+        - if a_demander.any?
+          = button_to "Proposer pour ces lignes", finance_unallocated_propositions_path, params: @revue_params, method: :post, class: "inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50", form: { class: "inline", data: { turbo_submits_with: "Jev cherche…" } }
+        = link_to "Les traiter dans la file", retour_file, class: "text-sm font-medium text-4s-main hover:underline"
+    ul.divide-y.divide-gray-100
+      - revue.without_proposal.each do |entry|
+        - principal = libelle_principal(entry)
+        - pourquoi = if indice_de_file(entry) then "Piste : #{indice_de_file(entry)}" elsif entry.cash_allocations.any? then "Déjà en partie affectée" elsif entry.jev_checked_at then "Jev n'est pas assez sûr" else "Pas encore demandée à Jev" end
+        li.flex.flex-wrap.items-center.gap-4.px-4.py-2.text-sm
+          .flex-shrink-0.tabular-nums.text-gray-500(style="width: 84px")= l(entry.entry_date, format: "%d/%m/%Y")
+          .min-w-0.flex-grow.truncate(style="flex-basis: 16rem")
+            span.text-gray-900= principal.presence || "Sans communication"
+            span.text-gray-500= " · #{entry.counterparty_name.presence || entry.cash_account.name}"
+          span.flex-shrink-0.text-xs.text-gray-500= pourquoi
+          .flex-shrink-0.text-right.tabular-nums.text-gray-700(style="width: 112px")= number_to_currency(entry.amount_cents / 100.0)
+
+- if revue.lots.empty? && revue.without_proposal.empty?
+  .p-8.text-center.bg-green-50.rounded-lg.border.border-green-100
+    p.text-2xl.font-semibold.text-green-700 ✓ Rien à revoir
+    p.mt-2.text-sm.text-gray-600
+      = link_to "Retour à la file", retour_file, class: "font-medium text-4s-main hover:underline"

@@ -17,7 +17,34 @@ module Finance
     # affichée — c'est ce qui compte pour l'issue #202.
     PAR_PAGE = 50
 
+    included do
+      helper_method :indice_de_file
+    end
+
     private
+
+    # L'indice en pastille sur une ligne repliée : la meilleure piste de
+    # rapprochement qu'on ait, dans l'ordre où elle engage de l'argent. Lu dans
+    # ce que `charger_pistes` a posé ; nil sans piste.
+    def indice_de_file(entry)
+      if (piste = @settlement_matches[entry.id]&.first)
+        "#{piste.member_account.name} · #{piste.already_recorded? ? 'règlement déjà encodé' : piste.flow_label}"
+      elsif (piste = @payout_matches[entry.id]&.first)
+        "Virement à #{piste.member_account.name}"
+      elsif (piste = @stay_matches[entry.id])
+        "Séjour ##{piste[:match].stay.id}"
+      elsif (piste = @invoice_matches[entry.id]&.first)
+        piste.invoice.payable_label
+      elsif (piste = @expense_report_matches[entry.id]&.first)
+        piste.report.payable_label
+      elsif (piste = @consignment_report_matches&.dig(entry.id)&.first)
+        piste.report.payable_label
+      elsif @stripe_matches[entry.id]&.first
+        "Versement Stripe"
+      end
+    end
+
+    def pistes_par_ligne(entries) = entries.to_h { |entry| [entry.id, indice_de_file(entry)] }.compact
 
     # Les lignes en attente, restreintes par les filtres de la file : compte
     # ou famille de comptes (epic #250), recherche, période, sens et montant
@@ -126,6 +153,11 @@ module Finance
     # paramètre qui l'annonce.
     def depuis_la_file?
       request.format.turbo_stream? && referer_uri&.path == finance_unallocated_cash_entries_path
+    end
+
+    # Le geste vient-il de la revue des propositions (`propositions`) ?
+    def depuis_la_revue?
+      request.format.turbo_stream? && referer_uri&.path == finance_unallocated_propositions_path
     end
 
     def referer_uri
