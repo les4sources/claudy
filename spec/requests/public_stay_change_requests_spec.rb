@@ -47,7 +47,7 @@ RSpec.describe "Demande de modification de séjour (client)", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.body).to include("Modifier mon séjour")
-      expect(response.body).to include("Votre nouveau devis")
+      expect(response.body).to include("Ton nouveau devis")
     end
 
     it "renvoie 404 sur un jeton inconnu" do

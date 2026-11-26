@@ -108,7 +108,7 @@ en:
         sheets: "Your bedding"
         sheets_option_1: "Either a fitted sheet with a sleeping bag + a pillowcase"
         sheets_option_2: "Or a fitted sheet and a duvet cover + a pillowcase"
-        sheets_provided: "Your bedding is taken care of: you rented it for everyone, it will be waiting for you."
+        sheets_rental: "Bedding can be rented on request before your stay: %{single} per single bed, %{double} per double bed."
         soap: "Biodegradable soap"
         soap_note: "for our reed-bed lagoon, our natural water treatment system"
         toilet_paper: "Some spare toilet paper (if you stay longer than a weekend)"

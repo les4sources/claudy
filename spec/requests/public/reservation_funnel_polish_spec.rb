@@ -62,7 +62,7 @@ RSpec.describe "Public::Reservations — finitions du funnel", type: :request do
   it "parle de réservation, pas de séjour, et n'a plus d'accroche" do
     get "/reservation/sejour"
     expect(response.body).to include("Votre réservation aux 4 Sources")
-    expect(response.body).not_to include("Votre séjour aux 4 Sources")
+    expect(response.body).not_to include("Ton séjour aux 4 Sources")
     expect(response.body).not_to include("Quinze hectares")
   end
 

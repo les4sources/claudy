@@ -94,7 +94,7 @@ RSpec.describe "Public /sejour/:token/carte — la carte des hôtes (epic #348, 
       lodgings = data_value("lodgings")["features"]
       expect(lodgings.map { |f| f["properties"]["name"] }).to eq(["La Hulotte"])
       expect(lodgings.first["geometry"]).to eq(square)
-      expect(response.body).to include("Votre hébergement")
+      expect(response.body).to include("Ton hébergement")
     end
 
     it "ne laisse passer ni la Gestion, ni les autres gîtes, ni un autre séjour" do

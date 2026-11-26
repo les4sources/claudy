@@ -257,7 +257,6 @@ RSpec.describe "Public /sejour/:token — page client enrichie", type: :request 
       expect(block).to include("si tu viens plus d&#39;un week-end")
       expect(block).not_to include("repas")
       expect(block).not_to include("camping")
-      expect(block).not_to include('data-stay-linen-provided="true"')
     end
 
     it "la montre aussi pour une chambre seule, pas pour un espace extérieur" do
@@ -280,28 +279,22 @@ RSpec.describe "Public /sejour/:token — page client enrichie", type: :request 
       end
     end
 
-    it "dit que les draps sont prévus et retire « Tes draps » quand ils couvrent tout le monde" do
-      stay = build_stay # 2 adultes + 1 enfant
+    # Michael, 2026-11-26 : plus de mention « draps prévus » ; on demande
+    # toujours d'emporter ses draps, avec le prix de la location sur demande.
+    it "garde « Tes draps » et donne le prix de la location sur demande" do
+      stay = build_stay
       stay.linen_orders.create!(kind: "double_bed", quantity: 1)
       stay.linen_orders.create!(kind: "single_bed", quantity: 1)
 
       get "/sejour/#{stay.token}"
 
       block = packing(response.body)
-      expect(block).to include('data-stay-linen-provided="true"')
-      expect(block).to include("tu les as loués pour tout le monde")
-      expect(block).not_to include('data-stay-packing-sheets="true"')
-    end
-
-    it "garde « Tes draps » quand les draps loués ne couvrent pas tout le monde" do
-      stay = build_stay # 3 personnes
-      stay.linen_orders.create!(kind: "double_bed", quantity: 1)
-
-      get "/sejour/#{stay.token}"
-
-      block = packing(response.body)
       expect(block).to include('data-stay-packing-sheets="true"')
-      expect(block).not_to include('data-stay-linen-provided="true"')
+      rental = block[/data-stay-linen-rental="true".*?<\/span>/m]
+      expect(rental).to include("sur demande avant ton séjour")
+      expect(rental).to include("10\u00A0€ par lit simple")
+      expect(rental).to include("20\u00A0€ par lit double")
+      expect(block).not_to include("tu les as loués")
     end
   end
 end

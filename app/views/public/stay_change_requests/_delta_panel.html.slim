@@ -2,7 +2,7 @@
 / Rendu dans un frame pour être remplacé en Turbo Stream à chaque changement.
 = turbo_frame_tag "change_request_delta"
   .bg-white.rounded-2xl.shadow-sm.border.border-gray-100.p-5.space-y-3
-    h2.text-base.font-semibold.text-gray-900 Votre nouveau devis
+    h2.text-base.font-semibold.text-gray-900 Ton nouveau devis
     .flex.justify-between.text-sm.text-gray-600
       span Total actuel
       span = number_to_currency(stay.total_amount_cents.to_i / 100.0, unit: "€", format: "%n %u")
@@ -12,7 +12,7 @@
 
     - if delta_cents.to_i.positive?
       .rounded-lg.bg-amber-50.border.border-amber-100.px-4.py-3.text-sm.text-amber-900
-        = "+#{number_to_currency(delta_cents.to_i / 100.0, unit: '€', format: '%n %u')} ajoutés à votre solde"
+        = "+#{number_to_currency(delta_cents.to_i / 100.0, unit: '€', format: '%n %u')} ajoutés à ton solde"
     - elsif delta_cents.to_i.negative?
       .rounded-lg.bg-emerald-50.border.border-emerald-100.px-4.py-3.text-sm.text-emerald-900
         = "−#{number_to_currency(delta_cents.abs / 100.0, unit: '€', format: '%n %u')} à rembourser"
@@ -23,7 +23,7 @@
     - if refund_cents.to_i.positive?
       .rounded-lg.bg-emerald-50.border.border-emerald-100.p-4.space-y-2
         label.block.text-sm.font-medium.text-gray-800[for="refund_iban"]
-          | Votre IBAN pour le remboursement
+          | Ton IBAN pour le remboursement
         = text_field_tag :refund_iban, params[:refund_iban], required: true, placeholder: "BE68539007547034", class: "w-full rounded-md border-gray-300 text-sm"
         p.text-xs.text-emerald-900
           = StayChangeRequest::REFUND_NOTICE
