@@ -20,7 +20,6 @@ module Finance
   # Rien ici ne se déclenche tout seul : c'est un clic humain sur une proposition
   # de `MatchMemberSettlements` qui appelle ce service.
   class RecordMemberSettlement < ServiceBase
-    class NotDebtor < StandardError; end
     class TooMuch < StandardError; end
     class MissingAccount < StandardError; end
     class WrongDirection < StandardError; end
@@ -68,17 +67,20 @@ module Finance
       existant = AccountEntry.unscoped.find_by(idempotency_key: idempotency_key)
       return link_existing(existant) if existant && existant.deleted_at.nil? && !linked_to_account?
 
-      # Ce que le compte doit encore POSTE PAR POSTE, pas son solde global : une
-      # avance sur les charges n'éteint pas une dette de bar, et ne doit pas
-      # empêcher d'encaisser le virement qui la paie.
-      du = MemberAccounts::Outstanding.new(@account).total_cents
-      raise NotDebtor, "#{@account.name} ne doit rien — il n'y a pas de dette à éteindre." unless du.positive?
-
-      montant = @amount_cents || [@entry.amount_cents, du].min
-      if montant > du
-        raise TooMuch,
-              "Ce compte ne doit que #{Money.new(du, 'EUR').format} — " \
-              "y imputer #{Money.new(montant, 'EUR').format} le mettrait en crédit."
+      # LE VIREMENT ENTIER, SUR LE POSTE CHOISI (Michael, 2026-11-27). Avant,
+      # on n'imputait que le minimum entre la ligne et ce que le compte devait
+      # TOUS POSTES CONFONDUS à cet instant. Les charges se paient d'avance (le
+      # 30 pour le mois qui vient, ou le 11 du mois avant que Claudy les pose le
+      # 30) : Seb & Mag versent 280 € de charges, le compte ne doit que 120 € de
+      # repas et de cagnotte, Claudy impute 120 € sur Charges et laisse 160 € en
+      # plan — « Compléter », une fausse avance sur Charges et de fausses dettes
+      # de repas. Ce qui dépasse ce que le poste réclame est une AVANCE sur ce
+      # poste, que `MemberAccounts::Outstanding` montre comme telle et que la
+      # charge du mois éteindra. Un virement qui paie deux choses se coupe en
+      # donnant un montant.
+      montant = @amount_cents || @entry.remaining_cents
+      if montant <= 0 || montant > @entry.remaining_cents
+        raise TooMuch, "Il reste #{Money.new(@entry.remaining_cents, 'EUR').format} à affecter sur cette ligne."
       end
 
       PaperTrail.request(whodunnit: @whodunnit || "member_settlement") do

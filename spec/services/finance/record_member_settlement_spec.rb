@@ -75,16 +75,20 @@ RSpec.describe Finance::RecordMemberSettlement do
   end
 
   describe "le montant imputé" do
-    # Le geste courant : une ligne de 100 € sur une dette de 75 € n'impute que
-    # 75 € — le reste appartient à autre chose.
-    it "impute le minimum entre la ligne et la dette" do
+    # Michael, 2026-11-27 : le virement ENTIER va au poste choisi. Seb & Mag
+    # versaient 280 € de charges, le compte ne devait que 120 € : Claudy
+    # n'imputait que 120 € et la ligne restait à « Compléter ».
+    it "impute tout le virement, l'excédent reste en avance sur le poste" do
       entry = entrante(10_000)
 
-      described_class.new(member_account: compte, cash_entry: entry).run!
+      described_class.new(member_account: compte, cash_entry: entry, flow: "charges").run!
 
-      expect(compte.reload.balance_cents).to eq(0)
-      expect(entry.reload.cash_allocations.sum(:amount_cents)).to eq(7_500)
-      expect(entry.remaining_cents).to eq(2_500)
+      expect(entry.reload.cash_allocations.sum(:amount_cents)).to eq(10_000)
+      expect(entry.remaining_cents).to eq(0)
+      expect(entry.status).to eq("allocated")
+      dus = MemberAccounts::Outstanding.new(compte.reload)
+      expect(dus.total_cents).to eq(0)
+      expect(dus.avances).to eq("charges" => 2_500)
     end
 
     it "accepte un règlement partiel" do
@@ -94,6 +98,19 @@ RSpec.describe Finance::RecordMemberSettlement do
 
       expect(compte.reload.balance_cents).to eq(4_500)
       expect(entry.reload.cash_allocations.sum(:amount_cents)).to eq(3_000)
+    end
+
+    # Les charges du mois qui vient, versées le 30 alors que Claudy ne les pose
+    # qu'à la fin du mois suivant : le compte ne doit encore rien.
+    it "encaisse des charges payées d'avance sur un compte à jour" do
+      compte.account_entries.destroy_all
+      entry = entrante(7_500, communication: "Charges du mois à venir")
+
+      described_class.new(member_account: compte.reload, cash_entry: entry, flow: "charges").run!
+
+      expect(compte.reload.balance_cents).to eq(-7_500)
+      expect(MemberAccounts::Outstanding.new(compte).avances).to eq("charges" => 7_500)
+      expect(entry.reload.status).to eq("allocated")
     end
   end
 
@@ -106,30 +123,12 @@ RSpec.describe Finance::RecordMemberSettlement do
       expect(compte.reload.balance_cents).to eq(7_500)
     end
 
-    it "refuse un montant supérieur à la dette" do
+    it "refuse un montant supérieur à ce que porte la ligne" do
       entry = entrante(20_000)
 
-      expect { described_class.new(member_account: compte, cash_entry: entry, amount_cents: 20_000).run! }
-        .to raise_error(described_class::TooMuch, /ne doit que/)
+      expect { described_class.new(member_account: compte, cash_entry: entry, amount_cents: 25_000).run! }
+        .to raise_error(described_class::TooMuch, /à affecter sur cette ligne/)
       expect(entry.reload.cash_allocations).to be_empty
-    end
-
-    it "refuse un compte qui ne doit rien" do
-      entry = entrante(7_500)
-      compte.account_entries.destroy_all
-
-      expect { described_class.new(member_account: compte.reload, cash_entry: entry).run! }
-        .to raise_error(described_class::NotDebtor, /ne doit rien/)
-      expect(entry.reload.cash_allocations).to be_empty
-    end
-
-    it "refuse un compte créditeur" do
-      entry = entrante(7_500)
-      compte.account_entries.create!(entry_date: Date.new(2026, 9, 2), kind: "settlement", flow: "charges",
-                                     label: "Trop-perçu", amount_cents: -20_000)
-
-      expect { described_class.new(member_account: compte.reload, cash_entry: entry).run! }
-        .to raise_error(described_class::NotDebtor)
     end
   end
 
@@ -152,13 +151,6 @@ RSpec.describe Finance::RecordMemberSettlement do
 
       expect(MemberAccounts::Outstanding.new(compte.reload).poste("bar")).to be_nil
       expect(entry.reload.cash_allocations.sum(:amount_cents)).to eq(12_000)
-    end
-
-    it "ne laisse pas imputer plus que ce qui reste dû" do
-      entry = entrante(20_000, communication: "Bar")
-
-      expect { described_class.new(member_account: compte.reload, cash_entry: entry, amount_cents: 20_000, flow: "bar").run! }
-        .to raise_error(described_class::TooMuch, /ne doit que 120/)
     end
 
     it "refuse sans compte" do

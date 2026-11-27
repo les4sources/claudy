@@ -149,6 +149,46 @@ RSpec.describe Finance::MatchMemberSettlements do
         .not_to include(compte_bene)
     end
 
+    # Michael, 2026-11-27 : les charges se paient d'avance, avant que Claudy
+    # les pose. Un compte à jour revient, mais désigné sans doute possible.
+    describe "des charges payées d'avance par un compte à jour" do
+      before { compte_bene.account_entries.destroy_all }
+
+      def iban_deja_vu
+        deja_vu = build_cash_entry(compte_bancaire, amount_cents: 1_000, label: "Ancien virement")
+        deja_vu.update!(counterparty_iban: "BE68 5390 0754 7034")
+        deja_vu.cash_allocations.create!(general_account: clients, legal_entity: entity,
+                                         document: compte_bene, amount_cents: 1_000)
+      end
+
+      it "le propose quand la communication porte son code" do
+        match = described_class.new.for_entry(entrante(7_500, communication: "#{compte_bene.code} frais"))
+                               .find { |m| m.member_account == compte_bene }
+
+        expect(match).to be_present
+        expect(match.due_cents).to eq(0)
+      end
+
+      it "le propose sur un IBAN connu quand la communication parle de charges" do
+        iban_deja_vu
+
+        match = described_class.new.for_entry(entrante(7_500, iban: "BE68539007547034",
+                                                              communication: "Charges du mois à venir"))
+                               .find { |m| m.member_account == compte_bene }
+
+        expect(match).to be_present
+        expect(match.flow).to eq("charges")
+      end
+
+      it "ne le propose pas sur un IBAN connu pour un achat à l'épicerie" do
+        iban_deja_vu
+
+        matches = described_class.new.for_entry(entrante(4_000, iban: "BE68539007547034", communication: "Epicerie"))
+
+        expect(matches.map(&:member_account)).not_to include(compte_bene)
+      end
+    end
+
     it "ne propose rien sur une ligne sortante" do
       entry = build_cash_entry(compte_bancaire, amount_cents: -35_000, label: "Virement émis")
 

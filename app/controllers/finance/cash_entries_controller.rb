@@ -215,8 +215,9 @@ module Finance
     # pas du tout.
     def settle
       compte = MemberAccount.find(params[:member_account_id])
-      # Sans montant explicite, on impute le minimum entre la ligne et la dette :
-      # c'est le geste courant. Le paramètre existe pour un règlement partiel.
+      # Sans montant explicite, tout ce qui reste sur la ligne va au poste choisi.
+      # Le champ montant de la proposition sert à couper un virement qui paie
+      # deux choses.
       montant = params[:amount].presence && (params[:amount].to_s.tr(",", ".").to_f * 100).round
 
       reglement = Finance::RecordMemberSettlement.new(
@@ -241,7 +242,7 @@ module Finance
     rescue ActiveRecord::RecordNotUnique
       apres_affectation(@entry, finance_unallocated_cash_entries_path,
                         alert: "Ce virement est déjà imputé sur #{compte.name} — rien n'a été enregistré une seconde fois.")
-    rescue Finance::RecordMemberSettlement::NotDebtor, Finance::RecordMemberSettlement::TooMuch,
+    rescue Finance::RecordMemberSettlement::TooMuch,
            Finance::RecordMemberSettlement::MissingAccount, Finance::RecordMemberSettlement::WrongDirection,
            Accounting::PostCashEntry::NotFullyAllocated,
            ActiveRecord::RecordInvalid => e

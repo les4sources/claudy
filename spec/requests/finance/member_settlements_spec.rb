@@ -42,13 +42,30 @@ RSpec.describe "Finances — rapprocher un virement entrant", type: :request do
       expect(response.body).to include("Poste réglé")
     end
 
-    it "ne propose rien quand plus personne ne doit rien" do
+    # Tout le virement par défaut, modifiable pour couper un virement en deux
+    # (Michael, 2026-11-27).
+    it "préremplit le montant avec tout le virement" do
       entry
+
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to include("Montant imputé")
+      expect(response.body).to include('value="75.00"')
+    end
+
+    it "ne propose rien quand plus personne ne doit rien, sauf un compte désigné par son code" do
+      entry.update!(communication: "Frais", counterparty_name: "LAMBERT BENEDICTE")
       compte.account_entries.destroy_all
 
       get finance_unallocated_cash_entries_path
 
       expect(response.body).not_to include("Enregistrer le règlement")
+
+      entry.update!(communication: "#{compte.code} frais du mois à venir")
+      get finance_unallocated_cash_entries_path
+
+      expect(response.body).to include("Enregistrer le règlement")
+      expect(response.body).to include("rien de dû, versé d&#39;avance")
     end
   end
 
