@@ -153,8 +153,8 @@ module Finance
       [/\bbar\b/i, "bar"],
       [/batch ?cooking|repas/i, "meal"],
       [/d[oô]me/i, "dome"],
-      [/cagnotte/i, "pot"],
-      [/loyer|frais|charges|participation/i, "charges"]
+      # La cagnotte se lettre avec les charges (`Outstanding::LETTRES_ENSEMBLE`).
+      [/loyer|frais|charges|participation|cagnotte/i, "charges"]
     ].freeze
 
     def poste_probable(entry, compte)

@@ -45,6 +45,21 @@ module MemberAccounts
     POSTES = (AccountEntry::FLOWS - ["other"]) + ["other"]
     SANS_POSTE = "other".freeze
 
+    # LA CAGNOTTE SE PAIE AVEC LES CHARGES (Michael, 2026-11-27). Depuis
+    # octobre 2026, la cagnotte (10 €) et la balançoire (10 €) sont des lignes
+    # à part, mais chaque ménage les verse dans son virement mensuel de
+    # charges. Lettrées sur leur propre poste, elles laissaient 20 € « dus » en
+    # Cagnotte en face de 20 € « d'avance » en Charges, chaque mois, chez tout
+    # le monde. Les deux postes se lettrent donc ensemble ; l'écriture garde son
+    # poste et son libellé, seul le lettrage les réunit — et la lecture étant
+    # non destructive, ça vaut aussi pour les lignes des décomptes déjà émis.
+    LETTRES_ENSEMBLE = { "pot" => "charges" }.freeze
+
+    def self.poste_de(flow)
+      flow = flow.presence || SANS_POSTE
+      LETTRES_ENSEMBLE.fetch(flow, flow)
+    end
+
     # Une ligne encore due : ce qu'il en reste après imputation des règlements,
     # pas son montant d'origine.
     # `quantity` et `unit_price_cents` viennent de la feuille de bar : « Vin
@@ -91,7 +106,7 @@ module MemberAccounts
       return nets if nets.empty?
 
       AccountEntry.where(member_account_id: nets.keys).group(:member_account_id, :flow).sum(:amount_cents)
-                  .each { |(id, flow), cents| nets[id][flow.presence || SANS_POSTE] += cents }
+                  .each { |(id, flow), cents| nets[id][poste_de(flow)] += cents }
       # Le solde d'ouverture entre dans « Divers », comme dans `ouverture`.
       accounts.each { |compte| nets[compte.id][SANS_POSTE] += compte.opening_balance_cents }
       nets
@@ -144,7 +159,7 @@ module MemberAccounts
         ouverts = Hash.new { |hash, key| hash[key] = [] }
         reserves = Hash.new(0)
 
-        mouvements.group_by { |ligne| ligne.flow.presence || SANS_POSTE }
+        mouvements.group_by { |ligne| self.class.poste_de(ligne.flow) }
                   .each { |poste, lignes| reserves[poste] = imputer(lignes, ouverts[poste]) }
 
         { postes: assembler(ouverts, reserves),

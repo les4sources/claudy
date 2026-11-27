@@ -29,6 +29,35 @@ RSpec.describe MemberAccounts::Outstanding do
 
   def poste(calcul, flow) = calcul.postes.find { |p| p.flow == flow }
 
+  # Michael, 2026-11-27 : la cagnotte et la balançoire se paient dans le
+  # virement de charges. Lettrées à part, elles laissaient 20 € dus en face de
+  # 20 € d'avance sur les charges.
+  describe "la cagnotte, lettrée avec les charges" do
+    it "est éteinte par le virement de charges qui la contient" do
+      conso(Date.new(2026, 10, 31), 32_500, label: "Charges habitants", flow: "charges")
+      conso(Date.new(2026, 10, 31), 1_000, label: "Cagnotte habitants", flow: "pot")
+      conso(Date.new(2026, 10, 31), 1_000, label: "Balançoire — Magali", flow: "pot")
+      reglement(Date.new(2026, 10, 30), 34_500, flow: "charges")
+
+      calcul = described_class.new(account.reload)
+
+      expect(calcul.postes).to be_empty
+      expect(calcul.avances).to be_empty
+      verifie_invariant
+    end
+
+    it "se montre sous Charges tant qu'elle reste due" do
+      conso(Date.new(2026, 10, 31), 1_000, label: "Cagnotte habitants", flow: "pot")
+
+      calcul = described_class.new(account.reload)
+
+      expect(calcul.postes.map(&:flow)).to eq(["charges"])
+      expect(poste(calcul, "charges").lignes.map(&:label)).to eq(["Cagnotte habitants"])
+      expect(described_class.nets_par_poste([account])[account.id]).not_to have_key("pot")
+      verifie_invariant
+    end
+  end
+
   it "ne réclame rien sur un compte vierge" do
     calcul = described_class.new(account)
 
