@@ -22,7 +22,8 @@ module Finance
   # pas de dette en face : y imputer un virement le mettrait en faux crédit. Ça
   # borne du même coup les virements qui n'ont rien à faire au grand livre des
   # membres — épicerie, pain, cagnotte, pension d'animaux : sans charge en face,
-  # pas de proposition.
+  # pas de proposition. Seule exception : des charges payées d'avance par un
+  # compte désigné sans doute possible (cf. `a_jour_designes`).
   #
   # « Débiteur » se lit POSTE PAR POSTE, comme le lettrage (Michael,
   # 2026-10-05). Un ménage en avance de 310 € sur ses charges et qui doit 120 €
@@ -67,9 +68,9 @@ module Finance
 
       deja = already_recorded(entry)
       comptes_relies = deja.map { |match| match.member_account.id }
-      deja + debtors.reject { |compte, _| comptes_relies.include?(compte.id) }
-                    .filter_map { |compte, du| match_for(entry, compte, du) }
-                    .sort_by { |match| [-match.confidence, match.member_account.name.to_s] }
+      candidats = (debtors + a_jour_designes(entry)).reject { |compte, _| comptes_relies.include?(compte.id) }
+      deja + candidats.filter_map { |compte, du| match_for(entry, compte, du) }
+                      .sort_by { |match| [-match.confidence, match.member_account.name.to_s] }
     end
 
     # Une passe sur toute une page. Les soldes, les IBAN déjà vus et les noms des
@@ -215,6 +216,30 @@ module Finance
       end
     end
 
+    # LES CHARGES SE PAIENT D'AVANCE (Michael, 2026-11-27). Le 30 pour le mois
+    # qui vient, ou le 11 alors que Claudy ne pose la charge que le 30 : à cet
+    # instant le ménage peut ne rien devoir. Lu aux seuls débiteurs, son
+    # virement n'était jamais proposé. Un compte à jour revient donc, mais
+    # seulement s'il est désigné sans doute possible : son code dans la
+    # communication, ou un IBAN déjà rapproché ET une communication qui parle
+    # de charges. Jamais sur un nom ou un montant, et jamais pour un virement
+    # d'épicerie ou de pain parti du même compte en banque : sans dette en
+    # face, rien d'autre ne distingue des charges payées d'avance d'un achat.
+    CHARGES_MOTIF = POSTES_PAR_MOTIF.to_h.invert.fetch("charges")
+
+    def a_jour_designes(entry)
+      a_jour.select do |compte, _|
+        code_cite?(entry, compte) || (iban_connu?(entry, compte) && entry.communication.to_s.match?(CHARGES_MOTIF))
+      end
+    end
+
+    def a_jour
+      @a_jour ||= begin
+        ids = debtors.to_set { |compte, _| compte.id }
+        comptes.reject { |compte| ids.include?(compte.id) }.map { |compte| [compte, 0] }
+      end
+    end
+
     def comptes = @comptes ||= (@accounts || MemberAccount.actives.ordered).to_a
 
     def nets = @nets ||= MemberAccounts::Outstanding.nets_par_poste(comptes)
@@ -225,7 +250,7 @@ module Finance
     # se reconnaît tout seul.
     def known_ibans
       @known_ibans ||= CashAllocation
-                       .where(document_type: "MemberAccount", document_id: debtors.map { |compte, _| compte.id })
+                       .where(document_type: "MemberAccount", document_id: comptes.map(&:id))
                        .joins(:cash_entry)
                        .where.not(cash_entries: { counterparty_iban: [nil, ""] })
                        .pluck(:document_id, Arel.sql("cash_entries.counterparty_iban"))
